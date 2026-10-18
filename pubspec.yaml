@@ -1,7 +1,7 @@
 name: levmax
-description: "A new Flutter project."
+description: "LevMax: Asisten Manajemen Gaya Hidup Cerdas (Solo Leveling Lifestyle RPG)"
 publish_to: 'none'
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   sdk: ^3.13.2
@@ -9,12 +9,40 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  supabase_flutter: ^2.18.3
+  
+  # Database Lokal & Sesi
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  shared_preferences: ^2.3.2
+  
+  # Network & Cloud REST API
+  http: ^1.2.2
+  
+  # Keamanan & Enkripsi
+  crypto: ^3.0.5
+  local_auth: ^2.3.0
+  
+  # Sensor Mobile
+  sensors_plus: ^7.0.0
+  
+  # LBS (Location Based Services) & Peta Dungeon
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.1
+  geolocator: ^12.0.0
+  
+  # AI Assistant "The System"
+  google_generative_ai: ^0.4.6
+  
+  # Notifikasi Lokal
+  flutter_local_notifications: ^17.2.3
+  
+  # Utility, Format Tanggal, & Kurs
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
