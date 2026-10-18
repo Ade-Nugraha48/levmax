@@ -1,16 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
-  runApp(const MainApp());
+Future<void> main() async {
+  await Supabase.initialize(
+    url: 'https://eoujrrvbrqotbnhsgjni.supabase.co',
+    publishableKey: 'sb_publishable_BCwFIi7ZpuBONB-rLMg4Jw_sB0NFxCb',
+  );
+  runApp(const MyApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
-      home: Scaffold(body: Center(child: Text('Hello World!'))),
+      title: 'Todos',
+      home: HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final _future = Supabase.instance.client
+      .from('todos')
+      .select();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: FutureBuilder(
+        future: _future,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final todos = snapshot.data!;
+          return ListView.builder(
+            itemCount: todos.length,
+            itemBuilder: ((context, index) {
+              final todo = todos[index];
+              return ListTile(
+                title: Text(todo['name']),
+              );
+            }),
+          );
+        },
+      ),
     );
   }
 }
