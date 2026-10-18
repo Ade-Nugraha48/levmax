@@ -1,11 +1,4 @@
-// ==============================================================================
-// LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
-// File: lib/ui/tabs/status_quest_tab.dart
-// Deskripsi: Tab 1 Bottom Navigation Bar: Status Window Solo Leveling,
-//            Search & Filter ChoiceChip, ValueListenableBuilder Daily Quest
-//            dengan Dismissible, Form Tambah Plan, & Aksi Cepat Sensor/AI.
-// ==============================================================================
-
+// Tab Status Window dan Manajemen Daily Quest
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -13,10 +6,11 @@ import '../../helpers/boxes.dart';
 import '../../models/quest_model.dart';
 import '../../models/user_model.dart';
 import '../../services/blockchain_service.dart';
-import '../../services/gemini_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/supabase_api_service.dart';
-import '../penalty/penalty_minigame_page.dart';
+import '../penalty_minigame_page.dart';
+import '../sensor_workout_page.dart';
+import '../widgets/ai_system_chat_sheet.dart';
 
 class StatusQuestTab extends StatefulWidget {
   final UserModel player;
@@ -33,6 +27,7 @@ class StatusQuestTab extends StatefulWidget {
 }
 
 class _StatusQuestTabState extends State<StatusQuestTab> {
+  // Controller pencarian dan form rencana baru
   final _searchController = TextEditingController();
   final _planFormKey = GlobalKey<FormState>();
 
@@ -40,6 +35,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
   final _descController = TextEditingController();
   final _targetValueController = TextEditingController(text: '10');
 
+  // Filter kategori dan form
   String _selectedCategory = 'Semua';
   String _newQuestCategory = 'Workout';
   String _newQuestUnit = 'Reps';
@@ -64,16 +60,13 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
     super.dispose();
   }
 
-  // ==========================================================================
-  // LOGIKA GAME BALANCING: SELESAIKAN QUEST & LEVEL UP
-  // ==========================================================================
+  // Toggle status penyelesaian quest dan kalkulasi reward EXP/Gold/Level
   Future<void> _toggleQuestCompletion(QuestModel quest, int index) async {
     final newStatus = !quest.isCompleted;
     quest.isCompleted = newStatus;
     quest.currentValue = newStatus ? quest.targetValue : 0;
     await quest.save();
 
-    // Hitung reward jika quest baru saja diselesaikan
     if (newStatus) {
       final expGain = quest.expReward;
       final goldGain = quest.goldReward;
@@ -83,20 +76,20 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
       int currentHp = widget.player.hp;
       final currentGold = widget.player.gold + goldGain;
 
-      // Cek Level Up: Setiap EXP >= 100
+      // Pengecekan Level Up jika EXP >= 100
       if (currentExp >= 100) {
         currentLevel += 1;
         currentExp -= 100;
-        currentHp = min(100, currentHp + 10); // Pulihkan +10 HP saat Level Up
+        currentHp = min(100, currentHp + 10);
         final newRank = UserModel.calculateRank(currentLevel);
 
-        // Catat blok baru ke Blockchain
+        // Catat peristiwa kenaikan level ke rantai blok
         await BlockchainService.addBlock(
           'LEVEL UP: Player reached Level $currentLevel (Rank $newRank). Restored +10 HP.',
           userId: widget.player.id,
         );
 
-        // Picu Notifikasi Lokal Level Up (FR-6.2)
+        // Kirim notifikasi lokal kenaikan level
         await NotificationService.showLevelUpNotification(
           newLevel: currentLevel,
           rank: newRank,
@@ -111,6 +104,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
         gold: currentGold,
       );
 
+      // Simpan perubahan data ke database dan cache
       await SupabaseApiService.updateUser(updatedPlayer);
       await SupabaseApiService.syncQuest(quest: quest, userId: widget.player.id);
       widget.onPlayerUpdated();
@@ -131,9 +125,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
     }
   }
 
-  // ==========================================================================
-  // FORM TAMBAH PLAN QUEST ESK HARI (FR-3.1)
-  // ==========================================================================
+  // Validasi dan penyimpanan rencana quest esok hari
   Future<void> _onFormSubmit() async {
     if (_planFormKey.currentState == null || !_planFormKey.currentState!.validate()) {
       return;
@@ -178,6 +170,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
       scheduledDate: tomorrow,
     );
 
+    // Simpan ke Hive box dan sinkronisasi
     final box = Hive.box<QuestModel>(HiveBoxes.questBox);
     await box.add(newQuest);
     await SupabaseApiService.syncQuest(quest: newQuest, userId: widget.player.id);
@@ -193,7 +186,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Rencana Quest Esok Hari Berhasil Ditambahkan ke Sistem!'),
+          content: Text('Rencana quest berhasil ditambahkan ke jadwal esok hari.'),
           backgroundColor: Color(0xFF00E5FF),
           behavior: SnackBarBehavior.floating,
         ),
@@ -201,19 +194,8 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
     }
   }
 
-  // ==========================================================================
-  // MODAL AI CHAT ASSISTANT "THE SYSTEM" (FR-5.2)
-  // ==========================================================================
+  // Tampilan modal dialog konsultasi asisten The System
   void _openSystemChatSheet() {
-    final chatMsgController = TextEditingController();
-    final List<Map<String, String>> messages = [
-      {
-        'sender': 'system',
-        'text':
-            '[THE SYSTEM ONLINE]\nHunter ${widget.player.username} (Level ${widget.player.level}, Rank ${widget.player.rank}). Laporkan kebutuhan konsultasi Anda seputar Workout, Looksmaxxing, atau Disiplin Belajar.'
-      }
-    ];
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -222,155 +204,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         side: BorderSide(color: Color(0xFF00E5FF), width: 1.5),
       ),
-      builder: (ctx) {
-        bool isTyping = false;
-
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 16,
-                right: 16,
-                top: 16,
-              ),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.75,
-                child: Column(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(Icons.bolt, color: Color(0xFF00E5FF), size: 28),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'THE SYSTEM (AI ASSISTANT)',
-                          style: TextStyle(
-                            color: Color(0xFF00E5FF),
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Colors.grey),
-                          onPressed: () => Navigator.pop(ctx),
-                        ),
-                      ],
-                    ),
-                    const Divider(color: Color(0xFF1E293B)),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: messages.length,
-                        itemBuilder: (context, idx) {
-                          final msg = messages[idx];
-                          final isSystem = msg['sender'] == 'system';
-
-                          return Align(
-                            alignment: isSystem ? Alignment.centerLeft : Alignment.centerRight,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 6),
-                              padding: const EdgeInsets.all(12),
-                              constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width * 0.78,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isSystem
-                                    ? const Color(0xFF131B2E)
-                                    : const Color(0xFF00E5FF).withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isSystem ? const Color(0xFF1E293B) : const Color(0xFF00E5FF),
-                                ),
-                              ),
-                              child: Text(
-                                msg['text'] ?? '',
-                                style: TextStyle(
-                                  color: isSystem ? Colors.white : const Color(0xFF00E5FF),
-                                  fontSize: 13,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    if (isTyping)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Text(
-                          '[Sistem sedang menganalisis status...]',
-                          style: TextStyle(
-                            color: Color(0xFF00E5FF),
-                            fontSize: 11,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: chatMsgController,
-                              style: const TextStyle(color: Colors.white, fontSize: 13),
-                              decoration: InputDecoration(
-                                hintText: 'Ketik pesan konsultasi ke The System...',
-                                hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
-                                filled: true,
-                                fillColor: const Color(0xFF131B2E),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: const BorderSide(color: Color(0xFF1E293B)),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.send, color: Color(0xFF00E5FF)),
-                            onPressed: () async {
-                              final txt = chatMsgController.text.trim();
-                              if (txt.isEmpty) return;
-
-                              setModalState(() {
-                                messages.add({'sender': 'user', 'text': txt});
-                                isTyping = true;
-                              });
-                              chatMsgController.clear();
-
-                              final reply = await GeminiService.sendMessage(
-                                message: txt,
-                                player: widget.player,
-                              );
-
-                              setModalState(() {
-                                messages.add({'sender': 'system', 'text': reply});
-                                isTyping = false;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+      builder: (ctx) => AiSystemChatSheet(player: widget.player),
     );
   }
 
@@ -385,9 +219,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ==================================================================
-          // STATUS WINDOW SOLO LEVELING (STATUS BAR UTAMA)
-          // ==================================================================
+          // Kartu Status Window Utama
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
@@ -477,7 +309,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                 ),
                 const SizedBox(height: 16),
 
-                // Health Points (HP Bar)
+                // Health Points Bar
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -509,7 +341,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                 ),
                 const SizedBox(height: 12),
 
-                // Experience (EXP Bar)
+                // Experience Bar
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -535,7 +367,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                 ),
                 const SizedBox(height: 12),
 
-                // Gold & Penalty Indicator
+                // Indikator Gold dan Penalti
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -592,11 +424,56 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // ==================================================================
-          // SEARCH BAR & FILTER CHOICE CHIP (FR-5.3)
-          // ==================================================================
+          // Tombol Navigasi Cepat Sensor Workout dan Asisten
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => SensorWorkoutPage(player: widget.player)),
+                    );
+                  },
+                  icon: const Icon(Icons.sensors, size: 18, color: Colors.black),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'SENSOR WORKOUT',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00E5FF),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _openSystemChatSheet,
+                  icon: const Icon(Icons.psychology, size: 18, color: Color(0xFF00E5FF)),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'THE SYSTEM CHAT',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF00E5FF)),
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF00E5FF)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Field Pencarian Quest
           TextField(
             controller: _searchController,
             style: const TextStyle(color: Colors.white, fontSize: 13),
@@ -622,6 +499,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
           ),
           const SizedBox(height: 10),
 
+          // ChoiceChips Filter Kategori
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -659,34 +537,18 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
           ),
           const SizedBox(height: 16),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'DAILY QUEST HARI INI',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.5,
-                  color: Color(0xFF00E5FF),
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: _openSystemChatSheet,
-                icon: const Icon(Icons.psychology, size: 16, color: Colors.black),
-                label: const Text('AI SYSTEM', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00E5FF),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                ),
-              ),
-            ],
+          const Text(
+            'DAILY QUEST HARI INI',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+              color: Color(0xFF00E5FF),
+            ),
           ),
           const SizedBox(height: 10),
 
-          // ==================================================================
-          // DAFTAR QUEST DENGAN ValueListenableBuilder (ARSTITEKTUR LAPISAN 2)
-          // ==================================================================
+          // Hive listenable builder untuk render daftar quest harian
           ValueListenableBuilder<Box<QuestModel>>(
             valueListenable: Hive.box<QuestModel>(HiveBoxes.questBox).listenable(),
             builder: (context, box, _) {
@@ -707,6 +569,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                 );
               }
 
+              // Filter pencarian dan kategori
               final query = _searchController.text.toLowerCase().trim();
               final allQuests = box.values.toList();
               final filtered = allQuests.where((q) {
@@ -853,9 +716,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
           ),
           const SizedBox(height: 24),
 
-          // ==================================================================
-          // FORM INPUT PLAN PRODUKTIVITAS ESOK HARI (FR-3.1)
-          // ==================================================================
+          // Form Tambah Rencana Quest Esok Hari
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -980,7 +841,13 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
-                          child: const Text('TERBITKAN RENCANA QUEST', style: TextStyle(fontWeight: FontWeight.bold)),
+                          child: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'TERBITKAN RENCANA QUEST',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
                         ),
                       ],
                     ),

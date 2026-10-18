@@ -1,18 +1,12 @@
-// ==============================================================================
-// LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
-// File: lib/ui/penalty/game_over_page.dart
-// Deskripsi: Layar Game Over Solo Leveling: "SYSTEM TERMINATED: ANDA TIDAK LAYAK"
-//            saat HP <= 0 beserta aksi Re-Awakening (Bab 5 & FR-6.2)
-// ==============================================================================
-
+// Halaman Status Game Over Sistem
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import '../../helpers/boxes.dart';
-import '../../models/quest_model.dart';
-import '../../models/user_model.dart';
-import '../../services/blockchain_service.dart';
-import '../../services/supabase_api_service.dart';
-import '../main_navigation_page.dart';
+import '../helpers/boxes.dart';
+import '../models/quest_model.dart';
+import '../models/user_model.dart';
+import '../services/blockchain_service.dart';
+import '../services/supabase_api_service.dart';
+import 'main_navigation_page.dart';
 
 class GameOverPage extends StatefulWidget {
   const GameOverPage({super.key});
@@ -24,6 +18,7 @@ class GameOverPage extends StatefulWidget {
 class _GameOverPageState extends State<GameOverPage> {
   bool _isLoading = false;
 
+  // Proses reset status Player ke Level 1 Rank F (Re-Awakening)
   Future<void> _handleReAwakening() async {
     setState(() {
       _isLoading = true;
@@ -39,16 +34,16 @@ class _GameOverPageState extends State<GameOverPage> {
       isPenaltyActive: false,
     );
 
-    // Perbarui ke Supabase & Hive
+    // Pembaruan data ke database
     await SupabaseApiService.updateUser(updatedPlayer);
 
-    // Catat Re-Awakening ke Rantai Blok Anti-Cheat
+    // Pencatatan peristiwa ke rantai blok anti-manipulasi
     await BlockchainService.addBlock(
       'RE-AWAKENING: Player reset to Level 1 (Rank F), HP 100, EXP 0 after System Termination.',
       userId: updatedPlayer.id,
     );
 
-    // Reset status quest di box
+    // Reset status pengerjaan seluruh quest harian
     final questBox = Hive.box<QuestModel>(HiveBoxes.questBox);
     for (int i = 0; i < questBox.length; i++) {
       final q = questBox.getAt(i);
@@ -67,11 +62,12 @@ class _GameOverPageState extends State<GameOverPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('RE-AWAKENING BERHASIL! Anda terlahir kembali sebagai Hunter Level 1.'),
+        content: Text('Re-Awakening berhasil diproses. Status kembali ke Hunter Level 1.'),
         backgroundColor: Color(0xFF00E5FF),
       ),
     );
 
+    // Navigasi kembali ke halaman utama
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const MainNavigationPage()),
@@ -91,7 +87,7 @@ class _GameOverPageState extends State<GameOverPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Icon Tengkorak / Glitch System Terminated
+                // Lambang terminasi sistem
                 Container(
                   padding: const EdgeInsets.all(28),
                   decoration: BoxDecoration(
@@ -114,7 +110,7 @@ class _GameOverPageState extends State<GameOverPage> {
                 ),
                 const SizedBox(height: 32),
 
-                // Judul Fatal Solo Leveling
+                // Teks status Game Over
                 const Text(
                   'SYSTEM TERMINATED',
                   textAlign: TextAlign.center,
@@ -139,7 +135,7 @@ class _GameOverPageState extends State<GameOverPage> {
                 ),
                 const SizedBox(height: 20),
 
-                // Penjelasan
+                // Informasi konsekuensi sistem
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -148,7 +144,7 @@ class _GameOverPageState extends State<GameOverPage> {
                     border: Border.all(color: const Color(0xFFFF1744).withValues(alpha: 0.5)),
                   ),
                   child: Text(
-                    'Health Points (HP) Anda telah terkuras habis hingga 0 akibat pengabaian quest dan kegagalan bertahan di Penalty Zone.\n\nSistem mencabut seluruh atribut Hunter Anda.',
+                    'Health Points (HP) Anda telah habis (0) akibat pengabaian quest dan kegagalan bertahan di Penalty Zone.\n\nSistem mencabut seluruh atribut Hunter Anda.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
@@ -171,12 +167,15 @@ class _GameOverPageState extends State<GameOverPage> {
                           width: 22,
                           child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.black),
                         )
-                      : const Text(
-                          'RE-AWAKENING (RESET KE LEVEL 1 / RANK F)',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.0,
+                      : const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'RE-AWAKENING (RESET KE LEVEL 1 / RANK F)',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.0,
+                            ),
                           ),
                         ),
                   style: ElevatedButton.styleFrom(

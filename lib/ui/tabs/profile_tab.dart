@@ -1,16 +1,10 @@
-// ==============================================================================
-// LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
-// File: lib/ui/tabs/profile_tab.dart
-// Deskripsi: Tab 4 Bottom Navigation Bar: Profil Player, Dynamic Rank Frame (F-S),
-//            Statistik Antropometri BMI, Toggle Biometrik, & Logout (FR-3.4 & FR-1.5)
-// ==============================================================================
-
+// Tab Profil Hunter dan Pengaturan Sesi
 import 'package:flutter/material.dart';
 import '../../helpers/user_info.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/supabase_api_service.dart';
-import '../auth/login_page.dart';
+import '../login_page.dart';
 
 class ProfileTab extends StatefulWidget {
   final UserModel player;
@@ -27,11 +21,13 @@ class ProfileTab extends StatefulWidget {
 }
 
 class _ProfileTabState extends State<ProfileTab> {
+  // State pengaturan biometrik
   bool _biometricEnabled = false;
 
   @override
   void initState() {
     super.initState();
+    // Memuat preferensi biometrik lokal
     _loadBiometricState();
   }
 
@@ -44,6 +40,7 @@ class _ProfileTabState extends State<ProfileTab> {
     }
   }
 
+  // Mengubah preferensi biometrik dan sinkronisasi ke Supabase
   Future<void> _toggleBiometrics(bool val) async {
     setState(() {
       _biometricEnabled = val;
@@ -58,8 +55,8 @@ class _ProfileTabState extends State<ProfileTab> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(val
-              ? 'Autentikasi Biometrik Diaktifkan.'
-              : 'Autentikasi Biometrik Dinonaktifkan.'),
+              ? 'Autentikasi biometrik diaktifkan.'
+              : 'Autentikasi biometrik dinonaktifkan.'),
           backgroundColor: const Color(0xFF00E5FF),
           duration: const Duration(seconds: 2),
         ),
@@ -67,6 +64,7 @@ class _ProfileTabState extends State<ProfileTab> {
     }
   }
 
+  // Proses keluar sesi dan pembersihan SharedPreferences
   Future<void> _handleLogout() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -95,6 +93,7 @@ class _ProfileTabState extends State<ProfileTab> {
       await AuthService.logout();
       if (!mounted) return;
 
+      // Navigasi kembali ke LoginPage dan bersihkan stack navigasi
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -111,7 +110,7 @@ class _ProfileTabState extends State<ProfileTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header Profil & Dynamic Rank Frame
+          // Kartu Header Profil & Bingkai Dinamis Sesuai Rank
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -120,28 +119,37 @@ class _ProfileTabState extends State<ProfileTab> {
               border: Border.all(color: widget.player.rankColor, width: 2),
               boxShadow: [
                 BoxShadow(
-                  color: widget.player.rankColor.withValues(alpha: 0.3),
+                  color: widget.player.rankColor.withValues(alpha: 0.35),
                   blurRadius: 20,
                   spreadRadius: 4,
                 ),
+                if (widget.player.rank == 'S')
+                  BoxShadow(
+                    color: const Color(0xFFFFD700).withValues(alpha: 0.3),
+                    blurRadius: 30,
+                    spreadRadius: 6,
+                  ),
               ],
             ),
             child: Column(
               children: [
-                // Avatar Frame Solo Leveling Sesuai Rank
+                // Avatar Frame Dinamis Solo Leveling
                 Stack(
                   alignment: Alignment.center,
                   children: [
                     Container(
-                      width: 90,
-                      height: 90,
+                      width: 96,
+                      height: 96,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: widget.player.rankColor, width: 3.5),
+                        border: Border.all(
+                          color: widget.player.rankColor,
+                          width: widget.player.rank == 'S' ? 4.0 : 3.0,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: widget.player.rankColor.withValues(alpha: 0.5),
-                            blurRadius: 16,
+                            blurRadius: 18,
                           ),
                         ],
                       ),
@@ -150,7 +158,7 @@ class _ProfileTabState extends State<ProfileTab> {
                         child: Text(
                           widget.player.rank,
                           style: TextStyle(
-                            fontSize: 36,
+                            fontSize: 38,
                             fontWeight: FontWeight.w900,
                             color: widget.player.rankColor,
                           ),
@@ -160,17 +168,24 @@ class _ProfileTabState extends State<ProfileTab> {
                     Positioned(
                       bottom: 0,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                         decoration: BoxDecoration(
                           color: widget.player.rankColor,
                           borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.4),
+                              blurRadius: 4,
+                            ),
+                          ],
                         ),
                         child: Text(
                           'RANK ${widget.player.rank}',
                           style: const TextStyle(
                             color: Colors.black,
                             fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.0,
                           ),
                         ),
                       ),
@@ -210,7 +225,7 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           const SizedBox(height: 16),
 
-          // Detail Statistik Antropometri & BMI
+          // Detail Statistik Fisik dan Skor BMI
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -221,16 +236,23 @@ class _ProfileTabState extends State<ProfileTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'STATISTIK FISIK & BMI HUNTER',
-                  style: TextStyle(
-                    color: Color(0xFF00E5FF),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 13,
-                    letterSpacing: 1.0,
-                  ),
+                const Row(
+                  children: [
+                    Icon(Icons.monitor_weight_outlined, color: Color(0xFF00E5FF), size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'STATISTIK FISIK & BMI HUNTER',
+                      style: TextStyle(
+                        color: Color(0xFF00E5FF),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -241,8 +263,9 @@ class _ProfileTabState extends State<ProfileTab> {
                   ],
                 ),
                 const Divider(color: Color(0xFF1E293B), height: 24),
+
                 const Text(
-                  'Kapasitas Repetisi Awal:',
+                  'Kapasitas Repetisi & Cardio Awal:',
                   style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
@@ -250,8 +273,17 @@ class _ProfileTabState extends State<ProfileTab> {
                   '• Push-up: ${widget.player.maxPushup} reps   • Sit-up: ${widget.player.maxSitup} reps\n• Squat: ${widget.player.maxSquat} reps       • Pull-up: ${widget.player.maxPullup} reps\n• Jarak Lari: ${widget.player.maxRunKm} km   • Pace: ${widget.player.pace2kmMenit} min/2km',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 12,
+                    fontSize: 11.5,
                     height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.player.bmiRecommendation,
+                  style: const TextStyle(
+                    color: Color(0xFF00E5FF),
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
               ],
@@ -259,7 +291,7 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           const SizedBox(height: 16),
 
-          // Pengaturan Biometrik
+          // Pengaturan Biometrik Sidik Jari / Face ID
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
@@ -272,10 +304,10 @@ class _ProfileTabState extends State<ProfileTab> {
               secondary: const Icon(Icons.fingerprint, color: Color(0xFF00E5FF), size: 28),
               title: const Text(
                 'Autentikasi Biometrik',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
               subtitle: const Text(
-                'Masuk lebih cepat menggunakan Sidik Jari / Face ID',
+                'Buka Status Window cepat via sensor sidik jari atau wajah',
                 style: TextStyle(color: Colors.grey, fontSize: 11),
               ),
               activeThumbColor: const Color(0xFF00E5FF),
@@ -285,13 +317,16 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           const SizedBox(height: 24),
 
-          // Tombol Logout
+          // Tombol Logout Sesi
           OutlinedButton.icon(
             onPressed: _handleLogout,
             icon: const Icon(Icons.logout, color: Color(0xFFFF1744)),
-            label: const Text(
-              'LOGOUT DARI SISTEM',
-              style: TextStyle(color: Color(0xFFFF1744), fontWeight: FontWeight.bold),
+            label: const FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                'LOGOUT DARI SISTEM',
+                style: TextStyle(color: Color(0xFFFF1744), fontWeight: FontWeight.bold),
+              ),
             ),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Color(0xFFFF1744)),

@@ -19,10 +19,10 @@ import 'services/notification_service.dart';
 import 'services/blockchain_service.dart';
 import 'services/auth_service.dart';
 import 'services/supabase_api_service.dart';
-import 'ui/auth/login_page.dart';
-import 'ui/onboarding/onboarding_page.dart';
+import 'ui/login_page.dart';
+import 'ui/onboarding_page.dart';
 import 'ui/main_navigation_page.dart';
-import 'ui/penalty/game_over_page.dart';
+import 'ui/game_over_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

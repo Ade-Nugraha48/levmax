@@ -1,16 +1,10 @@
-// ==============================================================================
-// LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
-// File: lib/ui/penalty/penalty_minigame_page.dart
-// Deskripsi: Layanan Mini-Game Penalty Zone (FR-6.1 & Bab 5):
-//            Tap-Tap Survival 50x tap dalam 15 detik melawan Monster Penalti
-// ==============================================================================
-
+// Halaman Mini-Game Penalty Zone
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import '../../services/blockchain_service.dart';
-import '../../services/notification_service.dart';
-import '../../services/supabase_api_service.dart';
+import '../services/blockchain_service.dart';
+import '../services/notification_service.dart';
+import '../services/supabase_api_service.dart';
 import 'game_over_page.dart';
 
 class PenaltyMiniGamePage extends StatefulWidget {
@@ -22,9 +16,11 @@ class PenaltyMiniGamePage extends StatefulWidget {
 
 class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
     with SingleTickerProviderStateMixin {
+  // Konstanta target tantangan penalti
   static const int _targetTaps = 50;
   static const int _totalSeconds = 15;
 
+  // State mini-game
   int _tapCount = 0;
   int _secondsLeft = _totalSeconds;
   Timer? _timer;
@@ -54,6 +50,7 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
     super.dispose();
   }
 
+  // Memulai timer dan reset hitungan
   void _startGame() {
     setState(() {
       _tapCount = 0;
@@ -75,6 +72,7 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
     });
   }
 
+  // Menangani ketukan tombol survival
   void _handleTap() {
     if (!_isGameRunning || _isGameOver) return;
 
@@ -87,6 +85,7 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
     }
   }
 
+  // Penanganan saat pengguna berhasil mencapai target 50 tap
   Future<void> _handleVictory() async {
     _timer?.cancel();
     setState(() {
@@ -94,7 +93,7 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
       _isGameOver = true;
     });
 
-    // Pulihkan +10 HP (Maks 100) dan nonaktifkan penalti
+    // Pemulihan +10 HP dan penonaktifan status penalti
     final player = SupabaseApiService.getPlayerCache();
     if (player != null) {
       final updatedHp = min(100, player.hp + 10);
@@ -104,7 +103,7 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
       );
       await SupabaseApiService.updateUser(updatedPlayer);
 
-      // Catat ke Blockchain
+      // Pencatatan ke rantai blok anti-manipulasi
       await BlockchainService.addBlock(
         'PENALTY SURVIVED: Successfully tapped $_targetTaps times in $_totalSeconds s. Restored +10 HP (Total HP: $updatedHp).',
         userId: player.id,
@@ -133,14 +132,14 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
           ],
         ),
         content: const Text(
-          'Anda berhasil mengalahkan Monster Penalti!\n\nReward Kelayakan:\n• HP dipulihkan: +10 HP\n• Status Penalti: DINONAKTIFKAN\n• Transaksi dicatat ke Rantai Blok.',
+          'Tantangan berhasil diselesaikan!\n\nReward Kelayakan:\n• HP dipulihkan: +10 HP\n• Status Penalti: DINONAKTIFKAN\n• Transaksi dicatat ke Rantai Blok.',
           style: TextStyle(color: Colors.white70, fontSize: 13),
         ),
         actions: [
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              Navigator.pop(context, true); // Kembali ke Status Window
+              Navigator.pop(context, true);
             },
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00E5FF)),
             child: const Text('KEMBALI KE STATUS WINDOW', style: TextStyle(color: Colors.black)),
@@ -150,6 +149,7 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
     );
   }
 
+  // Penanganan saat batas waktu 15 detik habis
   Future<void> _handleTimeUp() async {
     _timer?.cancel();
     setState(() {
@@ -164,7 +164,7 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
       await SupabaseApiService.updateUser(updatedPlayer);
 
       if (updatedHp <= 0) {
-        // HP habis = Game Over "Anda Tidak Layak"
+        // HP habis, diarahkan ke layar Game Over
         await NotificationService.showGameOverNotification();
         if (!mounted) return;
         Navigator.pushReplacement(
@@ -226,7 +226,7 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
     final progress = (_tapCount / _targetTaps).clamp(0.0, 1.0);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F050B), // Red-Dark Solo Leveling Penalty Zone
+      backgroundColor: const Color(0xFF0F050B),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A0A14),
         title: const Text(
@@ -242,7 +242,7 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Peringatan Zona Hukuman
+              // Banner peringatan
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -280,11 +280,10 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
               ),
               const SizedBox(height: 24),
 
-              // Timer & Progress Tap
+              // Timer dan Progres Tap
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  // Countdown Timer
                   Column(
                     children: [
                       const Text(
@@ -302,7 +301,6 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
                       ),
                     ],
                   ),
-                  // Tap Counter
                   Column(
                     children: [
                       const Text(
@@ -324,7 +322,7 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
               ),
               const SizedBox(height: 16),
 
-              // Progress Bar Darah Monster Penalti
+              // Progress Bar
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
@@ -336,7 +334,7 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
               ),
               const SizedBox(height: 32),
 
-              // Area Tap-Tap Survival Utama
+              // Area Interaksi GestureDetector
               Center(
                 child: GestureDetector(
                   onTap: _isGameRunning ? _handleTap : null,
@@ -389,7 +387,7 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
               ),
               const SizedBox(height: 36),
 
-              // Tombol Mulai jika belum jalan
+              // Tombol mulai tantangan
               if (!_isGameRunning) ...[
                 ElevatedButton(
                   onPressed: _startGame,
@@ -398,9 +396,12 @@ class _PenaltyMiniGamePageState extends State<PenaltyMiniGamePage>
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text(
-                    'MULAI MINI-GAME PENALTY ZONE',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                  child: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'MULAI MINI-GAME PENALTY ZONE',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
                   ),
                 ),
               ],

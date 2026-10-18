@@ -1,19 +1,13 @@
-// ==============================================================================
-// LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
-// File: lib/ui/onboarding/onboarding_page.dart
-// Deskripsi: Layanan Onboarding Fisik, Kalkulasi BMI Real-time, &
-//            Generasi Daily Quest Perdana dengan Rumus Adaptif 60% (FR-1.4 & Bab 5)
-// ==============================================================================
-
+// Halaman Onboarding Fisik dan Kalkulasi BMI Awal
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import '../../helpers/boxes.dart';
-import '../../helpers/user_info.dart';
-import '../../models/quest_model.dart';
-import '../../models/user_model.dart';
-import '../../services/blockchain_service.dart';
-import '../../services/supabase_api_service.dart';
-import '../main_navigation_page.dart';
+import '../helpers/boxes.dart';
+import '../helpers/user_info.dart';
+import '../models/quest_model.dart';
+import '../models/user_model.dart';
+import '../services/blockchain_service.dart';
+import '../services/supabase_api_service.dart';
+import 'main_navigation_page.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
@@ -23,8 +17,8 @@ class OnboardingPage extends StatefulWidget {
 }
 
 class _OnboardingPageState extends State<OnboardingPage> {
+  // Controller input fisik awal
   final _formKey = GlobalKey<FormState>();
-
   final _tbController = TextEditingController(text: '170');
   final _bbController = TextEditingController(text: '65');
   final _pushupController = TextEditingController(text: '15');
@@ -34,12 +28,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
   final _runKmController = TextEditingController(text: '2.0');
   final _paceController = TextEditingController(text: '14.0');
 
+  // Variabel kalkulasi nilai BMI
   double _calculatedBmi = 22.49;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    // Hitung BMI default saat awal
     _recalculateBmi();
   }
 
@@ -56,6 +52,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     super.dispose();
   }
 
+  // Formula kalkulasi BMI: Berat (kg) / (Tinggi (m) * Tinggi (m))
   void _recalculateBmi() {
     final tb = double.tryParse(_tbController.text) ?? 170.0;
     final bb = double.tryParse(_bbController.text) ?? 65.0;
@@ -68,6 +65,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
   }
 
+  // Kategori klasifikasi BMI
   String get _bmiCategory {
     if (_calculatedBmi < 18.5) return 'Underweight (Kurang BB)';
     if (_calculatedBmi <= 24.9) return 'Normal (Ideal)';
@@ -75,6 +73,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     return 'Obese (Obesitas)';
   }
 
+  // Warna indikator status BMI
   Color get _bmiColor {
     if (_calculatedBmi < 18.5) return Colors.amber;
     if (_calculatedBmi <= 24.9) return const Color(0xFF00E5FF);
@@ -82,16 +81,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
     return const Color(0xFFFF1744);
   }
 
+  // Rekomendasi program latihan sesuai kategori BMI
   String get _bmiRecommendation {
     if (_calculatedBmi < 18.5) {
-      return 'Fokus: Peningkatan massa otot melalui Strength Workout & asupan surplus kalori tinggi protein.';
+      return 'Fokus: Peningkatan massa otot melalui Strength Workout & surplus kalori protein.';
     } else if (_calculatedBmi <= 24.9) {
       return 'Fokus: Program seimbang (Workout, Cardio, Skincare Looksmaxxing, & Disiplin Belajar).';
     } else {
-      return 'Fokus: Defisit kalori aerobik via Cardio (Jogging/Lari) dan endurance latihan tubuh.';
+      return 'Fokus: Defisit kalori via Cardio (Jogging/Lari) dan endurance latihan tubuh.';
     }
   }
 
+  // Submit form dan generate Daily Quest adaptif 60%
   Future<void> _handleSubmitOnboarding() async {
     if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
       return;
@@ -114,7 +115,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     final username = await UserInfo.getUsername() ?? 'Hunter';
     final email = await UserInfo.getEmail() ?? '';
 
-    // Buat objek player terkini
+    // Inisialisasi profil Player Level 1 Rank F HP 100 EXP 0 Gold 0
     final player = UserModel(
       id: userId,
       username: username,
@@ -139,15 +140,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
       createdAt: DateTime.now().toIso8601String(),
     );
 
-    // Simpan ke Hive Cache & Supabase
+    // Simpan data ke Supabase dan cache Hive
     await SupabaseApiService.updateUser(player);
     await UserInfo.setIsOnboarded(true);
 
-    // Generasi Daily Quest Perdana dengan Rumus Adaptif 60% (Bab 5 Rules):
-    // targetHariIni = (kapasitasMaks * 0.60).round()
+    // Rumus target adaptif harian: (kapasitasMaks * (0.60 + ((level - 1) * 0.05))).round()
     final todayDate = DateTime.now().toIso8601String().substring(0, 10);
     final questBox = Hive.box<QuestModel>(HiveBoxes.questBox);
-    await questBox.clear(); // Bersihkan quest lama jika ada
+    await questBox.clear();
 
     final targetPushup = (pushup * 0.60).round().clamp(5, 1000);
     final targetSitup = (situp * 0.60).round().clamp(5, 1000);
@@ -155,6 +155,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     final targetPullup = (pullup * 0.60).round().clamp(2, 1000);
     final targetRun = double.parse((runKm * 0.60).toStringAsFixed(1)).clamp(0.5, 50.0);
 
+    // Inisialisasi daftar Daily Quest perdana
     final initialQuests = [
       QuestModel(
         id: 'quest_pushup_${DateTime.now().millisecondsSinceEpoch}',
@@ -249,12 +250,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
       ),
     ];
 
+    // Simpan semua quest ke box dan sinkronisasi online
     for (final q in initialQuests) {
       await questBox.add(q);
       await SupabaseApiService.syncQuest(quest: q, userId: userId);
     }
 
-    // Catat ke Blockchain
+    // Catat ke Blockchain ledger
     await BlockchainService.addBlock(
       'ONBOARDING COMPLETED: Hunter Awakened as Level 1 (Rank F) - BMI: $_calculatedBmi',
       userId: userId,
@@ -268,16 +270,16 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Penilaian Fisik Selesai! Daily Quest Perdana Telah Diterbitkan.'),
+        content: Text('Penilaian fisik selesai. Daily Quest perdana telah diterbitkan.'),
         backgroundColor: Color(0xFF00E5FF),
         behavior: SnackBarBehavior.floating,
       ),
     );
 
-    Navigator.pushAndRemoveUntil(
+    // Navigasi ke halaman utama
+    Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const MainNavigationPage()),
-      (route) => false,
     );
   }
 
@@ -298,7 +300,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Info Box Solo Leveling
+                // Kartu status BMI real-time
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -333,7 +335,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'Sistem akan menetapkan beban awal 60% dari kapasitas maksimal Anda',
+                                  'Beban harian ditetapkan sebesar 60% dari kapasitas maksimal',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.white.withValues(alpha: 0.7),
@@ -346,7 +348,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       ),
                       const Divider(color: Color(0xFF1E293B), height: 24),
 
-                      // Card Tampilan BMI Real-time
+                      // Tampilan skor BMI
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -405,7 +407,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Bagian 1: Antropometri
+                // Input Antropometri
                 const Text(
                   '1. ANTROPOMETRI (TB & BB)',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF00E5FF)),
@@ -458,7 +460,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Bagian 2: Repetisi Maksimal (Calisthenics)
+                // Input Repetisi Maksimal
                 const Text(
                   '2. KAPASITAS REPETISI MAKSIMAL',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF00E5FF)),
@@ -537,7 +539,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Bagian 3: Cardio / Jogging
+                // Input Cardio Lari
                 const Text(
                   '3. KAPASITAS CARDIO & ENDURANCE',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF00E5FF)),
@@ -580,7 +582,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ),
                 const SizedBox(height: 36),
 
-                // Tombol Submit Selesaikan Onboarding
+                // Tombol Submit Onboarding
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleSubmitOnboarding,
                   style: ElevatedButton.styleFrom(
@@ -596,9 +598,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           width: 22,
                           child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.black),
                         )
-                      : const Text(
-                          'BANGKITKAN HUNTER & TERIMA DAILY QUEST',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.0),
+                      : const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'BANGKITKAN HUNTER & TERIMA DAILY QUEST',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.0),
+                          ),
                         ),
                 ),
                 const SizedBox(height: 20),

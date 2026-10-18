@@ -1,10 +1,4 @@
-// ==============================================================================
-// LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
-// File: lib/ui/tabs/saran_kesan_tab.dart
-// Deskripsi: Tab 3 Bottom Navigation Bar: Evaluasi Mata Kuliah Pemrograman
-//            Aplikasi Mobile (Saran & Kesan) via Hive & Supabase (FR-3.3)
-// ==============================================================================
-
+// Tab Evaluasi Saran dan Kesan Mata Kuliah
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../helpers/boxes.dart';
@@ -22,6 +16,7 @@ class SaranKesanTab extends StatefulWidget {
 }
 
 class _SaranKesanTabState extends State<SaranKesanTab> {
+  // Controller form masukan
   final _formKey = GlobalKey<FormState>();
   final _namaController = TextEditingController();
   final _nimController = TextEditingController();
@@ -45,6 +40,7 @@ class _SaranKesanTabState extends State<SaranKesanTab> {
     super.dispose();
   }
 
+  // Validasi form dan penyimpanan masukan ke Hive dan Supabase
   Future<void> _submitFeedback() async {
     if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
       return;
@@ -63,11 +59,11 @@ class _SaranKesanTabState extends State<SaranKesanTab> {
       createdAt: DateTime.now().toIso8601String(),
     );
 
-    // Simpan ke Hive (Lapisan 2)
+    // Simpan data ke Hive lokal
     final box = Hive.box<FeedbackModel>(HiveBoxes.feedbackBox);
     await box.add(newFeedback);
 
-    // Simpan ke Supabase (Lapisan 3)
+    // Sinkronisasi data ke Supabase REST API
     await SupabaseApiService.createFeedback(newFeedback);
 
     _kesanController.clear();
@@ -81,10 +77,30 @@ class _SaranKesanTabState extends State<SaranKesanTab> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Saran & Kesan Berhasil Dikirim ke Sistem!'),
+        content: Text('Saran & Kesan berhasil dikirim ke database.'),
         backgroundColor: Color(0xFF00E5FF),
       ),
     );
+  }
+
+  // Menghapus data evaluasi dari Hive dan Supabase
+  Future<void> _deleteFeedback(FeedbackModel item, int index) async {
+    final box = Hive.box<FeedbackModel>(HiveBoxes.feedbackBox);
+    await box.deleteAt(index);
+
+    if (item.id > 0) {
+      await SupabaseApiService.deleteFeedback(item.id);
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Data evaluasi dihapus.'),
+          backgroundColor: Color(0xFFFF1744),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -95,7 +111,7 @@ class _SaranKesanTabState extends State<SaranKesanTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header
+          // Header Kartu
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -116,12 +132,12 @@ class _SaranKesanTabState extends State<SaranKesanTab> {
                         style: TextStyle(
                           color: Color(0xFF00E5FF),
                           fontWeight: FontWeight.w900,
-                          fontSize: 14,
+                          fontSize: 13,
                           letterSpacing: 1.0,
                         ),
                       ),
                       Text(
-                        'Evaluasi Pembelajaran Praktikum Pemrograman Aplikasi Mobile',
+                        'Evaluasi Pembelajaran Praktikum Pemrograman Aplikasi Mobile (PAM)',
                         style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11),
                       ),
                     ],
@@ -132,7 +148,7 @@ class _SaranKesanTabState extends State<SaranKesanTab> {
           ),
           const SizedBox(height: 16),
 
-          // Form Input
+          // Form Input Evaluasi
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -200,6 +216,7 @@ class _SaranKesanTabState extends State<SaranKesanTab> {
                     validator: (v) => v == null || v.trim().isEmpty ? 'Wajib diisi' : null,
                   ),
                   const SizedBox(height: 16),
+
                   ElevatedButton(
                     onPressed: _isLoading ? null : _submitFeedback,
                     style: ElevatedButton.styleFrom(
@@ -214,7 +231,13 @@ class _SaranKesanTabState extends State<SaranKesanTab> {
                             width: 20,
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
                           )
-                        : const Text('KIRIM SARAN & KESAN', style: TextStyle(fontWeight: FontWeight.bold)),
+                        : const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'KIRIM SARAN & KESAN',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
                   ),
                 ],
               ),
@@ -222,7 +245,7 @@ class _SaranKesanTabState extends State<SaranKesanTab> {
           ),
           const SizedBox(height: 20),
 
-          // Riwayat Saran & Kesan
+          // Daftar Riwayat Evaluasi
           const Text(
             'RIWAYAT SARAN & KESAN TERSIMPAN',
             style: TextStyle(
@@ -234,6 +257,7 @@ class _SaranKesanTabState extends State<SaranKesanTab> {
           ),
           const SizedBox(height: 10),
 
+          // Hive Listenable Builder
           ValueListenableBuilder<Box<FeedbackModel>>(
             valueListenable: Hive.box<FeedbackModel>(HiveBoxes.feedbackBox).listenable(),
             builder: (context, box, _) {
@@ -246,7 +270,7 @@ class _SaranKesanTabState extends State<SaranKesanTab> {
                   ),
                   child: const Center(
                     child: Text(
-                      'Belum ada riwayat saran & kesan.',
+                      'Belum ada riwayat saran & kesan yang tersimpan.',
                       style: TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                   ),
@@ -258,38 +282,67 @@ class _SaranKesanTabState extends State<SaranKesanTab> {
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: box.length,
                 itemBuilder: (context, index) {
-                  final fb = box.getAt(box.length - 1 - index);
+                  final actualIndex = box.length - 1 - index;
+                  final fb = box.getAt(actualIndex);
                   if (fb == null) return const SizedBox.shrink();
 
-                  return Container(
-                    margin: const EdgeInsets.symmetric(vertical: 6),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF131B2E),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF1E293B)),
+                  return Dismissible(
+                    key: Key('fb_${fb.id}_$actualIndex'),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 16),
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF1744),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Icon(Icons.delete, color: Colors.white),
+                          SizedBox(width: 6),
+                          Text('HAPUS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              fb.namaMahasiswa,
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00E5FF), fontSize: 13),
-                            ),
-                            Text(
-                              fb.nim,
-                              style: const TextStyle(color: Colors.grey, fontSize: 11),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text('Kesan: ${fb.kesan}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                        const SizedBox(height: 4),
-                        Text('Saran: ${fb.saran}', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                      ],
+                    onDismissed: (_) => _deleteFeedback(fb, actualIndex),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF131B2E),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF1E293B)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                fb.namaMahasiswa,
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00E5FF), fontSize: 13),
+                              ),
+                              Text(
+                                'NIM: ${fb.nim}',
+                                style: const TextStyle(color: Colors.grey, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Kesan: ${fb.kesan}',
+                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Saran: ${fb.saran}',
+                            style: const TextStyle(color: Colors.white, fontSize: 12),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },

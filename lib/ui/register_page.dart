@@ -1,12 +1,7 @@
-// ==============================================================================
-// LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
-// File: lib/ui/auth/register_page.dart
-// Deskripsi: Layanan Registrasi Akun Hunter Enkripsi SHA-256 (FR-1.1)
-// ==============================================================================
-
+// Halaman Registrasi Akun Pengguna
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import '../onboarding/onboarding_page.dart';
+import '../services/auth_service.dart';
+import 'onboarding_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -16,12 +11,14 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  // Controller input form registrasi
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  // State tampilan form
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   bool _biometricEnabled = false;
@@ -37,6 +34,7 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  // Validasi form dan proses registrasi akun baru
   Future<void> _handleRegister() async {
     if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
       return;
@@ -47,6 +45,7 @@ class _RegisterPageState extends State<RegisterPage> {
       _errorMessage = null;
     });
 
+    // Enkripsi SHA-256 dan penyimpanan data via AuthService
     final res = await AuthService.register(
       username: _usernameController.text.trim(),
       email: _emailController.text.trim(),
@@ -63,13 +62,13 @@ class _RegisterPageState extends State<RegisterPage> {
     if (res['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(res['message'] ?? 'Hunter Berhasil Terdaftar!'),
+          content: Text(res['message'] ?? 'Akun Hunter berhasil didaftarkan.'),
           backgroundColor: const Color(0xFF00E5FF),
           behavior: SnackBarBehavior.floating,
         ),
       );
 
-      // Setelah registrasi sukses, lanjut ke Onboarding Fisik BMI & Target Awal
+      // Navigasi ke halaman onboarding fisik
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const OnboardingPage()),
@@ -77,7 +76,7 @@ class _RegisterPageState extends State<RegisterPage> {
       );
     } else {
       setState(() {
-        _errorMessage = res['message'] ?? 'Registrasi gagal diproses Sistem.';
+        _errorMessage = res['message'] ?? 'Registrasi gagal diproses.';
       });
     }
   }
@@ -101,7 +100,7 @@ class _RegisterPageState extends State<RegisterPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 10),
-              // Header Badge
+              // Label header
               Center(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -133,7 +132,7 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Sistem akan mencatat data Anda ke PostgreSQL & Rantai Blok Anti-Cheat',
+                'Sistem akan mencatat data ke database dan rantai blok anti-manipulasi',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
@@ -142,7 +141,7 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 24),
 
-              // Pesan Error jika ada
+              // Pesan error
               if (_errorMessage != null) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -167,11 +166,12 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 20),
               ],
 
+              // Form data akun
               Form(
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Username Field
+                    // Input Username
                     TextFormField(
                       controller: _usernameController,
                       style: const TextStyle(color: Colors.white),
@@ -203,7 +203,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Email Field
+                    // Input Email
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -236,7 +236,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Password Field
+                    // Input Password
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -280,7 +280,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Confirm Password Field
+                    // Konfirmasi Password
                     TextFormField(
                       controller: _confirmPasswordController,
                       obscureText: _obscureConfirm,
@@ -321,7 +321,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Switch Biometrik
+                    // Opsi Biometrik
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
@@ -353,7 +353,7 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 28),
 
-              // Tombol Submit Register
+              // Tombol Submit Pendaftaran
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleRegister,
                 style: ElevatedButton.styleFrom(
@@ -369,14 +369,17 @@ class _RegisterPageState extends State<RegisterPage> {
                         width: 22,
                         child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.black),
                       )
-                    : const Text(
-                        'AWAKEN AS HUNTER (DAFTAR)',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                    : const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'AWAKEN AS HUNTER (DAFTAR)',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                        ),
                       ),
               ),
               const SizedBox(height: 20),
 
-              // Kembali ke Login
+              // Navigasi kembali ke login
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

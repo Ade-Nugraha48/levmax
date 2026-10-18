@@ -1,10 +1,4 @@
-// ==============================================================================
-// LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
-// File: lib/ui/main_navigation_page.dart
-// Deskripsi: Navigasi Utama 4 Tab (BottomNavigationBar), Pengecekan Pergantian
-//            Hari & Penalti Otomatis (Bab 5 Rules), & Manajemen State Player.
-// ==============================================================================
-
+// Halaman Navigasi Utama Aplikasi
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
@@ -14,8 +8,8 @@ import '../models/quest_model.dart';
 import '../models/user_model.dart';
 import '../services/notification_service.dart';
 import '../services/supabase_api_service.dart';
-import 'penalty/game_over_page.dart';
-import 'penalty/penalty_minigame_page.dart';
+import 'game_over_page.dart';
+import 'penalty_minigame_page.dart';
 import 'tabs/status_quest_tab.dart';
 import 'tabs/dungeon_guild_tab.dart';
 import 'tabs/saran_kesan_tab.dart';
@@ -29,17 +23,19 @@ class MainNavigationPage extends StatefulWidget {
 }
 
 class _MainNavigationPageState extends State<MainNavigationPage> {
-  int _currentIndex = 0;
+  // Indeks tab aktif
+  int _selectedIndex = 0;
   UserModel? _currentPlayer;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    // Memuat data pemain dan mengecek penalti harian
     _loadPlayerAndCheckPenalty();
   }
 
-  /// Memuat profil player dan menjalankan pemeriksaan pergantian hari & penalti (Bab 5)
+  // Pengecekan pergantian hari dan status penalti
   Future<void> _loadPlayerAndCheckPenalty() async {
     final uid = await UserInfo.getUserID();
     UserModel? player;
@@ -56,7 +52,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       await SupabaseApiService.savePlayerCache(player);
     }
 
-    // Periksa apakah HP <= 0 (Game Over)
+    // Pengecekan kondisi Game Over jika HP <= 0
     if (player.hp <= 0) {
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -66,25 +62,22 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       return;
     }
 
-    // ========================================================================
-    // ATURAN PERGANTIAN HARI & SISTEM PENALTI (BAB 5 RULES)
-    // ========================================================================
+    // Validasi pergantian tanggal harian (lewat 23:59)
     final today = DateTime.now().toIso8601String().substring(0, 10);
     if (player.lastActiveDate.isNotEmpty && player.lastActiveDate != today) {
-      // Terjadi pergantian hari (melewati pukul 23:59)
       final questBox = Hive.box<QuestModel>(HiveBoxes.questBox);
       final hasIncompleteQuests = questBox.values.any((q) => !q.isCompleted);
 
       if (hasIncompleteQuests) {
         int hpDeduction = 20;
         if (player.isPenaltyActive) {
-          hpDeduction = 40; // Double penalty jika penalti sebelumnya diabaikan
+          hpDeduction = 40;
         }
 
         final newHp = max(0, player.hp - hpDeduction);
         const isPenaltyActive = true;
 
-        // Tambahkan Extra Penalty Quest
+        // Tambahkan quest hukuman ekstra
         final penaltyQuest = QuestModel(
           id: 'penalty_quest_${DateTime.now().millisecondsSinceEpoch}',
           title: 'EXTRA QUEST: HUKUMAN SISTEM',
@@ -120,14 +113,12 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           return;
         }
 
-        // Tampilkan prompt navigasi ke Penalty Mini-Game
         if (mounted) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _showPenaltyWarningDialog();
           });
         }
       } else {
-        // Hari berganti dan semua quest kemarin selesai
         player = player.copyWith(lastActiveDate: today);
         await SupabaseApiService.updateUser(player);
       }
@@ -141,6 +132,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     }
   }
 
+  // Dialog peringatan penalti aktif
   void _showPenaltyWarningDialog() {
     showDialog(
       context: context,
@@ -190,6 +182,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       );
     }
 
+    // Daftar halaman 4 tab
     final pages = [
       StatusQuestTab(
         player: _currentPlayer!,
@@ -250,13 +243,13 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           ),
         ],
       ),
-      body: pages[_currentIndex],
+      body: pages[_selectedIndex],
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: Color(0xFF1E293B), width: 1.0)),
         ),
         child: BottomNavigationBar(
-          currentIndex: _currentIndex,
+          currentIndex: _selectedIndex,
           backgroundColor: const Color(0xFF0A0E1A),
           selectedItemColor: const Color(0xFF00E5FF),
           unselectedItemColor: Colors.grey,
@@ -265,7 +258,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           unselectedFontSize: 10,
           onTap: (index) {
             setState(() {
-              _currentIndex = index;
+              _selectedIndex = index;
             });
           },
           items: const [
