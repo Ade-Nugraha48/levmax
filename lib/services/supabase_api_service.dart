@@ -6,8 +6,10 @@
 // ==============================================================================
 
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:hive/hive.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../helpers/boxes.dart';
 import '../models/user_model.dart';
 import '../models/quest_model.dart';
@@ -15,11 +17,16 @@ import '../models/block_model.dart';
 import '../models/feedback_model.dart';
 
 class SupabaseApiService {
-  // Ganti URL dan ANON KEY dengan endpoint project Supabase Anda jika ada
-  static String supabaseUrl = 'https://YOUR_SUPABASE_PROJECT_ID.supabase.co';
-  static String supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+  // URL dan Publishable Anon Key project Supabase
+  static String supabaseUrl = 'https://eoujrrvbrqotbnhsgjni.supabase.co';
+  static String supabaseAnonKey = 'sb_publishable_BCwFIi7ZpuBONB-rLMg4Jw_sB0NFxCb';
+
+  /// Instance SupabaseClient resmi dari package supabase_flutter
+  static SupabaseClient get client => Supabase.instance.client;
 
   static bool get isConfigured =>
+      supabaseUrl.isNotEmpty &&
+      supabaseAnonKey.isNotEmpty &&
       !supabaseUrl.contains('YOUR_SUPABASE_PROJECT_ID') &&
       !supabaseAnonKey.contains('YOUR_SUPABASE_ANON_KEY');
 
@@ -150,6 +157,15 @@ class SupabaseApiService {
     try {
       final uri = Uri.parse('$supabaseUrl/rest/v1/users');
       final payload = user.toMap()..remove('id'); // ID dibuat otomatis SERIAL oleh PostgreSQL
+      
+      // Sanitasi tanggal agar sesuai tipe PostgreSQL
+      if (payload['last_active_date'] == null || (payload['last_active_date'] as String).isEmpty) {
+        payload['last_active_date'] = DateTime.now().toIso8601String().substring(0, 10);
+      }
+      if (payload['created_at'] == null || (payload['created_at'] as String).isEmpty) {
+        payload.remove('created_at');
+      }
+
       final res = await http
           .post(uri, headers: _headers, body: jsonEncode(payload))
           .timeout(const Duration(seconds: 8));
@@ -161,9 +177,11 @@ class SupabaseApiService {
           await savePlayerCache(createdUser);
           return createdUser;
         }
+      } else {
+        debugPrint('Supabase createUser error: ${res.statusCode} - ${res.body}');
       }
-    } catch (_) {
-      // Jika jaringan bermasalah saat demo, gunakan data lokal
+    } catch (e) {
+      debugPrint('Supabase createUser exception: $e');
     }
     return user;
   }
@@ -180,12 +198,23 @@ class SupabaseApiService {
     try {
       final uri = Uri.parse('$supabaseUrl/rest/v1/users?id=eq.${user.id}');
       final payload = user.toMap()..remove('id');
+      if (payload['last_active_date'] == null || (payload['last_active_date'] as String).isEmpty) {
+        payload['last_active_date'] = DateTime.now().toIso8601String().substring(0, 10);
+      }
+      if (payload['created_at'] == null || (payload['created_at'] as String).isEmpty) {
+        payload.remove('created_at');
+      }
+
       final res = await http
           .patch(uri, headers: _headers, body: jsonEncode(payload))
           .timeout(const Duration(seconds: 8));
 
+      if (res.statusCode != 200 && res.statusCode != 204) {
+        debugPrint('Supabase updateUser error: ${res.statusCode} - ${res.body}');
+      }
       return res.statusCode == 200 || res.statusCode == 204;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Supabase updateUser exception: $e');
       return true; // Sukses di cache lokal
     }
   }

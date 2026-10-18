@@ -8,6 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'helpers/boxes.dart';
 import 'helpers/user_info.dart';
@@ -41,6 +42,16 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
+
+  // Inisialisasi Lapisan 3 DB: Supabase Cloud Database (Backend Online)
+  try {
+    await Supabase.initialize(
+      url: SupabaseApiService.supabaseUrl,
+      publishableKey: SupabaseApiService.supabaseAnonKey,
+    );
+  } catch (e) {
+    debugPrint('Supabase initialization error: $e');
+  }
 
   // 1. Inisialisasi Lapisan 2 DB: Hive NoSQL
   await Hive.initFlutter();
