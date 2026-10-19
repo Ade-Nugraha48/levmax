@@ -55,7 +55,7 @@ class _BiometricGatePageState extends State<BiometricGatePage>
     super.dispose();
   }
 
-  /// Memuat profil dan langsung memicu pemindaian biometrik yang aktif
+  /// Memuat profil biometrik tanpa memicu pemindaian otomatis
   Future<void> _loadUserAndTriggerScan() async {
     final bioEmail = await UserInfo.getBiometricEmail();
     final username = await UserInfo.getUsername();
@@ -71,19 +71,8 @@ class _BiometricGatePageState extends State<BiometricGatePage>
         } else if (username != null && username.isNotEmpty) {
           _userIdentifier = username;
         }
+        _statusMessage = 'PILIH METODE PEMINDAIAN DI BAWAH';
       });
-    }
-
-    // Beri jeda 400ms agar UI me-render animasi terlebih dahulu
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (mounted) {
-      if (_faceEnabled) {
-        _executeFaceScan();
-      } else if (_fingerprintEnabled) {
-        _executeFingerprintScan();
-      } else {
-        _executeGeneralScan();
-      }
     }
   }
 

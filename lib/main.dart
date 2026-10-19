@@ -19,7 +19,6 @@ import 'services/notification_service.dart';
 import 'services/blockchain_service.dart';
 import 'services/supabase_api_service.dart';
 import 'ui/auth/login_page.dart';
-import 'ui/auth/biometric_gate_page.dart';
 import 'ui/onboarding/onboarding_page.dart';
 import 'ui/main_navigation_page.dart';
 import 'ui/penalty/game_over_page.dart';
@@ -181,29 +180,20 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _checkAuthAndNavigate() async {
     await Future.delayed(const Duration(milliseconds: 1500));
 
-    // Periksa apakah sesi kedaluwarsa (> 60 menit)
+    // Periksa apakah sesi kedaluwarsa (> 60 menit) atau proteksi biometrik aktif
     final isExpired = await UserInfo.checkSessionTimeout();
     final isLoggedIn = await UserInfo.getLoginStatus();
+    final isBiometricEnabled = await UserInfo.getBiometricEnabled();
 
     if (!mounted) return;
 
-    if (!isLoggedIn || isExpired) {
+    // Jika belum login, sesi kedaluwarsa, atau proteksi biometrik aktif:
+    // Arahkan ke Menu Autentikasi (LoginPage) yang ramah & fleksibel.
+    // Pengguna memiliki kebebasan penuh: login password, klik Face ID, atau klik Fingerprint.
+    if (!isLoggedIn || isExpired || isBiometricEnabled) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginPage()),
-      );
-      return;
-    }
-
-    // Alur 3: Jika sesi <= 60 menit dan biometric_enabled == true,
-    // tahan pengguna di layar System Biometric Lock Screen (BiometricGatePage)
-    final isBiometricEnabled = await UserInfo.getBiometricEnabled();
-    if (!mounted) return;
-
-    if (isBiometricEnabled) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const BiometricGatePage()),
       );
       return;
     }
