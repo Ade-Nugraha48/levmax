@@ -18,6 +18,7 @@ import '../../services/gemini_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/supabase_api_service.dart';
 import '../penalty/penalty_minigame_page.dart';
+import '../quests/sensor_study_page.dart';
 
 class StatusQuestTab extends StatefulWidget {
   final UserModel player;
@@ -1389,14 +1390,29 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
         : (quest.isCompleted ? 1.0 : 0.0);
     final int progressPercent = (progressRatio * 100).toInt();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: const Color(0xFF101725),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0x14FFFFFF), width: 1),
-      ),
+    return GestureDetector(
+      onTap: () {
+        if (categoryLower == 'study' || categoryLower == 'work') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SensorStudyPage(
+                quest: quest,
+                player: widget.player,
+                onQuestCompleted: () => _toggleQuestCompletion(quest),
+              ),
+            ),
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: const Color(0xFF101725),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0x14FFFFFF), width: 1),
+        ),
       child: Stack(
         children: [
           // Garis Aksen Neon Kiri (4px)
@@ -1549,7 +1565,18 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                     ),
                     GestureDetector(
                       onTap: () {
-                        if (quest.isCompleted) {
+                        if (categoryLower == 'study' || categoryLower == 'work') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SensorStudyPage(
+                                quest: quest,
+                                player: widget.player,
+                                onQuestCompleted: () => _toggleQuestCompletion(quest),
+                              ),
+                            ),
+                          );
+                        } else if (quest.isCompleted) {
                           _toggleQuestCompletion(quest);
                         } else {
                           _incrementQuestProgress(quest);
@@ -1594,8 +1621,9 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ==========================================================================
   // KOMPONEN 6: BANNER STREAK SAFEGUARD ACTIVE
