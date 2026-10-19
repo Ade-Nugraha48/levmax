@@ -36,6 +36,9 @@ dependencies:
   # Notifikasi Lokal
   flutter_local_notifications: ^17.2.3
   
+  # Typography & Stitch Design System Fonts
+  google_fonts: ^6.2.1
+
   # Utility, Format Tanggal, & Kurs
   intl: ^0.19.0
   supabase_flutter: ^2.18.3

@@ -5,6 +5,7 @@
 // ==============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class LevMaxTheme {
   // Palet Warna Eksak Desain Google Stitch
@@ -38,14 +39,14 @@ class LevMaxTheme {
   static const Color onSurfaceVariant = Color(0xFFB9CACB); // Teks sekunder
   static const Color outline = Color(0xFF849495); // Teks redup / reset time
 
-  // Tipografi Spesifik
+  // Tipografi Spesifik Sesuai Google Stitch Design System
   static TextStyle headline({
     double fontSize = 16,
     FontWeight fontWeight = FontWeight.w700,
     Color color = onSurface,
     double letterSpacing = 0.5,
   }) {
-    return TextStyle(
+    return GoogleFonts.spaceGrotesk(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
@@ -59,8 +60,7 @@ class LevMaxTheme {
     Color color = onSurfaceVariant,
     double letterSpacing = 1.0,
   }) {
-    return TextStyle(
-      fontFamily: 'monospace',
+    return GoogleFonts.jetBrainsMono(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,

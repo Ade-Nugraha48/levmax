@@ -793,8 +793,9 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: LevMaxTheme.surfaceContainer,
+        color: const Color(0xFF101725),
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0x14FFFFFF), width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.6),
@@ -829,7 +830,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                 'HUNTER HUD // ID: #${widget.player.id.toString().padLeft(6, '0')}',
                 style: LevMaxTheme.mono(
                   fontSize: 10,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   color: LevMaxTheme.primaryContainer,
                   letterSpacing: 1.2,
                 ),
@@ -838,8 +839,9 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: LevMaxTheme.surfaceContainerLowest,
+                  color: const Color(0xFF090D14),
                   borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: const Color(0x22EAB308), width: 1),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -865,46 +867,37 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Avatar & Rank Badge
+              // Avatar & Rank Badge (Stitch Anime Hunter Style)
               Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Container(
-                    width: 64,
-                    height: 64,
+                    width: 68,
+                    height: 68,
                     decoration: BoxDecoration(
-                      color: LevMaxTheme.surfaceContainerLowest,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: LevMaxTheme.primaryContainer.withValues(alpha: 0.3)),
                       boxShadow: const [
                         BoxShadow(
-                          color: Color(0x3300F0FF),
-                          blurRadius: 12,
+                          color: Color(0x4400F0FF),
+                          blurRadius: 14,
                         ),
                       ],
                     ),
-                    child: Center(
-                      child: Text(
-                        widget.player.rank,
-                        style: LevMaxTheme.headline(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          color: LevMaxTheme.primaryContainer,
-                        ),
-                      ),
+                    child: CustomPaint(
+                      painter: HunterPortraitPainter(),
                     ),
                   ),
                   Positioned(
-                    bottom: -4,
-                    right: -4,
+                    bottom: -3,
+                    right: -3,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: LevMaxTheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(3),
+                        color: const Color(0xFF00F0FF),
+                        borderRadius: BorderRadius.circular(4),
                         boxShadow: const [
                           BoxShadow(
-                            color: LevMaxTheme.primaryContainer,
+                            color: Color(0x8800F0FF),
                             blurRadius: 8,
                           ),
                         ],
@@ -912,9 +905,10 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                       child: Text(
                         'RANK ${widget.player.rank}',
                         style: LevMaxTheme.mono(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: LevMaxTheme.onPrimaryFixed,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF001F24),
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
@@ -932,15 +926,20 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'PLAYER ${widget.player.username.toUpperCase()}',
-                          style: LevMaxTheme.headline(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: LevMaxTheme.onSurface,
-                            letterSpacing: 0.5,
+                        Expanded(
+                          child: Text(
+                            'PLAYER ${widget.player.username.toUpperCase()}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: LevMaxTheme.headline(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: LevMaxTheme.onSurface,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
@@ -962,31 +961,35 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                     const SizedBox(height: 4),
 
                     // Baris Class & Title
-                    Row(
-                      children: [
-                        const Icon(Icons.shield_outlined, size: 14, color: LevMaxTheme.secondary),
-                        const SizedBox(width: 4),
-                        Text(
-                          'SHADOW INITIATE',
-                          style: LevMaxTheme.mono(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: LevMaxTheme.secondary,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.shield_outlined, size: 14, color: LevMaxTheme.secondary),
+                          const SizedBox(width: 4),
+                          Text(
+                            'SHADOW INITIATE',
+                            style: LevMaxTheme.mono(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: LevMaxTheme.secondary,
+                            ),
                           ),
-                        ),
-                        Text(
-                          ' • ',
-                          style: LevMaxTheme.mono(fontSize: 10, color: LevMaxTheme.outline),
-                        ),
-                        Text(
-                          'TITLE: AWAKENED',
-                          style: LevMaxTheme.mono(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: LevMaxTheme.tertiaryFixedDim,
+                          Text(
+                            ' • ',
+                            style: LevMaxTheme.mono(fontSize: 10, color: LevMaxTheme.outline),
                           ),
-                        ),
-                      ],
+                          Text(
+                            'TITLE: AWAKENED',
+                            style: LevMaxTheme.mono(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: LevMaxTheme.tertiaryFixedDim,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 8),
 
@@ -1283,65 +1286,99 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
   // KOMPONEN 5: KARTU QUEST TAKTIS (_buildTacticalQuestCard)
   // ==========================================================================
   Widget _buildTacticalQuestCard(QuestModel quest) {
-    // Penentuan Tema Dinamis berdasarkan Kategori
+    // Penentuan Tema Dinamis berdasarkan Kategori Sesuai Google Stitch HUD
     final categoryLower = quest.category.toLowerCase();
     Color accentColor = LevMaxTheme.primaryContainer;
     String subLabel = 'PHYSICAL SENSOR (ACCELEROMETER)';
     String badgeText = 'DAILY';
-    Color badgeBg = LevMaxTheme.surfaceContainerHighest;
-    Color badgeTextColor = LevMaxTheme.onSurface;
+    Color badgeBg = const Color(0xFF1E293B);
+    Color badgeTextColor = const Color(0xFF94A3B8);
+    Border? badgeBorder;
     String actionLabel = 'START QUEST';
-    Color actionBg = LevMaxTheme.primaryContainer;
-    Color actionTextColor = LevMaxTheme.onPrimaryFixed;
+    Color actionBg = const Color(0xFF00F0FF);
+    Color actionTextColor = const Color(0xFF001F24);
+    List<BoxShadow>? actionShadow = const [
+      BoxShadow(
+        color: Color(0x7700F0FF),
+        blurRadius: 16,
+        spreadRadius: 1,
+      ),
+    ];
+    Border? actionBorder;
     IconData actionIcon = Icons.play_arrow;
     IconData questIcon = Icons.fitness_center;
     String telemetryLabel = 'PROGRESS';
 
     if (categoryLower == 'workout') {
-      accentColor = LevMaxTheme.primaryContainer; // #00F0FF
+      accentColor = const Color(0xFF00F0FF); // #00F0FF
       subLabel = 'PHYSICAL SENSOR (ACCELEROMETER)';
       badgeText = quest.isCompleted ? 'COMPLETED' : 'DAILY';
-      badgeBg = LevMaxTheme.surfaceContainerHighest;
-      badgeTextColor = LevMaxTheme.onSurface;
+      badgeBg = const Color(0xFF1E293B);
+      badgeTextColor = const Color(0xFF94A3B8);
       actionLabel = quest.isCompleted ? 'COMPLETED' : 'START QUEST';
-      actionBg = quest.isCompleted ? LevMaxTheme.surfaceContainerHigh : LevMaxTheme.primaryContainer;
-      actionTextColor = quest.isCompleted ? LevMaxTheme.onSurfaceVariant : LevMaxTheme.onPrimaryFixed;
+      actionBg = quest.isCompleted ? const Color(0xFF1E293B) : const Color(0xFF00F0FF);
+      actionTextColor = quest.isCompleted ? const Color(0xFF94A3B8) : const Color(0xFF001F24);
       actionIcon = quest.isCompleted ? Icons.check : Icons.play_arrow;
+      actionShadow = quest.isCompleted
+          ? null
+          : const [
+              BoxShadow(
+                color: Color(0x7700F0FF),
+                blurRadius: 16,
+                spreadRadius: 1,
+              ),
+            ];
       questIcon = Icons.fitness_center;
       telemetryLabel = 'PROGRESS';
     } else if (categoryLower == 'cardio') {
-      accentColor = LevMaxTheme.tertiaryContainer; // #65F2B5
+      accentColor = const Color(0xFF65F2B5); // #65F2B5
       subLabel = 'GPS DUNGEON TRACKING';
       badgeText = quest.isCompleted ? 'COMPLETED' : 'IN PROGRESS';
-      badgeBg = LevMaxTheme.tertiaryContainer.withValues(alpha: 0.15);
-      badgeTextColor = LevMaxTheme.tertiaryContainer;
+      badgeBg = const Color(0x2610B981);
+      badgeBorder = Border.all(color: const Color(0x4D10B981), width: 1);
+      badgeTextColor = const Color(0xFF4EDEA3);
       actionLabel = quest.isCompleted ? 'COMPLETED' : 'CONTINUE';
-      actionBg = quest.isCompleted ? LevMaxTheme.surfaceContainerHigh : LevMaxTheme.surfaceContainerHigh;
+      actionBg = const Color(0xFF192231);
+      actionBorder = Border.all(color: const Color(0x33FFFFFF), width: 1);
       actionTextColor = const Color(0xFFDBFCFF);
-      actionIcon = Icons.navigation;
+      actionIcon = quest.isCompleted ? Icons.check : Icons.navigation;
+      actionShadow = const [
+        BoxShadow(
+          color: Colors.black45,
+          blurRadius: 6,
+        ),
+      ];
       questIcon = Icons.directions_run;
       telemetryLabel = 'DISTANCE';
     } else if (categoryLower == 'study' || categoryLower == 'work') {
-      accentColor = LevMaxTheme.secondary; // #D2BBFF
+      accentColor = const Color(0xFFC084FC); // #C084FC
       subLabel = 'GYROSCOPE POSTURE GUARDIAN';
       badgeText = quest.isCompleted ? 'COMPLETED' : 'ACTIVE SYNC';
-      badgeBg = LevMaxTheme.secondaryContainer.withValues(alpha: 0.3);
-      badgeTextColor = const Color(0xFFEADDFF);
+      badgeBg = const Color(0xFF2E1065);
+      badgeBorder = Border.all(color: const Color(0x668B5CF6), width: 1);
+      badgeTextColor = const Color(0xFFD8B4FE);
       actionLabel = quest.isCompleted ? 'COMPLETED' : 'FOCUS';
-      actionBg = quest.isCompleted ? LevMaxTheme.surfaceContainerHigh : LevMaxTheme.secondaryContainer;
-      actionTextColor = const Color(0xFFC9AEFF);
-      actionIcon = Icons.center_focus_strong;
-      questIcon = categoryLower == 'study' ? Icons.menu_book : Icons.terminal;
+      actionBg = const Color(0xFF7C3AED);
+      actionTextColor = Colors.white;
+      actionIcon = quest.isCompleted ? Icons.check : Icons.center_focus_strong;
+      actionShadow = const [
+        BoxShadow(
+          color: Color(0x777C3AED),
+          blurRadius: 14,
+          spreadRadius: 1,
+        ),
+      ];
+      questIcon = categoryLower == 'study' ? Icons.timer_outlined : Icons.terminal;
       telemetryLabel = 'DEEP WORK TIMER';
     } else if (categoryLower == 'skincare') {
-      accentColor = LevMaxTheme.secondary;
+      accentColor = const Color(0xFFD2BBFF);
       subLabel = 'DAILY LOOKSMAXXING PROTOCOL';
       badgeText = quest.isCompleted ? 'COMPLETED' : 'ROUTINE';
-      badgeBg = LevMaxTheme.surfaceContainerHighest;
-      badgeTextColor = LevMaxTheme.onSurface;
+      badgeBg = const Color(0xFF1E293B);
+      badgeTextColor = const Color(0xFF94A3B8);
       actionLabel = quest.isCompleted ? 'COMPLETED' : 'COMPLETE';
-      actionBg = LevMaxTheme.primaryContainer;
-      actionTextColor = LevMaxTheme.onPrimaryFixed;
+      actionBg = const Color(0xFF00F0FF);
+      actionTextColor = const Color(0xFF001F24);
       actionIcon = Icons.check;
       questIcon = Icons.spa;
       telemetryLabel = 'PROGRESS';
@@ -1356,8 +1393,9 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
       margin: const EdgeInsets.only(bottom: 12),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: LevMaxTheme.surfaceContainer,
+        color: const Color(0xFF101725),
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0x14FFFFFF), width: 1),
       ),
       child: Stack(
         children: [
@@ -1394,8 +1432,9 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: LevMaxTheme.surfaceContainerLowest,
+                        color: const Color(0xFF090D14),
                         borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: accentColor.withValues(alpha: 0.2)),
                       ),
                       child: Center(
                         child: Icon(questIcon, size: 20, color: accentColor),
@@ -1432,6 +1471,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                       decoration: BoxDecoration(
                         color: badgeBg,
                         borderRadius: BorderRadius.circular(4),
+                        border: badgeBorder,
                       ),
                       child: Text(
                         badgeText,
@@ -1473,7 +1513,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                   progress: progressRatio,
                   color: accentColor,
                   height: 8,
-                  trackColor: LevMaxTheme.surfaceContainerLowest,
+                  trackColor: const Color(0xFF090D14),
                   glowBlurRadius: 8,
                 ),
                 const SizedBox(height: 14),
@@ -1522,17 +1562,8 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                         decoration: BoxDecoration(
                           color: actionBg,
                           borderRadius: BorderRadius.circular(4),
-                          border: actionBg == LevMaxTheme.surfaceContainerHigh
-                              ? Border.all(color: LevMaxTheme.surfaceContainerHighest, width: 1)
-                              : null,
-                          boxShadow: actionBg == LevMaxTheme.primaryContainer
-                              ? const [
-                                  BoxShadow(
-                                    color: Color(0x6600F0FF),
-                                    blurRadius: 10,
-                                  ),
-                                ]
-                              : null,
+                          border: actionBorder,
+                          boxShadow: actionShadow,
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -1546,8 +1577,9 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                                 overflow: TextOverflow.ellipsis,
                                 style: LevMaxTheme.mono(
                                   fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w800,
                                   color: actionTextColor,
+                                  letterSpacing: 0.8,
                                 ),
                               ),
                             ),
@@ -1593,20 +1625,28 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'STREAK SAFEGUARD ACTIVE',
-                  style: LevMaxTheme.mono(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: LevMaxTheme.onSurface,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'STREAK SAFEGUARD ACTIVE',
+                    style: LevMaxTheme.mono(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: LevMaxTheme.onSurface,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'Day 12 Consecutive Protocol Maintained',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: LevMaxTheme.onSurfaceVariant,
+                const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Day 12 Consecutive Protocol Maintained',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: LevMaxTheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],
@@ -1646,79 +1686,75 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
   }
 
   // ==========================================================================
-  // KOMPONEN 7: DUAL FLOATING ACTION OVERLAY
+  // KOMPONEN 7: BOTTOM ACTION ROW (+ TOMORROW PLAN & SYSTEM EYE)
   // ==========================================================================
-  Widget _buildDualFloatingOverlay() {
-    return Positioned(
-      bottom: 16,
-      left: 16,
-      right: 16,
-      child: Row(
-        children: [
-          // Tombol Kiri: + TOMORROW PLAN
-          Expanded(
-            child: GestureDetector(
-              onTap: _openAddPlanModal,
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: LevMaxTheme.surfaceContainer.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: LevMaxTheme.primaryContainer.withValues(alpha: 0.25),
-                  ),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x3300F0FF),
-                      blurRadius: 10,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.calendar_today, size: 16, color: LevMaxTheme.primaryContainer),
-                    const SizedBox(width: 8),
-                    Text(
-                      '+ TOMORROW PLAN',
-                      style: LevMaxTheme.mono(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFFDBFCFF),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Tombol Kanan: AI "THE SYSTEM" (Gemini Conduit)
-          GestureDetector(
-            onTap: _openSystemChatSheet,
+  Widget _buildBottomActionRow() {
+    return Row(
+      children: [
+        // Tombol Kiri: + TOMORROW PLAN
+        Expanded(
+          child: GestureDetector(
+            onTap: _openAddPlanModal,
             child: Container(
-              width: 48,
-              height: 48,
-              decoration: const BoxDecoration(
-                color: LevMaxTheme.primaryContainer,
-                shape: BoxShape.circle,
-                boxShadow: [
+              height: 46,
+              decoration: BoxDecoration(
+                color: const Color(0xFF101725),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: LevMaxTheme.primaryContainer.withValues(alpha: 0.25),
+                ),
+                boxShadow: const [
                   BoxShadow(
-                    color: Color(0x6600F0FF),
-                    blurRadius: 16,
-                    spreadRadius: 2,
+                    color: Color(0x2200F0FF),
+                    blurRadius: 10,
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
-              child: const Center(
-                child: Icon(Icons.visibility, color: LevMaxTheme.onPrimaryFixed, size: 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.calendar_today, size: 16, color: LevMaxTheme.primaryContainer),
+                  const SizedBox(width: 8),
+                  Text(
+                    '+ TOMORROW PLAN',
+                    style: LevMaxTheme.mono(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFFDBFCFF),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 12),
+
+        // Tombol Kanan: AI "THE SYSTEM" (Gemini Conduit)
+        GestureDetector(
+          onTap: _openSystemChatSheet,
+          child: Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              color: LevMaxTheme.primaryContainer,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x8800F0FF),
+                  blurRadius: 18,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Icon(Icons.visibility, color: Color(0xFF001F24), size: 22),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1727,24 +1763,22 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
     return Container(
       color: LevMaxTheme.background,
       child: SafeArea(
-        child: Stack(
+        child: Column(
           children: [
-            Column(
-              children: [
-                // Komponen 1: Sticky Tactical Header
-                _buildStickyTacticalHeader(),
+            // Komponen 1: Sticky Tactical Header
+            _buildStickyTacticalHeader(),
 
-                // Scrollable Content
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 90), // Berikan ruang untuk floating overlay
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Komponen 2: Player Status Window
-                        _buildPlayerStatusHeroCard(),
-                        const SizedBox(height: 16),
+            // Scrollable Content
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Komponen 2: Player Status Window
+                    _buildPlayerStatusHeroCard(),
+                    const SizedBox(height: 16),
 
                         // Komponen 3: Search Bar & Tactical Filter Chips
                         _buildSearchBarAndFilters(),
@@ -1845,21 +1879,139 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                         ),
                         const SizedBox(height: 8),
 
-                        // Komponen 6: Banner Streak Safeguard
-                        _buildStreakSafeguardBanner(),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+                    // Komponen 6: Banner Streak Safeguard
+                    _buildStreakSafeguardBanner(),
+                    const SizedBox(height: 14),
 
-            // Komponen 7: Dual Floating Action Overlay
-            _buildDualFloatingOverlay(),
+                    // Komponen 7: Bottom Action Row (+ TOMORROW PLAN & SYSTEM EYE)
+                    _buildBottomActionRow(),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+
+// ==============================================================================
+// CUSTOM PAINTER: HUNTER SUNG JIN-WOO AVATAR (AWAKENED HUD PORTRAIT)
+// ==============================================================================
+class HunterPortraitPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(8));
+
+    // 1. Dark Gradient Background (Mana Aura)
+    final bgPaint = Paint()
+      ..shader = const RadialGradient(
+        center: Alignment(0.0, -0.2),
+        radius: 0.9,
+        colors: [
+          Color(0xFF1E293B),
+          Color(0xFF0F172A),
+          Color(0xFF080D18),
+        ],
+      ).createShader(rect);
+    canvas.drawRRect(rrect, bgPaint);
+
+    canvas.save();
+    canvas.clipRRect(rrect);
+
+    // 2. Tactical Background Grid
+    final gridPaint = Paint()
+      ..color = const Color(0x1500F0FF)
+      ..strokeWidth = 0.6;
+    for (double x = 0; x < size.width; x += 12) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    }
+    for (double y = 0; y < size.height; y += 12) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    // 3. Shadow Cloak / Hunter Silhouette
+    final cloakPaint = Paint()..color = const Color(0xFF060911);
+    final cloakPath = Path()
+      ..moveTo(size.width * 0.12, size.height)
+      ..lineTo(size.width * 0.22, size.height * 0.58)
+      ..lineTo(size.width * 0.35, size.height * 0.42)
+      ..lineTo(size.width * 0.42, size.height * 0.32)
+      ..lineTo(size.width * 0.58, size.height * 0.32)
+      ..lineTo(size.width * 0.65, size.height * 0.42)
+      ..lineTo(size.width * 0.78, size.height * 0.58)
+      ..lineTo(size.width * 0.88, size.height)
+      ..close();
+    canvas.drawPath(cloakPath, cloakPaint);
+
+    // 4. Anime Hair Spikes (Iconic Jin-Woo bangs)
+    final hairPaint = Paint()..color = const Color(0xFF10192E);
+    final hairPath = Path()
+      ..moveTo(size.width * 0.30, size.height * 0.46)
+      ..lineTo(size.width * 0.36, size.height * 0.22)
+      ..lineTo(size.width * 0.43, size.height * 0.36)
+      ..lineTo(size.width * 0.50, size.height * 0.18)
+      ..lineTo(size.width * 0.57, size.height * 0.36)
+      ..lineTo(size.width * 0.64, size.height * 0.22)
+      ..lineTo(size.width * 0.70, size.height * 0.46)
+      ..close();
+    canvas.drawPath(hairPath, hairPaint);
+
+    // 5. Glowing Cyan Hunter Eyes (Awakened Monarch Gaze)
+    final eyeGlowPaint = Paint()
+      ..color = const Color(0x9900F0FF)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    canvas.drawCircle(Offset(size.width * 0.42, size.height * 0.46), 4, eyeGlowPaint);
+    canvas.drawCircle(Offset(size.width * 0.58, size.height * 0.46), 4, eyeGlowPaint);
+
+    final eyeCorePaint = Paint()..color = const Color(0xFF00F0FF);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(size.width * 0.42, size.height * 0.46), width: 6, height: 2),
+        const Radius.circular(1),
+      ),
+      eyeCorePaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(size.width * 0.58, size.height * 0.46), width: 6, height: 2),
+        const Radius.circular(1),
+      ),
+      eyeCorePaint,
+    );
+
+    // Eye flare horizontal beam
+    final beamPaint = Paint()
+      ..shader = const LinearGradient(
+        colors: [Colors.transparent, Color(0xDD00F0FF), Colors.transparent],
+      ).createShader(Rect.fromLTWH(0, size.height * 0.44, size.width, 4));
+    canvas.drawRect(Rect.fromLTWH(size.width * 0.20, size.height * 0.45, size.width * 0.60, 2), beamPaint);
+
+    // 6. Cybernetic Collar
+    final collarPaint = Paint()
+      ..color = const Color(0x5500F0FF)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    final collarPath = Path()
+      ..moveTo(size.width * 0.36, size.height * 0.64)
+      ..lineTo(size.width * 0.50, size.height * 0.70)
+      ..lineTo(size.width * 0.64, size.height * 0.64);
+    canvas.drawPath(collarPath, collarPaint);
+
+    canvas.restore();
+
+    // 7. Outer Border
+    final borderPaint = Paint()
+      ..color = const Color(0x8800F0FF)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    canvas.drawRRect(rrect, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
