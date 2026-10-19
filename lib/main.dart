@@ -17,9 +17,9 @@ import 'models/block_model.dart';
 import 'models/feedback_model.dart';
 import 'services/notification_service.dart';
 import 'services/blockchain_service.dart';
-import 'services/auth_service.dart';
 import 'services/supabase_api_service.dart';
 import 'ui/auth/login_page.dart';
+import 'ui/auth/biometric_gate_page.dart';
 import 'ui/onboarding/onboarding_page.dart';
 import 'ui/main_navigation_page.dart';
 import 'ui/penalty/game_over_page.dart';
@@ -195,20 +195,17 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    // Jika sedang login dan biometrik aktif, minta otentikasi
+    // Alur 3: Jika sesi <= 60 menit dan biometric_enabled == true,
+    // tahan pengguna di layar System Biometric Lock Screen (BiometricGatePage)
     final isBiometricEnabled = await UserInfo.getBiometricEnabled();
+    if (!mounted) return;
+
     if (isBiometricEnabled) {
-      final authOk = await AuthService.authenticateWithBiometrics(
-        reason: 'Verifikasi identitas Hunter untuk membuka Status Window',
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const BiometricGatePage()),
       );
-      if (!authOk) {
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginPage()),
-        );
-        return;
-      }
+      return;
     }
 
     // Periksa status onboarding

@@ -39,6 +39,8 @@ dependencies:
   # Utility, Format Tanggal, & Kurs
   intl: ^0.19.0
   supabase_flutter: ^2.18.3
+  camera: ^0.12.1
+  google_mlkit_face_detection: ^0.15.1
 
 dev_dependencies:
   flutter_test:

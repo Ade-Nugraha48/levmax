@@ -2,29 +2,25 @@
 // LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
 // File: lib/services/auth_service.dart
 // Deskripsi: Layanan Autentikasi Modern Solo Leveling - Enkripsi SHA-256 (Tanpa Firebase),
-//            Biometrik Fingerprint & Face ID (Samsung Galaxy M31 / Android), 
+//            Token-Bound Biometric Session (Face ID & Fingerprint via BiometricService),
 //            REST API Supabase via package:http, & Manajemen Sesi SharedPreferences.
 // ==============================================================================
 
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:local_auth/local_auth.dart';
 import '../helpers/user_info.dart';
 import '../models/user_model.dart';
+import 'biometric_service.dart';
 import 'supabase_api_service.dart';
 
 class AuthService {
-  // Instance resmi local_auth untuk pemindaian hardware biometrik Android
-  static final LocalAuthentication _localAuth = LocalAuthentication();
-
   // ============================================================================
   // ENKRIPSI & KEAMANAN KRIPTOGRAFI (SHA-256)
   // ============================================================================
 
   /// Mengenkripsi password plaintext menjadi representasi hash SHA-256 (64 karakter heksadesimal).
-  /// Sesuai standar industri: password mentah tidak pernah disimpan di database Supabase.
+  /// Sesuai standar industri: password mentah tidak pernah disimpan di database Supabase maupun lokal.
   static String hashPassword(String password) {
     final bytes = utf8.encode(password.trim());
     final digest = sha256.convert(bytes);
@@ -39,117 +35,7 @@ class AuthService {
   }
 
   // ============================================================================
-  // VERIFIKASI HARDWARE & AUTENTIKASI BIOMETRIK (local_auth)
-  // ============================================================================
-
-  /// Memeriksa ketersediaan hardware sensor biometrik (Fingerprint / Face ID) di perangkat
-  static Future<bool> canAuthenticateWithBiometrics() async {
-    try {
-      final canCheck = await _localAuth.canCheckBiometrics;
-      final isSupported = await _localAuth.isDeviceSupported();
-      return canCheck || isSupported;
-    } catch (e) {
-      debugPrint('canAuthenticateWithBiometrics error: $e');
-      return false;
-    }
-  }
-
-  /// Mendapatkan daftar tipe biometrik yang tersedia di perangkat (Fingerprint, Face, dll)
-  static Future<List<BiometricType>> getAvailableBiometrics() async {
-    try {
-      return await _localAuth.getAvailableBiometrics();
-    } catch (_) {
-      return [];
-    }
-  }
-
-  /// Meminta verifikasi fisik biometrik kepada Hunter melalui prompt sistem Android
-  /// CATATAN: biometricOnly di-set false agar mendukung sensor Face Unlock (Class 2) & Fingerprint di Samsung M31
-  static Future<bool> authenticateWithBiometrics({
-    String reason = 'Gunakan sensor sidik jari atau Face ID untuk verifikasi otorisasi Hunter',
-  }) async {
-    try {
-      final isAvailable = await canAuthenticateWithBiometrics();
-      if (!isAvailable) return false;
-
-      return await _localAuth.authenticate(
-        localizedReason: reason,
-        options: const AuthenticationOptions(
-          stickyAuth: true,       // Menjaga dialog tetap aktif jika ada interupsi sistem
-          biometricOnly: false,   // Mendukung Fingerprint & Face ID di berbagai versi Android
-          useErrorDialogs: true,  // Tampilkan pesan dialog error bawaan Android jika gagal
-        ),
-      );
-    } on PlatformException catch (e) {
-      debugPrint('Biometric PlatformException: $e');
-      return false;
-    } catch (e) {
-      debugPrint('Biometric general exception: $e');
-      return false;
-    }
-  }
-
-  /// Helper Reusable untuk Halaman Profil: Mengubah status toggle biometrik user
-  /// Dilengkapi verifikasi sensor saat user mengaktifkannya (ON)
-  static Future<Map<String, dynamic>> toggleBiometricForUser({
-    required int userId,
-    required bool enable,
-    String? localizedReason,
-  }) async {
-    if (enable) {
-      // 1. Validasi kemampuan perangkat fisik
-      final isSupported = await canAuthenticateWithBiometrics();
-      if (!isSupported) {
-        return {
-          'success': false,
-          'message': 'Perangkat Anda tidak memiliki sensor biometrik yang aktif atau terdaftar.',
-        };
-      }
-
-      // 2. Minta verifikasi sidik jari/wajah Hunter secara langsung
-      final verified = await authenticateWithBiometrics(
-        reason: localizedReason ?? 'Verifikasi sidik jari atau Face ID Anda untuk mengaktifkan fitur ini.',
-      );
-
-      if (!verified) {
-        return {
-          'success': false,
-          'message': 'Verifikasi biometrik dibatalkan atau tidak cocok.',
-        };
-      }
-    }
-
-    // 3. Simpan perubahan ke SharedPreferences (Lapisan 1)
-    await UserInfo.setBiometricEnabled(enable);
-
-    // 4. Perbarui data ke Cache Hive dan Cloud Database Supabase
-    UserModel? user;
-    if (userId > 0) {
-      user = await SupabaseApiService.getUserById(userId);
-    }
-    user ??= SupabaseApiService.getPlayerCache();
-
-    if (user != null) {
-      final updatedUser = user.copyWith(biometricEnabled: enable);
-      // Simpan segera ke cache Hive lokal
-      await SupabaseApiService.savePlayerCache(updatedUser);
-
-      // Simpan ke Cloud Database Supabase jika terhubung
-      if (updatedUser.id > 0) {
-        await SupabaseApiService.updateUser(updatedUser);
-      }
-    }
-
-    return {
-      'success': true,
-      'message': enable
-          ? 'Login Biometrik berhasil diaktifkan!'
-          : 'Login Biometrik telah dinonaktifkan.',
-    };
-  }
-
-  // ============================================================================
-  // REGISTRASI USER BARU (POST KE TABEL 'users' SUPABASE)
+  // REGISTRASI USER BARU (POST KE TABEL 'users' SUPABASE) - ALUR 1
   // ============================================================================
 
   /// Mendaftarkan Hunter baru ke dalam Database Supabase via HTTP REST API
@@ -158,6 +44,8 @@ class AuthService {
     required String email,
     required String password,
     bool isBiometric = false,
+    bool? isFaceId,
+    bool? isFingerprint,
   }) async {
     final trimmedUsername = username.trim();
     final trimmedEmail = email.trim();
@@ -170,7 +58,6 @@ class AuthService {
       };
     }
 
-    // Validasi panjang username
     if (trimmedUsername.length < 3) {
       return {
         'success': false,
@@ -178,7 +65,6 @@ class AuthService {
       };
     }
 
-    // Validasi format email menggunakan Regular Expression
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(trimmedEmail)) {
       return {
@@ -187,7 +73,6 @@ class AuthService {
       };
     }
 
-    // Validasi panjang password minimal 8 karakter (sesuai spesifikasi)
     if (password.length < 8) {
       return {
         'success': false,
@@ -215,6 +100,10 @@ class AuthService {
     // 3. Enkripsi Password Plaintext menggunakan SHA-256
     final hashedPassword = hashPassword(password);
 
+    final effectiveFace = isFaceId ?? isBiometric;
+    final effectiveFp = isFingerprint ?? isBiometric;
+    final effectiveBio = isBiometric || effectiveFace || effectiveFp;
+
     // 4. Inisialisasi Objek Hunter Level 1 Rank F
     final tempId = DateTime.now().millisecondsSinceEpoch % 1000000;
     final newUser = UserModel.initial(
@@ -222,7 +111,7 @@ class AuthService {
       username: trimmedUsername,
       email: trimmedEmail,
       passwordHash: hashedPassword,
-      biometricEnabled: isBiometric,
+      biometricEnabled: effectiveBio,
     );
 
     // 5. Kirim HTTP POST ke Supabase REST API
@@ -238,8 +127,16 @@ class AuthService {
     await UserInfo.setEmail(createdUser.email);
     await UserInfo.setLoginStatus(true);
     await UserInfo.setIsOnboarded(createdUser.isOnboarded);
-    await UserInfo.setBiometricEnabled(isBiometric);
     await UserInfo.setLastActive(DateTime.now().toIso8601String());
+
+    // Simpan Token-Bound Biometric Session jika diaktifkan saat registrasi
+    if (effectiveBio) {
+      await UserInfo.setBiometricEnabled(true);
+      if (effectiveFace) await UserInfo.setFaceIdEnabled(true);
+      if (effectiveFp) await UserInfo.setFingerprintEnabled(true);
+      await UserInfo.setBiometricUserId(createdUser.id);
+      await UserInfo.setBiometricEmail(createdUser.email);
+    }
 
     // 7. Simpan Token Sesi ke tabel user_tokens di Supabase
     await SupabaseApiService.saveUserToken(
@@ -256,7 +153,7 @@ class AuthService {
   }
 
   // ============================================================================
-  // LOGIN KREDENSIAL PENGGUNA (EMAIL / USERNAME & PASSWORD)
+  // LOGIN KREDENSIAL PENGGUNA (EMAIL / USERNAME & PASSWORD) - ALUR 2
   // ============================================================================
 
   /// Autentikasi Pengguna menggunakan Email atau Username dan Password
@@ -272,15 +169,13 @@ class AuthService {
       };
     }
 
-    // 1. Ambil data user dari Supabase (bisa mencari via Email atau Username)
+    // 1. Ambil data user dari Supabase
     UserModel? user;
     if (identifier.contains('@')) {
       user = await SupabaseApiService.getUserByEmail(identifier);
     } else {
       user = await SupabaseApiService.getUserByUsername(identifier);
     }
-
-    // Jika belum ditemukan dan input tidak mengandung @, coba fallback ke email
     user ??= await SupabaseApiService.getUserByEmail(identifier);
 
     if (user == null) {
@@ -310,11 +205,20 @@ class AuthService {
     await UserInfo.setEmail(user.email);
     await UserInfo.setLoginStatus(true);
     await UserInfo.setIsOnboarded(user.isOnboarded);
-    // Jika user di database memiliki biometricEnabled = true, sinkronkan ke lokal
+    await UserInfo.setLastActive(DateTime.now().toIso8601String());
+
+    // Jika di database user sudah mengaktifkan biometrik, sinkronkan ke perangkat ini
     if (user.biometricEnabled) {
       await UserInfo.setBiometricEnabled(true);
+      final hasFace = await UserInfo.getFaceIdEnabled();
+      final hasFp = await UserInfo.getFingerprintEnabled();
+      if (!hasFace && !hasFp) {
+        await UserInfo.setFaceIdEnabled(true);
+        await UserInfo.setFingerprintEnabled(true);
+      }
+      await UserInfo.setBiometricUserId(user.id);
+      await UserInfo.setBiometricEmail(user.email);
     }
-    await UserInfo.setLastActive(DateTime.now().toIso8601String());
 
     // 5. Simpan Token Sesi ke Supabase user_tokens
     await SupabaseApiService.saveUserToken(
@@ -334,66 +238,135 @@ class AuthService {
   }
 
   // ============================================================================
-  // LOGIN BIOMETRIK (SIDIK JARI / FACE ID SCAN)
+  // LOGIN BIOMETRIK TERPISAH (FACE ID & FINGERPRINT QUICK LOGIN) - ALUR 2
   // ============================================================================
 
-  /// Melakukan login instan menggunakan sensor biometrik (Sidik Jari atau Face ID)
-  static Future<Map<String, dynamic>> loginBiometric({
-    int? userId,
+  /// Melakukan login instan khusus menggunakan Face ID / Face Recognition
+  static Future<Map<String, dynamic>> loginFaceId({
     String? reason,
   }) async {
-    // 1. Periksa ketersediaan hardware
-    final canAuth = await canAuthenticateWithBiometrics();
-    if (!canAuth) {
+    final isFaceConfigured = await UserInfo.getFaceIdEnabled();
+    final biometricUserId = await UserInfo.getBiometricUserId();
+
+    if (!isFaceConfigured || biometricUserId == null || biometricUserId <= 0) {
       return {
         'success': false,
-        'message': 'Perangkat tidak memiliki sensor biometrik yang aktif.',
+        'notConfigured': true,
+        'message': 'PERINGATAN SISTEM: Face ID belum diaktifkan untuk akun Hunter Anda. Silakan login menggunakan Email & Password terlebih dahulu.',
       };
     }
 
-    // 2. Minta pemindaian sidik jari / Face ID
-    final authOk = await authenticateWithBiometrics(
-      reason: reason ?? 'Pindai sidik jari atau Face ID Anda untuk masuk ke LevMax',
+    final authResult = await BiometricService.authenticateFace(
+      reason: reason ?? 'Arahkan wajah Anda ke kamera depan untuk otorisasi Face ID LevMax',
     );
 
-    if (!authOk) {
+    if (!authResult.success) {
       return {
         'success': false,
-        'message': 'Autentikasi biometrik dibatalkan atau tidak cocok.',
+        'message': authResult.errorMessage ?? 'Autentikasi Face ID dibatalkan.',
+        'isLockedOut': authResult.isLockedOut,
       };
     }
 
-    // 3. Cari data profil Hunter dari Cache Hive, ID, atau identifier yang tersimpan di SharedPreferences
+    return await _finalizeBiometricSession(biometricUserId, 'Face ID');
+  }
+
+  /// Melakukan login instan khusus menggunakan Sensor Sidik Jari (Fingerprint)
+  static Future<Map<String, dynamic>> loginFingerprint({
+    String? reason,
+  }) async {
+    final isFpConfigured = await UserInfo.getFingerprintEnabled();
+    final biometricUserId = await UserInfo.getBiometricUserId();
+
+    if (!isFpConfigured || biometricUserId == null || biometricUserId <= 0) {
+      return {
+        'success': false,
+        'notConfigured': true,
+        'message': 'PERINGATAN SISTEM: Sensor Sidik Jari belum diaktifkan untuk akun Hunter Anda. Silakan login menggunakan Email & Password terlebih dahulu.',
+      };
+    }
+
+    final authResult = await BiometricService.authenticateFingerprint(
+      reason: reason ?? 'Tempelkan sidik jari Anda pada sensor untuk otorisasi Fingerprint LevMax',
+    );
+
+    if (!authResult.success) {
+      return {
+        'success': false,
+        'message': authResult.errorMessage ?? 'Autentikasi Sidik Jari dibatalkan.',
+        'isLockedOut': authResult.isLockedOut,
+      };
+    }
+
+    return await _finalizeBiometricSession(biometricUserId, 'Fingerprint');
+  }
+
+  /// Melakukan login instan setelah pemindaian kamera wajah (Face Scan Kamera) berhasil
+  static Future<Map<String, dynamic>> finalizeFaceScanLogin() async {
+    final biometricUserId = await UserInfo.getBiometricUserId();
+    if (biometricUserId == null || biometricUserId <= 0) {
+      return {
+        'success': false,
+        'message': 'Akun Hunter belum terdaftar untuk pemindaian wajah.',
+      };
+    }
+    return await finalizeBiometricSession(biometricUserId, 'Face Scan Kamera');
+  }
+
+  /// Mengatur status Face ID setelah verifikasi kamera berhasil
+  static Future<Map<String, dynamic>> setFaceIdStatusForUser({
+    required int userId,
+    required bool enable,
+  }) async {
+    if (enable) {
+      await UserInfo.setFaceIdEnabled(true);
+      await UserInfo.setBiometricUserId(userId);
+
+      final currentEmail = await UserInfo.getEmail();
+      if (currentEmail != null && currentEmail.isNotEmpty) {
+        await UserInfo.setBiometricEmail(currentEmail);
+      }
+    } else {
+      await UserInfo.disableFaceId();
+    }
+
+    await _syncSupabaseBiometricStatus(userId);
+
+    return {
+      'success': true,
+      'message': enable
+          ? 'Face ID Kamera berhasil diaktifkan!'
+          : 'Face ID telah dinonaktifkan.',
+    };
+  }
+
+  /// Helper untuk memfinalisasi sesi token setelah autentikasi biometrik berhasil
+  static Future<Map<String, dynamic>> _finalizeBiometricSession(int biometricUserId, String methodLabel) =>
+      finalizeBiometricSession(biometricUserId, methodLabel);
+
+  static Future<Map<String, dynamic>> finalizeBiometricSession(int biometricUserId, String methodLabel) async {
     UserModel? user;
     final cached = SupabaseApiService.getPlayerCache();
-    if (cached != null) {
+    if (cached != null && cached.id == biometricUserId) {
       user = cached;
     } else {
-      final savedId = userId ?? await UserInfo.getUserID();
-      if (savedId != null && savedId > 0) {
-        user = await SupabaseApiService.getUserById(savedId);
-      }
+      user = await SupabaseApiService.getUserById(biometricUserId);
     }
 
-    // Fallback: Jika cache belum ada, gunakan email/username tersimpan
     if (user == null) {
-      final savedEmail = await UserInfo.getEmail();
-      final savedUsername = await UserInfo.getUsername();
-      if (savedEmail != null && savedEmail.isNotEmpty) {
-        user = await SupabaseApiService.getUserByEmail(savedEmail);
-      } else if (savedUsername != null && savedUsername.isNotEmpty) {
-        user = await SupabaseApiService.getUserByUsername(savedUsername);
+      final bioEmail = await UserInfo.getBiometricEmail();
+      if (bioEmail != null && bioEmail.isNotEmpty) {
+        user = await SupabaseApiService.getUserByEmail(bioEmail);
       }
     }
 
     if (user == null) {
       return {
         'success': false,
-        'message': 'Data Hunter belum tersimpan di perangkat. Silakan login dengan password sekali terlebih dahulu.',
+        'message': 'Profil Hunter tidak ditemukan. Silakan login manual dengan password.',
       };
     }
 
-    // 4. Perbarui sesi aktif & token baru
     final token = generateSessionToken(user.username);
     final expiresAt = DateTime.now().add(const Duration(hours: 1));
 
@@ -403,30 +376,224 @@ class AuthService {
     await UserInfo.setEmail(user.email);
     await UserInfo.setLoginStatus(true);
     await UserInfo.setIsOnboarded(user.isOnboarded);
-    await UserInfo.setBiometricEnabled(true);
     await UserInfo.updateLastActive();
 
-    // 5. Simpan token baru ke Supabase
     await SupabaseApiService.saveUserToken(
       userId: user.id,
       authKey: token,
       expiresAt: expiresAt,
     );
 
-    // 6. Simpan cache Player terbaru
     await SupabaseApiService.savePlayerCache(user.copyWith(biometricEnabled: true));
 
     return {
       'success': true,
       'user': user,
-      'message': 'Autentikasi biometrik berhasil. Selamat datang, Hunter ${user.username}!',
+      'message': 'Otorisasi $methodLabel berhasil. Selamat datang, Hunter ${user.username}!',
+    };
+  }
+
+  /// Melakukan login instan menggunakan Face ID atau Fingerprint (Umum)
+  static Future<Map<String, dynamic>> loginBiometric({
+    String? reason,
+  }) async {
+    final isBiometricConfigured = await UserInfo.getBiometricEnabled();
+    final biometricUserId = await UserInfo.getBiometricUserId();
+
+    if (!isBiometricConfigured || biometricUserId == null || biometricUserId <= 0) {
+      return {
+        'success': false,
+        'notConfigured': true,
+        'message': 'PERINGATAN SISTEM: Data Biometrik belum terhubung ke akun Player. Silakan login menggunakan Email & Password terlebih dahulu.',
+      };
+    }
+
+    final authResult = await BiometricService.authenticate(
+      localizedReason: reason ?? 'Pindai Face ID atau Sidik Jari untuk otorisasi Hunter LevMax',
+    );
+
+    if (!authResult.success) {
+      return {
+        'success': false,
+        'message': authResult.errorMessage ?? 'Autentikasi biometrik dibatalkan.',
+        'isLockedOut': authResult.isLockedOut,
+      };
+    }
+
+    return await _finalizeBiometricSession(biometricUserId, 'Biometrik');
+  }
+
+  // ============================================================================
+  // PENGATURAN TOGGLE FACE ID & FINGERPRINT TERPISAH (PROFIL) - ALUR 4
+  // ============================================================================
+
+  /// Mengaktifkan atau menonaktifkan Face ID secara independen dengan verifikasi wajib
+  static Future<Map<String, dynamic>> toggleFaceIdForUser({
+    required int userId,
+    required bool enable,
+    String? localizedReason,
+  }) async {
+    final authResult = await BiometricService.authenticateFace(
+      reason: localizedReason ?? (enable
+          ? 'Pindai Face ID untuk mengaktifkan akses cepat biometrik wajah'
+          : 'Konfirmasi Face ID untuk menonaktifkan fitur ini'),
+    );
+
+    if (!authResult.success) {
+      return {
+        'success': false,
+        'message': authResult.errorMessage ?? 'Verifikasi Face ID dibatalkan.',
+      };
+    }
+
+    if (enable) {
+      await UserInfo.setFaceIdEnabled(true);
+      await UserInfo.setBiometricUserId(userId);
+
+      final currentEmail = await UserInfo.getEmail();
+      if (currentEmail != null && currentEmail.isNotEmpty) {
+        await UserInfo.setBiometricEmail(currentEmail);
+      }
+    } else {
+      await UserInfo.disableFaceId();
+    }
+
+    await _syncSupabaseBiometricStatus(userId);
+
+    return {
+      'success': true,
+      'message': enable
+          ? 'Face ID / Biometrik Wajah berhasil diaktifkan!'
+          : 'Face ID telah dinonaktifkan.',
+    };
+  }
+
+  /// Mengaktifkan atau menonaktifkan Fingerprint secara independen dengan verifikasi wajib
+  static Future<Map<String, dynamic>> toggleFingerprintForUser({
+    required int userId,
+    required bool enable,
+    String? localizedReason,
+  }) async {
+    final authResult = await BiometricService.authenticateFingerprint(
+      reason: localizedReason ?? (enable
+          ? 'Tempelkan sidik jari Anda untuk mengaktifkan akses cepat Fingerprint'
+          : 'Konfirmasi sidik jari Anda untuk menonaktifkan fitur ini'),
+    );
+
+    if (!authResult.success) {
+      return {
+        'success': false,
+        'message': authResult.errorMessage ?? 'Verifikasi sidik jari dibatalkan.',
+      };
+    }
+
+    if (enable) {
+      await UserInfo.setFingerprintEnabled(true);
+      await UserInfo.setBiometricUserId(userId);
+
+      final currentEmail = await UserInfo.getEmail();
+      if (currentEmail != null && currentEmail.isNotEmpty) {
+        await UserInfo.setBiometricEmail(currentEmail);
+      }
+    } else {
+      await UserInfo.disableFingerprint();
+    }
+
+    await _syncSupabaseBiometricStatus(userId);
+
+    return {
+      'success': true,
+      'message': enable
+          ? 'Fingerprint / Sensor Sidik Jari berhasil diaktifkan!'
+          : 'Fingerprint telah dinonaktifkan.',
+    };
+  }
+
+  /// Helper untuk mensinkronisasi status umum biometric_enabled ke Supabase
+  static Future<void> _syncSupabaseBiometricStatus(int userId) async {
+    final isAnyActive = await UserInfo.getBiometricEnabled();
+
+    UserModel? user;
+    if (userId > 0) {
+      user = await SupabaseApiService.getUserById(userId);
+    }
+    user ??= SupabaseApiService.getPlayerCache();
+
+    if (user != null) {
+      final updatedUser = user.copyWith(biometricEnabled: isAnyActive);
+      await SupabaseApiService.savePlayerCache(updatedUser);
+
+      if (updatedUser.id > 0) {
+        await SupabaseApiService.updateUser(updatedUser);
+      }
+    }
+  }
+
+  /// Mengaktifkan atau menonaktifkan Face ID / Biometrik umum (Backward Compatibility)
+  static Future<Map<String, dynamic>> toggleBiometricForUser({
+    required int userId,
+    required bool enable,
+    String? localizedReason,
+  }) async {
+    final authResult = await BiometricService.authenticate(
+      localizedReason: localizedReason ?? (enable
+          ? 'Pindai Face ID atau Sidik Jari untuk mengaktifkan login instan Hunter'
+          : 'Konfirmasi biometrik Anda untuk menonaktifkan fitur ini'),
+    );
+
+    if (!authResult.success) {
+      return {
+        'success': false,
+        'message': authResult.errorMessage ?? 'Verifikasi biometrik dibatalkan.',
+      };
+    }
+
+    if (enable) {
+      await UserInfo.setFaceIdEnabled(true);
+      await UserInfo.setFingerprintEnabled(true);
+      await UserInfo.setBiometricEnabled(true);
+      await UserInfo.setBiometricUserId(userId);
+
+      final currentEmail = await UserInfo.getEmail();
+      if (currentEmail != null && currentEmail.isNotEmpty) {
+        await UserInfo.setBiometricEmail(currentEmail);
+      }
+    } else {
+      await UserInfo.disableBiometrics();
+    }
+
+    await _syncSupabaseBiometricStatus(userId);
+
+    return {
+      'success': true,
+      'message': enable
+          ? 'Face ID & Fingerprint berhasil dihubungkan ke akun Hunter!'
+          : 'Biometrik telah dinonaktifkan.',
     };
   }
 
   // ============================================================================
-  // HELPER KOMPATIBILITAS (FORWARDING ALIASES)
+  // LOGOUT (MENCABUT TOKEN & AMANKAN KREDENSIAL BIOMETRIK)
   // ============================================================================
 
+  /// Logout Hunter: Menghapus token dari Supabase & mencabut sesi login aktif
+  static Future<void> logout() async {
+    try {
+      final userId = await UserInfo.getUserID();
+      final token = await UserInfo.getToken();
+
+      if (userId != null && token != null) {
+        await SupabaseApiService.deleteUserToken(userId: userId, authKey: token);
+      }
+    } catch (e) {
+      debugPrint('Logout delete token error: $e');
+    }
+
+    // Mencabut token sesi aktif, mempertahankan biometric_user_id & biometric_email
+    await UserInfo.logout();
+  }
+
+  // Forwarding aliases untuk backward-compatibility
   static Future<Map<String, dynamic>> register({
     required String username,
     required String email,
@@ -449,22 +616,5 @@ class AuthService {
       email: username,
       password: password,
     );
-  }
-
-  /// Logout Hunter: menghapus token dari Supabase & mencabut sesi aktif SharedPreferences
-  static Future<void> logout() async {
-    try {
-      final userId = await UserInfo.getUserID();
-      final token = await UserInfo.getToken();
-
-      if (userId != null && token != null) {
-        await SupabaseApiService.deleteUserToken(userId: userId, authKey: token);
-      }
-    } catch (e) {
-      debugPrint('Logout delete token error: $e');
-    }
-
-    // Standar Industri: Cabut sesi aktif, jangan hapus flag biometrik yang sudah aktif di perangkat ini!
-    await UserInfo.logout();
   }
 }

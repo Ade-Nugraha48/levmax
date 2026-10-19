@@ -1,13 +1,15 @@
 // ==============================================================================
 // LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
 // File: lib/ui/auth/register_page.dart
-// Deskripsi: Layanan Registrasi Akun Hunter Enkripsi SHA-256 (FR-1.1)
-//            dengan opsi verifikasi pemindaian biometrik instan pada saat pendaftaran.
+// Deskripsi: Layanan Registrasi Akun Hunter Enkripsi SHA-256 (Alur 1)
+//            dengan opsi aktivasi Face ID / Biometrik & penanganan NotEnrolled dialog.
 // ==============================================================================
 
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import '../../services/biometric_service.dart';
 import '../onboarding/onboarding_page.dart';
+import 'face_scan_camera_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -25,9 +27,18 @@ class _RegisterPageState extends State<RegisterPage> {
 
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
-  bool _biometricEnabled = false;
+  bool _faceIdEnabled = false;
+  bool _fingerprintEnabled = false;
   bool _isLoading = false;
   String? _errorMessage;
+
+  BiometricCapability? _capability;
+
+  @override
+  void initState() {
+    super.initState();
+    _detectBiometricCapability();
+  }
 
   @override
   void dispose() {
@@ -38,77 +49,81 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  // ============================================================================
-  // LOGIKA VERIFIKASI BIOMETRIK SAAT CHECKBOX/SWITCH DICENTANG
-  // ============================================================================
-  Future<void> _handleBiometricToggle(bool value) async {
-    // Jika user mematikan checkbox, langsung set false tanpa pemindaian
-    if (!value) {
+  Future<void> _detectBiometricCapability() async {
+    final cap = await BiometricService.checkCapability();
+    if (mounted) {
       setState(() {
-        _biometricEnabled = false;
+        _capability = cap;
       });
-      return;
-    }
-
-    // 1. Cek apakah perangkat mendukung sensor biometrik
-    final isSupported = await AuthService.canAuthenticateWithBiometrics();
-    if (!isSupported) {
-      if (!mounted) return;
-      _showWarningSnackBar(
-        'Perangkat tidak mendukung sensor biometrik atau belum ada sidik jari/wajah yang didaftarkan di pengaturan Android.',
-      );
-      setState(() {
-        _biometricEnabled = false;
-      });
-      return;
-    }
-
-    // 2. Panggil pemindai sidik jari / Face ID saat itu juga untuk verifikasi awal
-    final authSuccess = await AuthService.authenticateWithBiometrics(
-      reason: 'Verifikasi sensor biometrik Anda untuk mengaktifkan login instan Hunter',
-    );
-
-    if (!mounted) return;
-
-    if (authSuccess) {
-      setState(() {
-        _biometricEnabled = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.check_circle_outline, color: Colors.black),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Sensor biometrik terverifikasi dan siap digunakan!',
-                  style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF00E5FF),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-    } else {
-      setState(() {
-        _biometricEnabled = false;
-      });
-      _showWarningSnackBar('Verifikasi biometrik dibatalkan atau tidak cocok.');
     }
   }
 
   // ============================================================================
-  // LOGIKA SUBMIT REGISTRASI
+  // LOGIKA SUBMIT REGISTRASI DENGAN VERIFIKASI FACE ID & FINGERPRINT (ALUR 1)
   // ============================================================================
   Future<void> _handleRegister() async {
     FocusScope.of(context).unfocus();
 
     if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
       return;
+    }
+
+    bool finalFaceChoice = _faceIdEnabled;
+    bool finalFpChoice = _fingerprintEnabled;
+
+    // Jika user mengaktifkan Face ID, buka kamera depan untuk Face Scan
+    if (_faceIdEnabled) {
+      final scanSuccess = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const FaceScanCameraPage(
+            mode: FaceScanMode.register,
+            title: 'REGISTRASI WAJAH HUNTER',
+            subtitle: 'Pindai wajah Anda melalui kamera depan HP Samsung',
+          ),
+        ),
+      );
+
+      if (scanSuccess != true) {
+        if (!mounted) return;
+        final continueWithout = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: const Color(0xFF131B2E),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Face Scan Dibatalkan', style: TextStyle(color: Color(0xFFFFA000))),
+            content: const Text('Pemindaian wajah dibatalkan. Apakah Anda ingin tetap melanjutkan registrasi tanpa mengaktifkan Face ID?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('BATAL', style: TextStyle(color: Colors.grey))),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00E5FF), foregroundColor: Colors.black),
+                child: const Text('LANJUTKAN', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+        if (continueWithout != true) return;
+        finalFaceChoice = false;
+      }
+    }
+
+    // Jika user mengaktifkan Fingerprint, verifikasi sidik jari
+    if (_fingerprintEnabled && finalFaceChoice == false) {
+      // Jika Face ID belum/tidak diverifikasi, verifikasi Fingerprint
+      final authResult = await BiometricService.authenticateFingerprint(
+        reason: 'Verifikasi sidik jari untuk mendaftarkan otorisasi Fingerprint Hunter',
+      );
+
+      if (!authResult.success) {
+        if (!mounted) return;
+        final continueWithout = await _showBiometricFailedDialog(authResult, 'Fingerprint');
+        if (continueWithout != true) {
+          return;
+        }
+        finalFpChoice = false;
+      }
     }
 
     setState(() {
@@ -120,7 +135,8 @@ class _RegisterPageState extends State<RegisterPage> {
       username: _usernameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
-      isBiometric: _biometricEnabled,
+      isFaceId: finalFaceChoice,
+      isFingerprint: finalFpChoice,
     );
 
     if (!mounted) return;
@@ -164,6 +180,56 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  /// Dialog penanganan saat verifikasi Face ID atau Fingerprint gagal / NotEnrolled
+  Future<bool?> _showBiometricFailedDialog(BiometricAuthResult result, String methodName) {
+    String message = result.errorMessage ?? 'Verifikasi biometrik tidak berhasil.';
+    if (result.isNotEnrolled) {
+      message = 'Sensor $methodName belum didaftarkan di Pengaturan HP Samsung Anda.';
+    }
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF131B2E),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFFFA000), width: 1.5),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Color(0xFFFFA000), size: 26),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '$methodName Belum Terverifikasi',
+                style: const TextStyle(color: Color(0xFFFFA000), fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          '$message\n\nApakah Anda ingin tetap melanjutkan pendaftaran akun tanpa mengaktifkan $methodName untuk saat ini?',
+          style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('BATAL', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00E5FF),
+              foregroundColor: Colors.black,
+            ),
+            child: const Text('LANJUTKAN', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -176,24 +242,6 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         backgroundColor: const Color(0xFFFF1744),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-  }
-
-  void _showWarningSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.info_outline, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message, style: const TextStyle(color: Colors.white))),
-          ],
-        ),
-        backgroundColor: const Color(0xFFFFA000),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -217,7 +265,6 @@ class _RegisterPageState extends State<RegisterPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 10),
-              // Header Badge Solo Leveling
               Center(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -258,7 +305,6 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 24),
 
-              // Pesan Error jika ada
               if (_errorMessage != null) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -287,7 +333,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Username Field
                     TextFormField(
                       controller: _usernameController,
                       style: const TextStyle(color: Colors.white),
@@ -319,7 +364,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Email Field
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -353,7 +397,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Password Field (Minimal 8 Karakter)
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -397,7 +440,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Confirm Password Field
                     TextFormField(
                       controller: _confirmPasswordController,
                       obscureText: _obscureConfirm,
@@ -441,67 +483,85 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 18),
 
-                    // Checkbox / Switch Biometrik dengan trigger verifikasi awal
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF131B2E),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _biometricEnabled
-                              ? const Color(0xFF00E5FF)
-                              : const Color(0xFF1E293B),
-                          width: _biometricEnabled ? 1.5 : 1.0,
+                    // Switch 1: Opsi Face ID (Jika didukung hardware)
+                    if (_capability?.hasFace ?? true)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF131B2E),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _faceIdEnabled ? const Color(0xFF00E5FF) : const Color(0xFF1E293B),
+                            width: _faceIdEnabled ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          secondary: Icon(
+                            Icons.face_unlock_outlined,
+                            color: _faceIdEnabled ? const Color(0xFF00E5FF) : Colors.grey,
+                            size: 26,
+                          ),
+                          title: const Text(
+                            'Aktifkan Face ID untuk Akses Cepat',
+                            style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            'Verifikasi wajah saat menekan tombol Daftar',
+                            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+                          ),
+                          activeThumbColor: const Color(0xFF00E5FF),
+                          value: _faceIdEnabled,
+                          onChanged: (val) {
+                            setState(() {
+                              _faceIdEnabled = val;
+                            });
+                          },
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
+                    if (_capability?.hasFace ?? true) const SizedBox(height: 12),
+
+                    // Switch 2: Opsi Fingerprint (Jika didukung hardware)
+                    if (_capability?.hasFingerprint ?? true)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF131B2E),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _fingerprintEnabled ? const Color(0xFF00E5FF) : const Color(0xFF1E293B),
+                            width: _fingerprintEnabled ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          secondary: Icon(
                             Icons.fingerprint,
-                            color: _biometricEnabled
-                                ? const Color(0xFF00E5FF)
-                                : Colors.grey,
-                            size: 28,
+                            color: _fingerprintEnabled ? const Color(0xFF00E5FF) : Colors.grey,
+                            size: 26,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Aktifkan Login Biometrik',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Memicu pemindaian sidik jari/wajah saat dicentang untuk verifikasi awal',
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.6),
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          title: const Text(
+                            'Aktifkan Fingerprint untuk Akses Cepat',
+                            style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                           ),
-                          Checkbox(
-                            value: _biometricEnabled,
-                            activeColor: const Color(0xFF00E5FF),
-                            checkColor: Colors.black,
-                            onChanged: (val) => _handleBiometricToggle(val ?? false),
+                          subtitle: Text(
+                            'Verifikasi sidik jari saat menekan tombol Daftar',
+                            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
                           ),
-                        ],
+                          activeThumbColor: const Color(0xFF00E5FF),
+                          value: _fingerprintEnabled,
+                          onChanged: (val) {
+                            setState(() {
+                              _fingerprintEnabled = val;
+                            });
+                          },
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 28),
 
-              // Tombol Submit Register
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleRegister,
                 style: ElevatedButton.styleFrom(
@@ -524,7 +584,6 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 20),
 
-              // Link Kembali ke Login
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

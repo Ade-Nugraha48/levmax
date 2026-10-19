@@ -6,10 +6,10 @@
 // ==============================================================================
 
 import 'package:flutter/material.dart';
-import '../../helpers/user_info.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../auth/login_page.dart';
+import 'profile_biometric_widget.dart';
 
 class ProfileTab extends StatefulWidget {
   final UserModel player;
@@ -26,74 +26,7 @@ class ProfileTab extends StatefulWidget {
 }
 
 class _ProfileTabState extends State<ProfileTab> {
-  bool _biometricEnabled = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadBiometricState();
-  }
-
-  @override
-  void didUpdateWidget(covariant ProfileTab oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.player.biometricEnabled != widget.player.biometricEnabled) {
-      setState(() {
-        _biometricEnabled = widget.player.biometricEnabled;
-      });
-    }
-  }
-
-  Future<void> _loadBiometricState() async {
-    final localPref = await UserInfo.getBiometricEnabled();
-    final effectiveEnabled = localPref || widget.player.biometricEnabled;
-    if (mounted) {
-      setState(() {
-        _biometricEnabled = effectiveEnabled;
-      });
-    }
-    // Sinkronkan jika ada perbedaan antara database dan preferensi lokal
-    if (localPref != effectiveEnabled) {
-      await UserInfo.setBiometricEnabled(effectiveEnabled);
-    }
-  }
-
-  Future<void> _toggleBiometrics(bool val) async {
-    final res = await AuthService.toggleBiometricForUser(
-      userId: widget.player.id,
-      enable: val,
-      localizedReason: 'Konfirmasi biometrik Hunter untuk mengubah status login instan',
-    );
-
-    if (!mounted) return;
-
-    if (res['success'] == true) {
-      setState(() {
-        _biometricEnabled = val;
-      });
-      widget.onPlayerUpdated();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(res['message'] ?? 'Status Biometrik Diperbarui.'),
-          backgroundColor: const Color(0xFF00E5FF),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    } else {
-      // Kembalikan switch ke nilai semula jika verifikasi gagal/dibatalkan
-      setState(() {
-        _biometricEnabled = !val;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(res['message'] ?? 'Gagal mengubah status biometrik.'),
-          backgroundColor: const Color(0xFFFFA000),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
 
   Future<void> _handleLogout() async {
     final confirm = await showDialog<bool>(
@@ -318,29 +251,10 @@ class _ProfileTabState extends State<ProfileTab> {
           ),
           const SizedBox(height: 16),
 
-          // Pengaturan Biometrik
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF131B2E),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF1E293B)),
-            ),
-            child: SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              secondary: const Icon(Icons.fingerprint, color: Color(0xFF00E5FF), size: 28),
-              title: const Text(
-                'Autentikasi Biometrik',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              subtitle: const Text(
-                'Masuk lebih cepat menggunakan Sidik Jari / Face ID',
-                style: TextStyle(color: Colors.grey, fontSize: 11),
-              ),
-              activeThumbColor: const Color(0xFF00E5FF),
-              value: _biometricEnabled,
-              onChanged: _toggleBiometrics,
-            ),
+          // Pengaturan Face ID & Biometrik (Modular ProfileBiometricWidget)
+          ProfileBiometricWidget(
+            player: widget.player,
+            onPlayerUpdated: widget.onPlayerUpdated,
           ),
           const SizedBox(height: 24),
 
