@@ -17,6 +17,8 @@ class LevMaxTheme {
   static const Color surfaceContainerHighest = Color(0xFF313540); // Badge DAILY dan CTRL+K
 
   static const Color primaryContainer = Color(0xFF00F0FF); // Electric Cyan
+  static const Color primary = Color(0xFFDBFCFF); // Teks judul & input email
+  static const Color onPrimary = Color(0xFF00363A); // Teks gelap tombol CTA
   static const Color onPrimaryFixed = Color(0xFF002022); // Teks gelap di atas Cyan
 
   static const Color tertiaryContainer = Color(0xFF65F2B5); // Neon Mint Green (EXP Bar, Cardio, Buff)

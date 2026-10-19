@@ -19,6 +19,7 @@ import 'services/notification_service.dart';
 import 'services/blockchain_service.dart';
 import 'services/supabase_api_service.dart';
 import 'ui/auth/login_page.dart';
+import 'ui/auth/register_page.dart';
 import 'ui/onboarding/onboarding_page.dart';
 import 'ui/main_navigation_page.dart';
 import 'ui/penalty/game_over_page.dart';
@@ -135,6 +136,12 @@ class LevMaxApp extends StatelessWidget {
         ),
       ),
       home: const SplashScreen(),
+      routes: {
+        '/login': (context) => const LoginPage(),
+        '/onboarding': (context) => const OnboardingPage(),
+        '/main': (context) => const MainNavigationPage(),
+        '/register': (context) => const RegisterPage(),
+      },
     );
   }
 }
