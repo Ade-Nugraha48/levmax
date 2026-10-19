@@ -1082,21 +1082,30 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () async {
                 final won = await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const PenaltyMiniGamePage()),
+                  MaterialPageRoute(builder: (_) => const PenaltyGamePage()),
                 );
                 if (won == true) {
                   widget.onPlayerUpdated();
                 }
               },
-              child: Text(
-                'PENALTY: 14H 12M',
-                style: LevMaxTheme.mono(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: LevMaxTheme.errorCoral,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: LevMaxTheme.errorCoral.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: LevMaxTheme.errorCoral.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  'PENALTY: 14H 12M',
+                  style: LevMaxTheme.mono(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: LevMaxTheme.errorCoral,
+                  ),
                 ),
               ),
             ),

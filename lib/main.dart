@@ -23,6 +23,7 @@ import 'ui/auth/register_page.dart';
 import 'ui/onboarding/onboarding_page.dart';
 import 'ui/main_navigation_page.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'ui/gamification/penalty_game_page.dart';
 import 'ui/penalty/game_over_page.dart';
 
 void main() async {
@@ -150,6 +151,7 @@ class LevMaxApp extends StatelessWidget {
         '/main': (context) => const MainNavigationPage(),
         '/register': (context) => const RegisterPage(),
         '/game_over': (context) => const GameOverPage(),
+        '/penalty': (context) => const PenaltyGamePage(),
       },
     );
   }
