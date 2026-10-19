@@ -313,6 +313,45 @@ class AuthService {
     return await finalizeBiometricSession(biometricUserId, 'Face Scan Kamera');
   }
 
+  /// Melakukan login instan setelah pemindaian sidik jari (Fingerprint Scan) berhasil
+  static Future<Map<String, dynamic>> finalizeFingerprintLogin() async {
+    final biometricUserId = await UserInfo.getBiometricUserId();
+    if (biometricUserId == null || biometricUserId <= 0) {
+      return {
+        'success': false,
+        'message': 'Akun Hunter belum terdaftar untuk sensor sidik jari.',
+      };
+    }
+    return await finalizeBiometricSession(biometricUserId, 'Fingerprint');
+  }
+
+  /// Mengatur status Fingerprint setelah verifikasi sensor berhasil
+  static Future<Map<String, dynamic>> setFingerprintStatusForUser({
+    required int userId,
+    required bool enable,
+  }) async {
+    if (enable) {
+      await UserInfo.setFingerprintEnabled(true);
+      await UserInfo.setBiometricUserId(userId);
+
+      final currentEmail = await UserInfo.getEmail();
+      if (currentEmail != null && currentEmail.isNotEmpty) {
+        await UserInfo.setBiometricEmail(currentEmail);
+      }
+    } else {
+      await UserInfo.disableFingerprint();
+    }
+
+    await _syncSupabaseBiometricStatus(userId);
+
+    return {
+      'success': true,
+      'message': enable
+          ? 'Sensor Sidik Jari berhasil diaktifkan!'
+          : 'Sensor Sidik Jari telah dinonaktifkan.',
+    };
+  }
+
   /// Mengatur status Face ID setelah verifikasi kamera berhasil
   static Future<Map<String, dynamic>> setFaceIdStatusForUser({
     required int userId,

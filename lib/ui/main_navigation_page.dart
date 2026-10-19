@@ -209,80 +209,60 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F131D),
-      appBar: _currentIndex == 0
-          ? null
-          : AppBar(
-              backgroundColor: const Color(0xFF0F131D),
-              elevation: 0,
-              title: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.bolt, color: Color(0xFF00F0FF), size: 24),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'LEVMAX',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 3.0,
-                      color: Color(0xFF00F0FF),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: _currentPlayer!.rankColor.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: _currentPlayer!.rankColor),
-                    ),
-                    child: Text(
-                      'RANK ${_currentPlayer!.rank}',
-                      style: TextStyle(
-                        color: _currentPlayer!.rankColor,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+      backgroundColor: const Color(0xFF0A0E1A),
+      appBar: AppBar(
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.bolt, color: Color(0xFF00E5FF), size: 24),
+            const SizedBox(width: 6),
+            const Text(
+              'LEVMAX',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                letterSpacing: 3.0,
+                color: Color(0xFF00E5FF),
               ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.refresh, color: Color(0xFF00F0FF)),
-                  onPressed: _loadPlayerAndCheckPenalty,
-                ),
-              ],
             ),
-      body: pages[_currentIndex],
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF0F131D),
-          border: Border(top: BorderSide(color: Color(0xFF1C1F2A), width: 1.0)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black54,
-              blurRadius: 20,
-              offset: Offset(0, -4),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: _currentPlayer!.rankColor.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: _currentPlayer!.rankColor),
+              ),
+              child: Text(
+                'RANK ${_currentPlayer!.rank}',
+                style: TextStyle(
+                  color: _currentPlayer!.rankColor,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color(0xFF00E5FF)),
+            onPressed: _loadPlayerAndCheckPenalty,
+          ),
+        ],
+      ),
+      body: pages[_currentIndex],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Color(0xFF1E293B), width: 1.0)),
+        ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          backgroundColor: const Color(0xFF0F131D),
-          selectedItemColor: const Color(0xFF00F0FF),
-          unselectedItemColor: const Color(0xFF849495),
+          backgroundColor: const Color(0xFF0A0E1A),
+          selectedItemColor: const Color(0xFF00E5FF),
+          unselectedItemColor: Colors.grey,
           type: BottomNavigationBarType.fixed,
           selectedFontSize: 11,
           unselectedFontSize: 10,
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.8,
-          ),
           onTap: (index) {
             setState(() {
               _currentIndex = index;
@@ -290,24 +270,20 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           },
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.assignment_turned_in_outlined),
-              activeIcon: Icon(Icons.assignment_turned_in, color: Color(0xFF00F0FF)),
-              label: 'QUESTS',
+              icon: Icon(Icons.assignment),
+              label: 'Status & Quest',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.shield_outlined),
-              activeIcon: Icon(Icons.shield, color: Color(0xFF00F0FF)),
-              label: 'DUNGEON',
+              icon: Icon(Icons.map),
+              label: 'Dungeon & Guild',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.analytics_outlined),
-              activeIcon: Icon(Icons.analytics, color: Color(0xFF00F0FF)),
-              label: 'REVIEWS',
+              icon: Icon(Icons.rate_review),
+              label: 'Saran & Kesan',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person, color: Color(0xFF00F0FF)),
-              label: 'PROFILE',
+              icon: Icon(Icons.person),
+              label: 'Profil Player',
             ),
           ],
         ),

@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../auth/login_page.dart';
+import '../onboarding/onboarding_page.dart';
 import 'profile_biometric_widget.dart';
 
 class ProfileTab extends StatefulWidget {
@@ -244,6 +245,33 @@ class _ProfileTabState extends State<ProfileTab> {
                     color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 12,
                     height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const OnboardingPage()),
+                      );
+                    },
+                    icon: const Icon(Icons.tune, color: Color(0xFF002022), size: 16),
+                    label: const Text(
+                      'KALIBRASI ULANG STATS (HUNTER CALIBRATION)',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        color: Color(0xFF002022),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00F0FF),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
                   ),
                 ),
               ],
