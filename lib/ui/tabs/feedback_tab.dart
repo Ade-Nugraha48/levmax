@@ -862,24 +862,30 @@ class _FeedbackTabState extends State<FeedbackTab>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 4,
-                            height: 4,
-                            color: primaryCyan,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'HUNTER IMPRESSION [KESAN MATKUL]',
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.bold,
-                              color: onSurfaceVariant,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 4,
+                              height: 4,
+                              color: primaryCyan,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                'HUNTER IMPRESSION [KESAN MATKUL]',
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.jetBrainsMono(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         'CHAR ${_kesanController.text.length}/500',
                         style: GoogleFonts.jetBrainsMono(
@@ -901,24 +907,30 @@ class _FeedbackTabState extends State<FeedbackTab>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 4,
-                            height: 4,
-                            color: mintAccent,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'STRATEGIC DIRECTIVES & SUGGESTIONS [SARAN MATKUL]',
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.bold,
-                              color: onSurfaceVariant,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 4,
+                              height: 4,
+                              color: mintAccent,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                'STRATEGIC DIRECTIVES & SUGGESTIONS [SARAN MATKUL]',
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.jetBrainsMono(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         'CHAR ${_saranController.text.length}/500',
                         style: GoogleFonts.jetBrainsMono(

@@ -187,19 +187,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     );
   }
 
-  String _getTabTitle(int index) {
-    switch (index) {
-      case 1:
-        return 'DUNGEON & GUILD EXCHANGE';
-      case 2:
-        return 'ARCHIVE & LECTURE FEEDBACK';
-      case 3:
-        return 'HUNTER PROFILE & STATS';
-      default:
-        return 'DAILY QUESTS HUD';
-    }
-  }
-
   Widget _buildTacticalBottomNavBar() {
     final items = [
       {'label': 'QUESTS', 'icon': Icons.shield_moon},
@@ -295,46 +282,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
     return Scaffold(
       backgroundColor: LevMaxTheme.background,
-      appBar: (_currentIndex == 0 || _currentIndex == 1 || _currentIndex == 2)
-          ? null // Tab 1, Tab 2, & Tab 3: Menampilkan Sticky Tactical Header Bar kustom sendiri
-          : PreferredSize(
-              preferredSize: const Size.fromHeight(56),
-              child: Container(
-                color: LevMaxTheme.surface,
-                child: SafeArea(
-                  bottom: false,
-                  child: Container(
-                    height: 56,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: const BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: LevMaxTheme.surfaceContainerHighest, width: 1.0),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.bolt, color: LevMaxTheme.primaryContainer, size: 22),
-                        const SizedBox(width: 8),
-                        Text(
-                          _getTabTitle(_currentIndex),
-                          style: LevMaxTheme.headline(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: LevMaxTheme.onSurface,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          icon: const Icon(Icons.refresh, color: LevMaxTheme.primaryContainer, size: 20),
-                          onPressed: _loadPlayerAndCheckPenalty,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+      appBar: null,
       body: pages[_currentIndex],
       bottomNavigationBar: _buildTacticalBottomNavBar(),
     );
