@@ -41,7 +41,7 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
   double _currentLat = -6.2088;
   double _currentLng = 106.8456;
   double _gpsAccuracy = 3.2;
-  int _satCount = 18;
+  final int _satCount = 18;
 
   // Sub-View 2: Guild Exchange State
   late TextEditingController _goldInputController;

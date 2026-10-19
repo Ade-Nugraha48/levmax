@@ -68,6 +68,48 @@ class FeedbackModel extends HiveObject {
       createdAt: map['created_at']?.toString() ?? DateTime.now().toIso8601String(),
     );
   }
+
+  /// Ekstraksi rating bintang/dagger (1-5) dari metadata nim atau default 5
+  int get rating {
+    if (nim.startsWith('RATING:')) {
+      final parts = nim.split('|');
+      for (final p in parts) {
+        if (p.startsWith('RATING:')) {
+          return int.tryParse(p.replaceFirst('RATING:', '')) ?? 5;
+        }
+      }
+    }
+    return 5;
+  }
+
+  /// Ekstraksi mata kuliah/disiplin
+  String get discipline {
+    if (namaMahasiswa.isNotEmpty && namaMahasiswa != 'Hunter' && namaMahasiswa != 'Admin') {
+      return namaMahasiswa;
+    }
+    if (nim.contains('SECTOR:')) {
+      final parts = nim.split('|');
+      for (final p in parts) {
+        if (p.startsWith('SECTOR:')) {
+          return p.replaceFirst('SECTOR:', '');
+        }
+      }
+    }
+    return 'Semester 5 - Mobile Programming Theory';
+  }
+
+  /// Ekstraksi rank log
+  String get rank {
+    if (nim.contains('RANK:')) {
+      final parts = nim.split('|');
+      for (final p in parts) {
+        if (p.startsWith('RANK:')) {
+          return p.replaceFirst('RANK:', '');
+        }
+      }
+    }
+    return rating >= 5 ? 'S' : (rating >= 4 ? 'A' : 'B');
+  }
 }
 
 /// ==============================================================================

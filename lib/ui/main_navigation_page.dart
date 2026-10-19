@@ -20,6 +20,7 @@ import '../helpers/levmax_theme.dart';
 import 'tabs/status_quest_tab.dart';
 import 'tabs/dungeon_guild_tab.dart';
 import 'tabs/saran_kesan_tab.dart';
+import 'tabs/feedback_tab.dart';
 import 'tabs/profile_tab.dart';
 
 class MainNavigationPage extends StatefulWidget {
@@ -191,7 +192,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       case 1:
         return 'DUNGEON & GUILD EXCHANGE';
       case 2:
-        return 'REVIEWS & FEEDBACK';
+        return 'ARCHIVE & LECTURE FEEDBACK';
       case 3:
         return 'HUNTER PROFILE & STATS';
       default:
@@ -203,8 +204,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     final items = [
       {'label': 'QUESTS', 'icon': Icons.shield_moon},
       {'label': 'DUNGEON', 'icon': Icons.shield_outlined},
-      {'label': 'REVIEWS', 'icon': Icons.analytics_outlined},
-      {'label': 'PROFILE', 'icon': Icons.person_outline},
+      {'label': 'ARCHIVE', 'icon': Icons.menu_book_outlined},
+      {'label': 'HUNTER', 'icon': Icons.person_outline},
     ];
 
     return Container(
@@ -282,8 +283,9 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
         player: _currentPlayer!,
         onPlayerUpdated: _loadPlayerAndCheckPenalty,
       ),
-      SaranKesanTab(
+      FeedbackTab(
         player: _currentPlayer!,
+        onPlayerUpdated: _loadPlayerAndCheckPenalty,
       ),
       ProfileTab(
         player: _currentPlayer!,
@@ -293,8 +295,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
     return Scaffold(
       backgroundColor: LevMaxTheme.background,
-      appBar: (_currentIndex == 0 || _currentIndex == 1)
-          ? null // Tab 1 & Tab 2: Menampilkan Sticky Tactical Header Bar kustom sendiri
+      appBar: (_currentIndex == 0 || _currentIndex == 1 || _currentIndex == 2)
+          ? null // Tab 1, Tab 2, & Tab 3: Menampilkan Sticky Tactical Header Bar kustom sendiri
           : PreferredSize(
               preferredSize: const Size.fromHeight(56),
               child: Container(
