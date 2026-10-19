@@ -14,9 +14,9 @@ import '../../helpers/levmax_theme.dart';
 import '../../models/quest_model.dart';
 import '../../models/user_model.dart';
 import '../../services/blockchain_service.dart';
-import '../../services/gemini_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/supabase_api_service.dart';
+import '../chat/system_ai_chat_modal.dart';
 import '../penalty/penalty_minigame_page.dart';
 import '../quests/sensor_study_page.dart';
 import '../quests/sensor_workout_page.dart';
@@ -452,180 +452,10 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
   }
 
   // ==========================================================================
-  // MODAL AI CHAT ASSISTANT "THE SYSTEM" (GEMINI CONDUIT)
+  // MODAL AI CHAT ASSISTANT "THE SYSTEM" (GEMINI CONDUIT - PIXEL-PERFECT HUD)
   // ==========================================================================
   void _openSystemChatSheet() {
-    final chatMsgController = TextEditingController();
-    final List<Map<String, String>> messages = [
-      {
-        'sender': 'system',
-        'text':
-            '[THE SYSTEM ONLINE]\nHunter ${widget.player.username} (Level ${widget.player.level}, Rank ${widget.player.rank}). Laporkan kebutuhan konsultasi Anda seputar Workout, Looksmaxxing, atau Disiplin Belajar.'
-      }
-    ];
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: LevMaxTheme.surfaceContainer,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        side: BorderSide(color: LevMaxTheme.primaryContainer, width: 1.5),
-      ),
-      builder: (ctx) {
-        bool isTyping = false;
-
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 16,
-                right: 16,
-                top: 16,
-              ),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.75,
-                child: Column(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: LevMaxTheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(Icons.bolt, color: LevMaxTheme.primaryContainer, size: 24),
-                        const SizedBox(width: 8),
-                        Text(
-                          'THE SYSTEM // AI CONDUIT',
-                          style: LevMaxTheme.headline(
-                            fontSize: 14,
-                            color: LevMaxTheme.primaryContainer,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: LevMaxTheme.outline),
-                          onPressed: () => Navigator.pop(ctx),
-                        ),
-                      ],
-                    ),
-                    const Divider(color: LevMaxTheme.surfaceContainerHighest),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: messages.length,
-                        itemBuilder: (context, idx) {
-                          final msg = messages[idx];
-                          final isSystem = msg['sender'] == 'system';
-
-                          return Align(
-                            alignment: isSystem ? Alignment.centerLeft : Alignment.centerRight,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 6),
-                              padding: const EdgeInsets.all(12),
-                              constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width * 0.80,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isSystem
-                                    ? LevMaxTheme.surfaceContainerLowest
-                                    : LevMaxTheme.primaryContainer.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: isSystem ? LevMaxTheme.surfaceContainerHighest : LevMaxTheme.primaryContainer,
-                                ),
-                              ),
-                              child: Text(
-                                msg['text'] ?? '',
-                                style: TextStyle(
-                                  fontFamily: isSystem ? 'monospace' : null,
-                                  color: isSystem ? LevMaxTheme.onSurface : LevMaxTheme.primaryContainer,
-                                  fontSize: 12,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    if (isTyping)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Text(
-                          '[SISTEM SEDANG MEMPROSES TELEMETRI HUNTER...]',
-                          style: LevMaxTheme.mono(
-                            fontSize: 11,
-                            color: LevMaxTheme.primaryContainer,
-                          ),
-                        ),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: chatMsgController,
-                              style: LevMaxTheme.mono(fontSize: 13, color: LevMaxTheme.onSurface),
-                              decoration: InputDecoration(
-                                hintText: 'Query The System protocol...',
-                                hintStyle: LevMaxTheme.mono(fontSize: 12, color: LevMaxTheme.outline),
-                                filled: true,
-                                fillColor: LevMaxTheme.surfaceContainerLowest,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(color: LevMaxTheme.surfaceContainerHighest),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(color: LevMaxTheme.surfaceContainerHighest),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: const Icon(Icons.send, color: LevMaxTheme.primaryContainer),
-                            onPressed: () async {
-                              final txt = chatMsgController.text.trim();
-                              if (txt.isEmpty) return;
-
-                              setModalState(() {
-                                messages.add({'sender': 'user', 'text': txt});
-                                isTyping = true;
-                              });
-                              chatMsgController.clear();
-
-                              final reply = await GeminiService.sendMessage(
-                                message: txt,
-                                player: widget.player,
-                              );
-
-                              setModalState(() {
-                                messages.add({'sender': 'system', 'text': reply});
-                                isTyping = false;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
+    SystemAiChatModal.show(context, player: widget.player);
   }
 
   // ==========================================================================
@@ -1785,7 +1615,11 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
 
         // Tombol Kanan: AI "THE SYSTEM" (Gemini Conduit)
         GestureDetector(
-          onTap: _openSystemChatSheet,
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            debugPrint('=== [STATUS QUEST TAB] OPENING SYSTEM AI CHAT MODAL ===');
+            _openSystemChatSheet();
+          },
           child: Container(
             width: 46,
             height: 46,

@@ -22,10 +22,18 @@ import 'ui/auth/login_page.dart';
 import 'ui/auth/register_page.dart';
 import 'ui/onboarding/onboarding_page.dart';
 import 'ui/main_navigation_page.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'ui/penalty/game_over_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inisialisasi Environment Variables (.env)
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint('[main] Warning: .env file not found or failed to load: $e');
+  }
 
   // Kunci orientasi layar ke Portrait agar UI stabil
   await SystemChrome.setPreferredOrientations([
@@ -141,6 +149,7 @@ class LevMaxApp extends StatelessWidget {
         '/onboarding': (context) => const OnboardingPage(),
         '/main': (context) => const MainNavigationPage(),
         '/register': (context) => const RegisterPage(),
+        '/game_over': (context) => const GameOverPage(),
       },
     );
   }
