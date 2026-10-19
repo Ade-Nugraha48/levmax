@@ -2,6 +2,7 @@
 // LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
 // File: lib/ui/auth/register_page.dart
 // Deskripsi: Layanan Registrasi Akun Hunter Enkripsi SHA-256 (FR-1.1)
+//            dengan opsi verifikasi pemindaian biometrik instan pada saat pendaftaran.
 // ==============================================================================
 
 import 'package:flutter/material.dart';
@@ -37,7 +38,75 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  // ============================================================================
+  // LOGIKA VERIFIKASI BIOMETRIK SAAT CHECKBOX/SWITCH DICENTANG
+  // ============================================================================
+  Future<void> _handleBiometricToggle(bool value) async {
+    // Jika user mematikan checkbox, langsung set false tanpa pemindaian
+    if (!value) {
+      setState(() {
+        _biometricEnabled = false;
+      });
+      return;
+    }
+
+    // 1. Cek apakah perangkat mendukung sensor biometrik
+    final isSupported = await AuthService.canAuthenticateWithBiometrics();
+    if (!isSupported) {
+      if (!mounted) return;
+      _showWarningSnackBar(
+        'Perangkat tidak mendukung sensor biometrik atau belum ada sidik jari/wajah yang didaftarkan di pengaturan Android.',
+      );
+      setState(() {
+        _biometricEnabled = false;
+      });
+      return;
+    }
+
+    // 2. Panggil pemindai sidik jari / Face ID saat itu juga untuk verifikasi awal
+    final authSuccess = await AuthService.authenticateWithBiometrics(
+      reason: 'Verifikasi sensor biometrik Anda untuk mengaktifkan login instan Hunter',
+    );
+
+    if (!mounted) return;
+
+    if (authSuccess) {
+      setState(() {
+        _biometricEnabled = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle_outline, color: Colors.black),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Sensor biometrik terverifikasi dan siap digunakan!',
+                  style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF00E5FF),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    } else {
+      setState(() {
+        _biometricEnabled = false;
+      });
+      _showWarningSnackBar('Verifikasi biometrik dibatalkan atau tidak cocok.');
+    }
+  }
+
+  // ============================================================================
+  // LOGIKA SUBMIT REGISTRASI
+  // ============================================================================
   Future<void> _handleRegister() async {
+    FocusScope.of(context).unfocus();
+
     if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
       return;
     }
@@ -47,11 +116,11 @@ class _RegisterPageState extends State<RegisterPage> {
       _errorMessage = null;
     });
 
-    final res = await AuthService.register(
+    final res = await AuthService.registerUser(
       username: _usernameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
-      biometricEnabled: _biometricEnabled,
+      isBiometric: _biometricEnabled,
     );
 
     if (!mounted) return;
@@ -63,9 +132,21 @@ class _RegisterPageState extends State<RegisterPage> {
     if (res['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(res['message'] ?? 'Hunter Berhasil Terdaftar!'),
+          content: Row(
+            children: [
+              const Icon(Icons.verified, color: Colors.black),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  res['message'] ?? 'Hunter Berhasil Dibangkitkan!',
+                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
           backgroundColor: const Color(0xFF00E5FF),
           behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
 
@@ -79,7 +160,42 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() {
         _errorMessage = res['message'] ?? 'Registrasi gagal diproses Sistem.';
       });
+      _showErrorSnackBar(_errorMessage!);
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message, style: const TextStyle(color: Colors.white))),
+          ],
+        ),
+        backgroundColor: const Color(0xFFFF1744),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  void _showWarningSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.info_outline, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message, style: const TextStyle(color: Colors.white))),
+          ],
+        ),
+        backgroundColor: const Color(0xFFFFA000),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   @override
@@ -101,7 +217,7 @@ class _RegisterPageState extends State<RegisterPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 10),
-              // Header Badge
+              // Header Badge Solo Leveling
               Center(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -133,7 +249,7 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Sistem akan mencatat data Anda ke PostgreSQL & Rantai Blok Anti-Cheat',
+                'Sistem akan mencatat data Anda ke PostgreSQL Supabase & Rantai Blok Anti-Cheat',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
@@ -228,27 +344,28 @@ class _RegisterPageState extends State<RegisterPage> {
                         if (value == null || value.trim().isEmpty) {
                           return 'Email wajib diisi.';
                         }
-                        if (!value.contains('@') || !value.contains('.')) {
-                          return 'Format email tidak valid.';
+                        final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                        if (!emailRegex.hasMatch(value.trim())) {
+                          return 'Format alamat email tidak valid.';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
 
-                    // Password Field
+                    // Password Field (Minimal 8 Karakter)
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        labelText: 'Password (Minimal 6 Karakter)',
+                        labelText: 'Password (Minimal 8 Karakter)',
                         labelStyle: const TextStyle(color: Color(0xFF00E5FF)),
                         prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF00E5FF)),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                            color: Colors.grey,
+                            color: const Color(0xFF00E5FF),
                           ),
                           onPressed: () {
                             setState(() {
@@ -272,8 +389,8 @@ class _RegisterPageState extends State<RegisterPage> {
                         if (value == null || value.isEmpty) {
                           return 'Password wajib diisi.';
                         }
-                        if (value.length < 6) {
-                          return 'Password minimal 6 karakter.';
+                        if (value.length < 8) {
+                          return 'Password minimal 8 karakter.';
                         }
                         return null;
                       },
@@ -292,7 +409,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscureConfirm ? Icons.visibility_off : Icons.visibility,
-                            color: Colors.grey,
+                            color: const Color(0xFF00E5FF),
                           ),
                           onPressed: () {
                             setState(() {
@@ -313,39 +430,70 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                       validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Konfirmasi password wajib diisi.';
+                        }
                         if (value != _passwordController.text) {
                           return 'Konfirmasi password tidak cocok.';
                         }
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 18),
 
-                    // Switch Biometrik
+                    // Checkbox / Switch Biometrik dengan trigger verifikasi awal
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
                         color: const Color(0xFF131B2E),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF1E293B)),
+                        border: Border.all(
+                          color: _biometricEnabled
+                              ? const Color(0xFF00E5FF)
+                              : const Color(0xFF1E293B),
+                          width: _biometricEnabled ? 1.5 : 1.0,
+                        ),
                       ),
-                      child: SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text(
-                          'Aktifkan Login Biometrik',
-                          style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text(
-                          'Gunakan sensor sidik jari / Face ID untuk verifikasi cepat sesi',
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
-                        ),
-                        activeThumbColor: const Color(0xFF00E5FF),
-                        value: _biometricEnabled,
-                        onChanged: (val) {
-                          setState(() {
-                            _biometricEnabled = val;
-                          });
-                        },
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.fingerprint,
+                            color: _biometricEnabled
+                                ? const Color(0xFF00E5FF)
+                                : Colors.grey,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Aktifkan Login Biometrik',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Memicu pemindaian sidik jari/wajah saat dicentang untuk verifikasi awal',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Checkbox(
+                            value: _biometricEnabled,
+                            activeColor: const Color(0xFF00E5FF),
+                            checkColor: Colors.black,
+                            onChanged: (val) => _handleBiometricToggle(val ?? false),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -376,7 +524,7 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
               const SizedBox(height: 20),
 
-              // Kembali ke Login
+              // Link Kembali ke Login
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

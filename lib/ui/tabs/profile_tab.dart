@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import '../../helpers/user_info.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
-import '../../services/supabase_api_service.dart';
 import '../auth/login_page.dart';
 
 class ProfileTab extends StatefulWidget {
@@ -35,32 +34,61 @@ class _ProfileTabState extends State<ProfileTab> {
     _loadBiometricState();
   }
 
-  Future<void> _loadBiometricState() async {
-    final enabled = await UserInfo.getBiometricEnabled();
-    if (mounted) {
+  @override
+  void didUpdateWidget(covariant ProfileTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.player.biometricEnabled != widget.player.biometricEnabled) {
       setState(() {
-        _biometricEnabled = enabled;
+        _biometricEnabled = widget.player.biometricEnabled;
       });
     }
   }
 
-  Future<void> _toggleBiometrics(bool val) async {
-    setState(() {
-      _biometricEnabled = val;
-    });
-    await UserInfo.setBiometricEnabled(val);
-
-    final updated = widget.player.copyWith(biometricEnabled: val);
-    await SupabaseApiService.updateUser(updated);
-    widget.onPlayerUpdated();
-
+  Future<void> _loadBiometricState() async {
+    final localPref = await UserInfo.getBiometricEnabled();
+    final effectiveEnabled = localPref || widget.player.biometricEnabled;
     if (mounted) {
+      setState(() {
+        _biometricEnabled = effectiveEnabled;
+      });
+    }
+    // Sinkronkan jika ada perbedaan antara database dan preferensi lokal
+    if (localPref != effectiveEnabled) {
+      await UserInfo.setBiometricEnabled(effectiveEnabled);
+    }
+  }
+
+  Future<void> _toggleBiometrics(bool val) async {
+    final res = await AuthService.toggleBiometricForUser(
+      userId: widget.player.id,
+      enable: val,
+      localizedReason: 'Konfirmasi biometrik Hunter untuk mengubah status login instan',
+    );
+
+    if (!mounted) return;
+
+    if (res['success'] == true) {
+      setState(() {
+        _biometricEnabled = val;
+      });
+      widget.onPlayerUpdated();
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(val
-              ? 'Autentikasi Biometrik Diaktifkan.'
-              : 'Autentikasi Biometrik Dinonaktifkan.'),
+          content: Text(res['message'] ?? 'Status Biometrik Diperbarui.'),
           backgroundColor: const Color(0xFF00E5FF),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else {
+      // Kembalikan switch ke nilai semula jika verifikasi gagal/dibatalkan
+      setState(() {
+        _biometricEnabled = !val;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Gagal mengubah status biometrik.'),
+          backgroundColor: const Color(0xFFFFA000),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -72,10 +100,20 @@ class _ProfileTabState extends State<ProfileTab> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF131B2E),
-        title: const Text('LOGOUT DARI SISTEM', style: TextStyle(color: Color(0xFF00E5FF))),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFFF1744), width: 1.5),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.logout, color: Color(0xFFFF1744)),
+            SizedBox(width: 8),
+            Text('LOGOUT DARI SISTEM', style: TextStyle(color: Color(0xFFFF1744), fontWeight: FontWeight.bold)),
+          ],
+        ),
         content: const Text(
-          'Apakah Anda yakin ingin keluar dari Status Window?',
-          style: TextStyle(color: Colors.white70),
+          'Apakah Anda yakin ingin keluar dari Status Window?\nSesi aktif akan dicabut, namun konfigurasi biometrik pada perangkat ini tetap tersimpan dengan aman.',
+          style: TextStyle(color: Colors.white70, fontSize: 13),
         ),
         actions: [
           TextButton(
@@ -85,22 +123,43 @@ class _ProfileTabState extends State<ProfileTab> {
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF1744)),
-            child: const Text('LOGOUT', style: TextStyle(color: Colors.white)),
+            child: const Text('LOGOUT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
 
-    if (confirm == true) {
-      await AuthService.logout();
-      if (!mounted) return;
+    if (confirm != true) return;
 
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-        (route) => false,
-      );
+    // Tampilkan loading dialog selama proses logout berlangsung
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const PopScope(
+        canPop: false,
+        child: Center(
+          child: CircularProgressIndicator(color: Color(0xFF00E5FF)),
+        ),
+      ),
+    );
+
+    try {
+      await AuthService.logout();
+    } catch (e) {
+      debugPrint('Logout execution caught: $e');
     }
+
+    if (!mounted) return;
+
+    // Tutup loading dialog
+    Navigator.of(context, rootNavigator: true).pop();
+
+    // Navigasi ke LoginPage menggunakan rootNavigator agar membersihkan seluruh stack BottomNavigationBar
+    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
   }
 
   @override

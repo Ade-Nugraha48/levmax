@@ -2,12 +2,14 @@
 // LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
 // File: lib/helpers/user_info.dart
 // Deskripsi: Lapisan 1 Arsitektur DB - Manajemen Sesi Login via SharedPreferences
-//            dengan validasi kedaluwarsa sesi otomatis 60 menit (1 Jam).
+//            dengan validasi kedaluwarsa sesi otomatis 60 menit (Auto-Logout).
+//            Standar Industri: Mempertahankan preferensi biometrik lokal saat logout.
 // ==============================================================================
 
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserInfo {
+  // Kunci-kunci penyimpanan SharedPreferences
   static const String keyToken = 'token';
   static const String keyUserID = 'userID';
   static const String keyUsername = 'username';
@@ -16,6 +18,10 @@ class UserInfo {
   static const String keyIsOnboarded = 'isOnboarded';
   static const String keyBiometricEnabled = 'biometricEnabled';
   static const String keyLastActive = 'last_active_timestamp';
+
+  // ============================================================================
+  // TOKEN & USER IDENTITY
+  // ============================================================================
 
   /// Menyimpan token autentikasi sesi (auth_key)
   static Future<bool> setToken(String value) async {
@@ -29,7 +35,7 @@ class UserInfo {
     return pref.getString(keyToken);
   }
 
-  /// Menyimpan ID unik Player (user_id)
+  /// Menyimpan ID unik Player (user_id di PostgreSQL Supabase)
   static Future<bool> setUserID(int value) async {
     final pref = await SharedPreferences.getInstance();
     return await pref.setInt(keyUserID, value);
@@ -41,31 +47,35 @@ class UserInfo {
     return pref.getInt(keyUserID);
   }
 
-  /// Menyimpan Username
+  /// Menyimpan Username Hunter
   static Future<bool> setUsername(String value) async {
     final pref = await SharedPreferences.getInstance();
     return await pref.setString(keyUsername, value);
   }
 
-  /// Mengambil Username
+  /// Mengambil Username Hunter
   static Future<String?> getUsername() async {
     final pref = await SharedPreferences.getInstance();
     return pref.getString(keyUsername);
   }
 
-  /// Menyimpan Email
+  /// Menyimpan Email terdaftar
   static Future<bool> setEmail(String value) async {
     final pref = await SharedPreferences.getInstance();
     return await pref.setString(keyEmail, value);
   }
 
-  /// Mengambil Email
+  /// Mengambil Email terdaftar
   static Future<String?> getEmail() async {
     final pref = await SharedPreferences.getInstance();
     return pref.getString(keyEmail);
   }
 
-  /// Menyimpan status login aktif
+  // ============================================================================
+  // STATUS LOGIN & ONBOARDING
+  // ============================================================================
+
+  /// Menyimpan status login aktif (true jika sudah login)
   static Future<bool> setLoginStatus(bool value) async {
     final pref = await SharedPreferences.getInstance();
     return await pref.setBool(keyLogin, value);
@@ -77,31 +87,44 @@ class UserInfo {
     return pref.getBool(keyLogin) ?? false;
   }
 
-  /// Menyimpan status onboarding fisik Player
+  /// Menyimpan status penyelesaian Onboarding fisik Player
   static Future<bool> setIsOnboarded(bool value) async {
     final pref = await SharedPreferences.getInstance();
     return await pref.setBool(keyIsOnboarded, value);
   }
 
-  /// Mengambil status onboarding fisik Player
+  /// Mengambil status penyelesaian Onboarding fisik Player
   static Future<bool> getIsOnboarded() async {
     final pref = await SharedPreferences.getInstance();
     return pref.getBool(keyIsOnboarded) ?? false;
   }
 
-  /// Menyimpan preferensi biometrik (Fingerprint / Face ID)
+  // ============================================================================
+  // PREFERENSI BIOMETRIK LOKAL
+  // ============================================================================
+
+  /// Menyimpan status aktivasi biometrik lokal (Fingerprint / Face ID)
   static Future<bool> setBiometricEnabled(bool value) async {
     final pref = await SharedPreferences.getInstance();
     return await pref.setBool(keyBiometricEnabled, value);
   }
 
-  /// Mengambil status preferensi biometrik
+  /// Mengambil status aktivasi biometrik lokal
   static Future<bool> getBiometricEnabled() async {
     final pref = await SharedPreferences.getInstance();
     return pref.getBool(keyBiometricEnabled) ?? false;
   }
 
-  /// Menyimpan waktu aktivitas terakhir dalam format ISO-8601
+  /// Alias pembantu untuk memeriksa apakah biometrik aktif di sesi lokal
+  static Future<bool> isBiometricEnabledLocal() async {
+    return await getBiometricEnabled();
+  }
+
+  // ============================================================================
+  // MANAJEMEN WAKTU & TIMEOUT SESI (AUTO-LOGOUT 60 MENIT)
+  // ============================================================================
+
+  /// Menyimpan timestamp waktu aktivitas terakhir dalam format ISO-8601
   static Future<bool> setLastActive(String isoTime) async {
     final pref = await SharedPreferences.getInstance();
     return await pref.setString(keyLastActive, isoTime);
@@ -113,49 +136,73 @@ class UserInfo {
     return pref.getString(keyLastActive);
   }
 
-  /// Memperbarui timestamp aktivitas ke waktu saat ini
+  /// Memperbarui timestamp aktivitas ke waktu saat ini (setiap ada interaksi aktif)
   static Future<void> updateLastActive() async {
     final nowIso = DateTime.now().toIso8601String();
     await setLastActive(nowIso);
   }
 
   /// Memeriksa apakah sesi telah kedaluwarsa (> 60 menit dari aktivitas terakhir).
-  /// Sesuai Spesifikasi FR-1.2: jika selisih > 60 menit, panggil pref.clear() (auto-logout)
-  /// dan kembalikan true. Jika sesi masih berlaku, perbarui last_active dan kembalikan false.
+  /// Sesuai Spesifikasi FR-1.2:
+  /// - Jika user tidak sedang login -> return true.
+  /// - Jika timestamp kosong atau rusak -> panggil logout() & return true.
+  /// - Jika selisih waktu saat ini dengan last_active >= 60 menit -> panggil logout() & return true.
+  /// - Jika masih dalam batas waktu -> perbarui last_active ke waktu saat ini & return false.
   static Future<bool> checkSessionTimeout() async {
     final pref = await SharedPreferences.getInstance();
     final isLoggedIn = pref.getBool(keyLogin) ?? false;
+    
+    // Jika tidak dalam kondisi login, sesi dianggap tidak aktif
     if (!isLoggedIn) {
-      return true; // Tidak sedang login
+      return true;
     }
 
     final lastActiveStr = pref.getString(keyLastActive);
     if (lastActiveStr == null || lastActiveStr.isEmpty) {
-      await pref.clear();
-      return true; // Tidak ada riwayat aktivitas, auto-logout
+      // Data waktu aktivitas tidak valid -> amankan dengan auto-logout
+      await logout();
+      return true;
     }
 
     final lastActive = DateTime.tryParse(lastActiveStr);
     if (lastActive == null) {
-      await pref.clear();
+      await logout();
       return true;
     }
 
     final differenceInMinutes = DateTime.now().difference(lastActive).inMinutes;
 
-    // Sesuai aturan: jika selisih waktu sekarang dengan last_active_timestamp > 60 menit (1 jam)
+    // Batas waktu inaktif toleransi maksimal: 60 menit (1 Jam)
     if (differenceInMinutes >= 60) {
-      await pref.clear();
-      return true; // Sesi habis, panggil auto-logout
+      // Sesi telah kedaluwarsa -> bersihkan sesi aktif (Auto-Logout)
+      await logout();
+      return true;
     }
 
-    // Sesi masih valid, perbarui timestamp ke waktu saat ini
-    await pref.setString(keyLastActive, DateTime.now().toIso8601String());
+    // Sesi masih valid: perbarui timestamp aktivitas terakhir ke waktu saat ini
+    await setLastActive(DateTime.now().toIso8601String());
     return false;
   }
 
-  /// Menghapus seluruh data sesi di SharedPreferences saat Logout
+  // ============================================================================
+  // LOGOUT (STANDAR INDUSTRI)
+  // ============================================================================
+
+  /// Menghapus otorisasi sesi aktif saat Logout.
+  /// STANDAR INDUSTRI APLIKASI MODERN:
+  /// Hanya mencabut sesi (token, status login, dan timestamp aktivitas).
+  /// Kredensial pengenal (username/email/userID) dan preferensi biometrik (keyBiometricEnabled)
+  /// TETAP DIPERTAHANKAN pada perangkat ini agar user dapat login kembali menggunakan
+  /// Sidik Jari / Face ID tanpa harus mengetik password berulang kali.
   static Future<void> logout() async {
+    final pref = await SharedPreferences.getInstance();
+    await pref.remove(keyToken);
+    await pref.setBool(keyLogin, false);
+    await pref.remove(keyLastActive);
+  }
+
+  /// Reset total data aplikasi jika user ingin menghapus seluruh jejak lokal (Factory Reset)
+  static Future<void> clearAll() async {
     final pref = await SharedPreferences.getInstance();
     await pref.clear();
   }

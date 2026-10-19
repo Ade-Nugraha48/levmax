@@ -1,13 +1,13 @@
 // ==============================================================================
 // LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
 // File: lib/ui/auth/login_page.dart
-// Deskripsi: Layanan Login Kredensial Enkripsi SHA-256 & Biometrik (FR-1.1 - FR-1.3)
+// Deskripsi: Halaman Login Hunter Kredensial Enkripsi SHA-256 & Biometrik
+//            dengan tombol terpisah untuk Sidik Jari & Face ID Scan.
 // ==============================================================================
 
 import 'package:flutter/material.dart';
 import '../../helpers/user_info.dart';
 import '../../services/auth_service.dart';
-import '../../services/supabase_api_service.dart';
 import '../onboarding/onboarding_page.dart';
 import '../main_navigation_page.dart';
 import 'register_page.dart';
@@ -21,38 +21,45 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailOrUsernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _isLoading = false;
-  bool _canUseBiometrics = false;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _checkBiometricsSupport();
+    _prefillSavedIdentifier();
+  }
+
+  /// Mengisi otomatis email atau username yang terakhir diingat di perangkat
+  Future<void> _prefillSavedIdentifier() async {
+    final savedEmail = await UserInfo.getEmail();
+    final savedUsername = await UserInfo.getUsername();
+    if (mounted) {
+      if (savedEmail != null && savedEmail.isNotEmpty) {
+        _emailOrUsernameController.text = savedEmail;
+      } else if (savedUsername != null && savedUsername.isNotEmpty) {
+        _emailOrUsernameController.text = savedUsername;
+      }
+    }
   }
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _emailOrUsernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _checkBiometricsSupport() async {
-    final canAuth = await AuthService.canAuthenticateWithBiometrics();
-    final hasBiometricPref = await UserInfo.getBiometricEnabled();
-    if (mounted) {
-      setState(() {
-        _canUseBiometrics = canAuth && hasBiometricPref;
-      });
-    }
-  }
-
+  // ============================================================================
+  // LOGIKA LOGIN KREDENSIAL (EMAIL/USERNAME + PASSWORD)
+  // ============================================================================
   Future<void> _handleLogin() async {
+    FocusScope.of(context).unfocus();
+
     if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
       return;
     }
@@ -62,8 +69,8 @@ class _LoginPageState extends State<LoginPage> {
       _errorMessage = null;
     });
 
-    final res = await AuthService.login(
-      username: _usernameController.text.trim(),
+    final res = await AuthService.loginUser(
+      email: _emailOrUsernameController.text.trim(),
       password: _passwordController.text,
     );
 
@@ -75,15 +82,27 @@ class _LoginPageState extends State<LoginPage> {
 
     if (res['success'] == true) {
       final user = res['user'];
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(res['message'] ?? 'Akses Sistem Diberikan!'),
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_outline, color: Colors.black),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  res['message'] ?? 'Otorisasi Diterima! Selamat datang.',
+                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
           backgroundColor: const Color(0xFF00E5FF),
           behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
 
-      // Cek apakah user sudah onboarding fisik
       if (user != null && user.isOnboarded) {
         Navigator.pushReplacement(
           context,
@@ -99,25 +118,70 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _errorMessage = res['message'] ?? 'Gagal masuk ke Sistem.';
       });
+
+      _showErrorSnackBar(_errorMessage!);
     }
   }
 
-  Future<void> _handleBiometricLogin() async {
-    final authOk = await AuthService.authenticateWithBiometrics(
-      reason: 'Verifikasi identitas Hunter untuk membuka Status Window',
-    );
+  // ============================================================================
+  // LOGIKA LOGIN BIOMETRIK (SIDIK JARI / FACE ID SCAN)
+  // ============================================================================
+  Future<void> _handleBiometricAuth({required String mode}) async {
+    FocusScope.of(context).unfocus();
 
-    if (!authOk || !mounted) return;
+    // 1. Cek apakah perangkat mendukung hardware biometrik
+    final canCheckHardware = await AuthService.canAuthenticateWithBiometrics();
+    final isBiometricConfigured = await UserInfo.getBiometricEnabled();
 
-    // Login cepat dengan user yang tersimpan di cache
-    final cachedUser = SupabaseApiService.getPlayerCache();
-    if (cachedUser != null) {
-      await UserInfo.setLoginStatus(true);
-      await UserInfo.updateLastActive();
-
+    // SKENARIO A: User belum pernah mengatur/mengaktifkan biometrik di perangkat
+    if (!isBiometricConfigured || !canCheckHardware) {
       if (!mounted) return;
+      _showBiometricNotConfiguredDialog();
+      return;
+    }
 
-      if (cachedUser.isOnboarded) {
+    // SKENARIO B: Biometrik sudah aktif dan terkonfigurasi
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final reason = mode == 'face'
+        ? 'Arahkan wajah Anda ke kamera untuk pemindaian Face ID Hunter'
+        : 'Tempelkan sidik jari Anda pada sensor untuk otorisasi Hunter';
+
+    final result = await AuthService.loginBiometric(reason: reason);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (result['success'] == true) {
+      final user = result['user'];
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(mode == 'face' ? Icons.face : Icons.fingerprint, color: Colors.black),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  result['message'] ?? 'Otorisasi Biometrik Berhasil!',
+                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF00E5FF),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+
+      if (user != null && user.isOnboarded) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MainNavigationPage()),
@@ -129,13 +193,75 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Data Hunter belum tersimpan di perangkat. Silakan login manual.'),
-          backgroundColor: Colors.amber,
-        ),
-      );
+      _showErrorSnackBar(result['message'] ?? 'Autentikasi biometrik dibatalkan.');
     }
+  }
+
+  // Dialog visual khusus untuk Skenario A
+  void _showBiometricNotConfiguredDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF131B2E),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFF00E5FF), width: 1.5),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.fingerprint, color: Color(0xFF00E5FF), size: 28),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Biometrik Belum Aktif',
+                style: TextStyle(
+                  color: Color(0xFF00E5FF),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Biometrik belum dikonfigurasi. Silakan login menggunakan password terlebih dahulu, lalu aktifkan fitur ini melalui menu Profil.',
+          style: TextStyle(color: Colors.white, fontSize: 13, height: 1.5),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00E5FF),
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('MENGERTI', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFFFF1744),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   @override
@@ -151,7 +277,6 @@ class _LoginPageState extends State<LoginPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header Logo Solo Leveling
                 Center(
                   child: Container(
                     width: 80,
@@ -177,7 +302,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 20),
 
-                // Judul
                 const Text(
                   'LEVMAX SYSTEM',
                   textAlign: TextAlign.center,
@@ -199,7 +323,6 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 32),
 
-                // Pesan Error jika ada
                 if (_errorMessage != null) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -224,19 +347,18 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 20),
                 ],
 
-                // Form Kredensial
                 Form(
                   key: _formKey,
                   child: Column(
                     children: [
-                      // Username Field
+                      // Field Email atau Username
                       TextFormField(
-                        controller: _usernameController,
+                        controller: _emailOrUsernameController,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          labelText: 'Nama Hunter / Username',
+                          labelText: 'Email atau Username Hunter',
                           labelStyle: const TextStyle(color: Color(0xFF00E5FF)),
-                          prefixIcon: const Icon(Icons.person, color: Color(0xFF00E5FF)),
+                          prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF00E5FF)),
                           filled: true,
                           fillColor: const Color(0xFF131B2E),
                           border: OutlineInputBorder(
@@ -254,14 +376,14 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Harap masukkan nama Hunter Anda.';
+                            return 'Harap masukkan email atau username Hunter.';
                           }
                           return null;
                         },
                       ),
                       const SizedBox(height: 16),
 
-                      // Password Field
+                      // Field Password dengan Hide/Show Toggle
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
@@ -273,7 +395,7 @@ class _LoginPageState extends State<LoginPage> {
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                              color: Colors.grey,
+                              color: const Color(0xFF00E5FF),
                             ),
                             onPressed: () {
                               setState(() {
@@ -300,9 +422,6 @@ class _LoginPageState extends State<LoginPage> {
                           if (value == null || value.isEmpty) {
                             return 'Harap masukkan password.';
                           }
-                          if (value.length < 6) {
-                            return 'Password minimal 6 karakter.';
-                          }
                           return null;
                         },
                       ),
@@ -311,7 +430,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Tombol Submit Login
+                // Tombol Submit Login Utama
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
@@ -332,27 +451,79 @@ class _LoginPageState extends State<LoginPage> {
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 1.5),
                         ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
 
-                // Tombol Login Biometrik jika tersedia
-                if (_canUseBiometrics) ...[
-                  OutlinedButton.icon(
-                    onPressed: _handleBiometricLogin,
-                    icon: const Icon(Icons.fingerprint, color: Color(0xFF00E5FF), size: 28),
-                    label: const Text(
-                      'BUKA DENGAN BIOMETRIK / SIDIK JARI',
-                      style: TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.bold),
+                // PEMISAH ATAU (OR)
+                Row(
+                  children: [
+                    const Expanded(child: Divider(color: Color(0xFF1E293B), thickness: 1)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        'ATAU OTORISASI CEPAT',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
                     ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF00E5FF)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                    const Expanded(child: Divider(color: Color(0xFF1E293B), thickness: 1)),
+                  ],
+                ),
+                const SizedBox(height: 18),
 
-                // Link ke Halaman Registrasi
+                // BARIS TOMBOL BIOMETRIK: SIDIK JARI & FACE ID SCAN
+                Row(
+                  children: [
+                    // 1. Tombol Sidik Jari
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isLoading ? null : () => _handleBiometricAuth(mode: 'fingerprint'),
+                        icon: const Icon(Icons.fingerprint, color: Color(0xFF00E5FF), size: 22),
+                        label: const Text(
+                          'SIDIK JARI',
+                          style: TextStyle(
+                            color: Color(0xFF00E5FF),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFF00E5FF), width: 1.5),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // 2. Tombol Face ID Scan
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isLoading ? null : () => _handleBiometricAuth(mode: 'face'),
+                        icon: const Icon(Icons.face_unlock_outlined, color: Color(0xFFD500F9), size: 22),
+                        label: const Text(
+                          'FACE ID SCAN',
+                          style: TextStyle(
+                            color: Color(0xFFD500F9),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFD500F9), width: 1.5),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Link Navigasi ke Halaman Registrasi
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
