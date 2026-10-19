@@ -6,10 +6,12 @@
 //            Pixel Silhouette & Height Ruler, Dynamic BMI Range Gauge, & Vitals Allocation.
 // ==============================================================================
 
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
 import '../../helpers/boxes.dart';
+import '../../helpers/levmax_theme.dart';
 import '../../helpers/user_info.dart';
 import '../../models/quest_model.dart';
 import '../../models/user_model.dart';
@@ -57,7 +59,7 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
   }
 
   // ============================================================================
-  // KALKULASI DINAMIS BMI & VITALS
+  // KALKULASI DINAMIS BMI, VITALS, & HUNTER RANK
   // ============================================================================
   double get _calculatedBmi {
     final heightMeter = _heightCm / 100.0;
@@ -76,10 +78,10 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
 
   Color get _bmiStatusColor {
     final bmi = _calculatedBmi;
-    if (bmi < 18.5) return const Color(0xFFF59E0B); // Amber
-    if (bmi <= 24.9) return const Color(0xFF65F2B5); // Mint Emerald
-    if (bmi <= 29.9) return const Color(0xFFD2BBFF); // Violet
-    return const Color(0xFFFF2A54); // Crimson
+    if (bmi < 18.5) return const Color(0xFFF59E0B); // Amber Warning
+    if (bmi <= 24.9) return LevMaxTheme.tertiaryContainer; // Neon Mint
+    if (bmi <= 29.9) return LevMaxTheme.secondary; // Soft Lavender
+    return LevMaxTheme.hpRed; // Crimson Heavy Tank
   }
 
   int get _calculatedBaseHp {
@@ -91,10 +93,23 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
   }
 
   double get _bmiGaugePercentage {
-    // Clamps between 15 and 32 BMI, mapped to 0.05 .. 0.92
+    // Memetakan rentang BMI 15.0 - 32.0 ke persentase 0.05 .. 0.94
     final bmi = _calculatedBmi;
-    final percent = ((bmi - 15.0) / (32.0 - 15.0)).clamp(0.05, 0.92);
+    final percent = ((bmi - 15.0) / (32.0 - 15.0)).clamp(0.04, 0.94);
     return percent;
+  }
+
+  String get _calculatedRank {
+    if (_pushups >= 55 && _situps >= 60) return 'C';
+    if (_pushups >= 40 && _situps >= 45) return 'D';
+    return 'E';
+  }
+
+  String get _rankTitle {
+    final rank = _calculatedRank;
+    if (rank == 'C') return 'RANK C - ELITE STRIKER';
+    if (rank == 'D') return 'RANK D - EXPERIENCED VESSEL';
+    return 'RANK E - RECRUIT HUNTER';
   }
 
   void _adjustHeight(double delta) {
@@ -108,7 +123,7 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
       if (_weightUnit == 'kg') {
         _weightKg = double.parse((_weightKg + delta).clamp(30.0, 250.0).toStringAsFixed(1));
       } else {
-        // Delta in lbs -> convert to kg
+        // Delta dalam lbs -> konversi ke kg
         final currentLbs = _weightKg * 2.20462;
         final newLbs = (currentLbs + delta).clamp(66.0, 550.0);
         _weightKg = double.parse((newLbs / 2.20462).toStringAsFixed(1));
@@ -153,6 +168,9 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
     final email = await UserInfo.getEmail() ?? '';
     final todayDate = DateTime.now().toIso8601String().substring(0, 10);
 
+    final assignedRank = _calculatedRank;
+    final baseHp = _calculatedBaseHp;
+
     final player = UserModel(
       id: userId,
       username: username,
@@ -168,8 +186,8 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
       maxRunKm: _runKm,
       pace2kmMenit: _pace,
       level: 1,
-      rank: 'E',
-      hp: 100,
+      rank: assignedRank,
+      hp: baseHp,
       exp: 0,
       gold: 50,
       isPenaltyActive: false,
@@ -177,19 +195,37 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
       createdAt: DateTime.now().toIso8601String(),
     );
 
-    // Simpan ke Hive Cache & Supabase
-    await SupabaseApiService.updateUser(player);
+    // 1. Simpan ke Supabase Cloud DB & Local UserInfo
+    try {
+      await SupabaseApiService.updateUser(player);
+    } catch (e) {
+      debugPrint('Supabase update error: $e');
+    }
     await UserInfo.setIsOnboarded(true);
 
-    // Rumus Adaptif 60% Kapasitas Maksimal Hunter
+    // 2. Rumus Adaptif 60% Kapasitas Maksimal Hunter dengan Pembobotan BMI
     final questBox = Hive.box<QuestModel>(HiveBoxes.questBox);
     await questBox.clear();
 
-    final targetPushup = (_pushups * 0.60).round().clamp(5, 500);
+    double pushupMultiplier = 0.60;
+    double runMultiplier = 0.60;
+
+    // Adaptasi berdasarkan kategori BMI
+    if (_calculatedBmi < 18.5) {
+      // Underweight: Tingkatkan fokus hypertrophy strength
+      pushupMultiplier = 0.65;
+      runMultiplier = 0.50;
+    } else if (_calculatedBmi >= 25.0) {
+      // High Density / Heavy Tank: Tingkatkan fokus endurance cardio
+      pushupMultiplier = 0.55;
+      runMultiplier = 0.70;
+    }
+
+    final targetPushup = (_pushups * pushupMultiplier).round().clamp(5, 500);
     final targetSitup = (_situps * 0.60).round().clamp(5, 500);
     final targetSquat = (_squats * 0.60).round().clamp(5, 500);
     final targetPullup = (_pullups * 0.60).round().clamp(2, 500);
-    final targetRun = double.parse((_runKm * 0.60).toStringAsFixed(1)).clamp(0.5, 50.0);
+    final targetRun = double.parse((_runKm * runMultiplier).toStringAsFixed(1)).clamp(0.5, 50.0);
 
     final initialQuests = [
       QuestModel(
@@ -287,30 +323,44 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
 
     for (final q in initialQuests) {
       await questBox.add(q);
-      await SupabaseApiService.syncQuest(quest: q, userId: userId);
+      try {
+        await SupabaseApiService.syncQuest(quest: q, userId: userId);
+      } catch (e) {
+        debugPrint('Sync quest error: $e');
+      }
     }
 
-    // Catat ke Blockchain Genesis
-    await BlockchainService.addBlock(
-      'ONBOARDING COMPLETED: Hunter Awakened as Rank E Recruit - Baseline BMI: $_calculatedBmi, HP: $_calculatedBaseHp',
-      userId: userId,
-    );
+    // 3. Catat ke Blockchain Genesis
+    try {
+      await BlockchainService.addBlock(
+        'ONBOARDING COMPLETED: Hunter Awakened as Rank $assignedRank - Baseline BMI: $_calculatedBmi, HP: $baseHp',
+        userId: userId,
+      );
+    } catch (e) {
+      debugPrint('Blockchain genesis error: $e');
+    }
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Row(
           children: [
-            Icon(Icons.verified, color: Colors.black),
-            SizedBox(width: 8),
-            Text(
-              'AWAKENING COMPLETE! ENTERING THE SYSTEM...',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black, fontSize: 12),
+            const Icon(Icons.verified, color: LevMaxTheme.onPrimary, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'AWAKENING COMPLETE! ENTERING THE SYSTEM...',
+                style: LevMaxTheme.mono(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: LevMaxTheme.onPrimary,
+                ),
+              ),
             ),
           ],
         ),
-        backgroundColor: Color(0xFF00F0FF),
+        backgroundColor: LevMaxTheme.primaryContainer,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -322,42 +372,55 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final displayWeight = _weightUnit == 'kg'
-        ? _weightKg.toStringAsFixed(1)
-        : (_weightKg * 2.20462).toStringAsFixed(1);
-
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F131D),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ==============================================================
-            // 1. TOP HEADER BAR
-            // ==============================================================
-            Container(
-              height: 56,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: const BoxDecoration(
-                color: Color(0xFF0A0E18),
-                border: Border(bottom: BorderSide(color: Color(0xFF1C1F2A), width: 1)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Color(0xFF00DBE9), size: 20),
-                        onPressed: () {
-                          if (Navigator.canPop(context)) {
-                            Navigator.pop(context);
-                          }
-                        },
+  // ============================================================================
+  // KOMPONEN 1: STICKY TOP NAVIGATION BAR (64PX)
+  // ============================================================================
+  Widget _buildStickyTopNavigationBar() {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          height: 64,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: LevMaxTheme.surfaceContainerLow.withValues(alpha: 0.85),
+            border: const Border(
+              bottom: BorderSide(color: Color(0xFF1E293B), width: 1),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Sisi Kiri: Tombol Back & Judul Sistem
+              Expanded(
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        }
+                      },
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: LevMaxTheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: LevMaxTheme.surfaceContainerHigh),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.arrow_back,
+                            color: Color(0xFF00DBE9),
+                            size: 18,
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 4),
-                      Column(
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -371,1156 +434,1426 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
                                     height: 6,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: const Color(0xFF00F0FF).withValues(
+                                      color: LevMaxTheme.primaryContainer.withValues(
                                         alpha: 0.4 + (_pulseController.value * 0.6),
                                       ),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: LevMaxTheme.primaryContainer,
+                                          blurRadius: 4,
+                                        ),
+                                      ],
                                     ),
                                   );
                                 },
                               ),
                               const SizedBox(width: 6),
-                              const Text(
-                                '[SYS // ONBOARDING]',
-                                style: TextStyle(
-                                  fontFamily: 'monospace',
-                                  color: Color(0xFF00DBE9),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Text(
-                            'Hunter Calibration',
-                            style: TextStyle(
-                              color: Color(0xFFDFE2F1),
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'SEQ',
-                            style: TextStyle(fontFamily: 'monospace', color: Color(0xFF849495), fontSize: 9),
-                          ),
-                          Text(
-                            'PHASE 01/02',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              color: Color(0xFF00F0FF),
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Color(0xFFDBFCFF),
-                        ),
-                        child: const Icon(Icons.person, color: Color(0xFF00363A), size: 18),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // ==============================================================
-            // MAIN SCROLLABLE ONBOARDING FORM
-            // ==============================================================
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Step Telemetry & Narrative Intro
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Color(0xFF00F0FF),
-                                boxShadow: [
-                                  BoxShadow(color: Color(0xFF00F0FF), blurRadius: 4),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'PHASE 02 // VESSEL CALIBRATION',
-                              style: TextStyle(
-                                fontFamily: 'monospace',
-                                color: Color(0xFF00DBE9),
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF262A35),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            'SYNC: READY',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              color: Color(0xFF6FFBBE),
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'NEW HUNTER ONBOARDING: STATS CALIBRATION',
-                      style: TextStyle(
-                        color: Color(0xFF00F0FF),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Enter your physical vessel metrics to calculate your starting Hunter Rank and baseline vitals.',
-                      style: TextStyle(
-                        color: Color(0xFFB9CACB),
-                        fontSize: 12,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // ==============================================================
-                    // 2. HEIGHT STEPPER CARD (WITH PIXEL SILHOUETTE & RULER)
-                    // ==============================================================
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF171B26),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF1C1F2A)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Expanded(
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.height, color: Color(0xFF7DF4FF), size: 15),
-                                    SizedBox(width: 5),
-                                    Flexible(
-                                      child: Text(
-                                        'VESSEL HEIGHT [VERTICAL STAT]',
-                                        style: TextStyle(
-                                          fontFamily: 'monospace',
-                                          color: Color(0xFF7DF4FF),
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 0.4,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF0A0E18),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  'AXIS: Z-HEIGHT',
-                                  style: TextStyle(
-                                    fontFamily: 'monospace',
-                                    color: Color(0xFF849495),
-                                    fontSize: 9,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // Left Controls
                               Expanded(
-                                flex: 6,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                                      textBaseline: TextBaseline.alphabetic,
-                                      children: [
-                                        Text(
-                                          _heightCm.toInt().toString(),
-                                          style: const TextStyle(
-                                            fontFamily: 'monospace',
-                                            fontSize: 32,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF00F0FF),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        const Text(
-                                          'CM',
-                                          style: TextStyle(
-                                            fontFamily: 'monospace',
-                                            color: Color(0xFF00DBE9),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Row(
-                                      children: [
-                                        _buildStepperButton(
-                                          icon: Icons.remove,
-                                          onTap: () => _adjustHeight(-1),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        _buildStepperButton(
-                                          icon: Icons.add,
-                                          onTap: () => _adjustHeight(1),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        GestureDetector(
-                                          onTap: () => _adjustHeight(5),
-                                          child: Container(
-                                            height: 38,
-                                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF1C1F2A),
-                                              borderRadius: BorderRadius.circular(6),
-                                              border: Border.all(color: const Color(0xFF313540)),
-                                            ),
-                                            child: const Center(
-                                              child: Text(
-                                                '+5',
-                                                style: TextStyle(
-                                                  fontFamily: 'monospace',
-                                                  color: Color(0xFF00DBE9),
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              // Right Graphic: Pixel Silhouette + Height Ruler
-                              Expanded(
-                                flex: 5,
-                                child: SizedBox(
-                                  height: 96,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      // Pixel silhouette
-                                      CustomPaint(
-                                        size: const Size(42, 84),
-                                        painter: _PixelSilhouettePainter(heightCm: _heightCm),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      // Height ruler ticks
-                                      const Column(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('200', style: TextStyle(fontFamily: 'monospace', color: Color(0xFF849495), fontSize: 9)),
-                                          Text('180', style: TextStyle(fontFamily: 'monospace', color: Color(0xFF849495), fontSize: 9)),
-                                          Text('175', style: TextStyle(fontFamily: 'monospace', color: Color(0xFF00F0FF), fontSize: 9, fontWeight: FontWeight.bold)),
-                                          Text('160', style: TextStyle(fontFamily: 'monospace', color: Color(0xFF849495), fontSize: 9)),
-                                          Text('140', style: TextStyle(fontFamily: 'monospace', color: Color(0xFF849495), fontSize: 9)),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // ==============================================================
-                    // 3. WEIGHT STEPPER CARD WITH UNIT SWITCHER
-                    // ==============================================================
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF171B26),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF1C1F2A)),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Expanded(
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.scale, color: Color(0xFF7DF4FF), size: 15),
-                                    SizedBox(width: 5),
-                                    Flexible(
-                                      child: Text(
-                                        'VESSEL MASS [GRAVITY RESISTANCE]',
-                                        style: TextStyle(
-                                          fontFamily: 'monospace',
-                                          color: Color(0xFF7DF4FF),
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 0.4,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              // Unit Switcher KG / LBS
-                              Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF0A0E18),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Row(
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () => _toggleWeightUnit('kg'),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: _weightUnit == 'kg' ? const Color(0xFF00F0FF) : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          'KG',
-                                          style: TextStyle(
-                                            fontFamily: 'monospace',
-                                            color: _weightUnit == 'kg' ? const Color(0xFF002022) : const Color(0xFF849495),
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () => _toggleWeightUnit('lbs'),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: _weightUnit == 'lbs' ? const Color(0xFF00F0FF) : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(4),
-                                        ),
-                                        child: Text(
-                                          'LBS',
-                                          style: TextStyle(
-                                            fontFamily: 'monospace',
-                                            color: _weightUnit == 'lbs' ? const Color(0xFF002022) : const Color(0xFF849495),
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.baseline,
-                                textBaseline: TextBaseline.alphabetic,
-                                children: [
-                                  Text(
-                                    displayWeight,
-                                    style: const TextStyle(
-                                      fontFamily: 'monospace',
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF00F0FF),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    _weightUnit.toUpperCase(),
-                                    style: const TextStyle(
-                                      fontFamily: 'monospace',
-                                      color: Color(0xFF00DBE9),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                children: [
-                                  _buildStepperButton(
-                                    icon: Icons.remove,
-                                    onTap: () => _adjustWeight(-0.5),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  _buildStepperButton(
-                                    icon: Icons.add,
-                                    onTap: () => _adjustWeight(0.5),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // ==============================================================
-                    // 4. UPPER BODY & CORE STRENGTH GRID (2 COLUMNS)
-                    // ==============================================================
-                    Row(
-                      children: [
-                        // Column 1: Max Push-Ups
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF171B26),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFF1C1F2A)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Row(
-                                  children: [
-                                    Icon(Icons.fitness_center, color: Color(0xFF00F0FF), size: 16),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      'UPPER STRENGTH',
-                                      style: TextStyle(
-                                        fontFamily: 'monospace',
-                                        color: Color(0xFF7DF4FF),
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'MAX PUSH-UPS',
-                                  style: TextStyle(fontFamily: 'monospace', color: Color(0xFF849495), fontSize: 9),
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                                  textBaseline: TextBaseline.alphabetic,
-                                  children: [
-                                    Text(
-                                      _pushups.toString(),
-                                      style: const TextStyle(
-                                        fontFamily: 'monospace',
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF00F0FF),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Text(
-                                      'REPS',
-                                      style: TextStyle(fontFamily: 'monospace', color: Color(0xFF00DBE9), fontSize: 10),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    _buildSmallStepper(icon: Icons.remove, onTap: () => _adjustPushups(-1)),
-                                    const SizedBox(width: 6),
-                                    _buildSmallStepper(icon: Icons.add, onTap: () => _adjustPushups(1)),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: GestureDetector(
-                                        onTap: () => _adjustPushups(5),
-                                        child: Container(
-                                          height: 32,
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF313540),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: const Center(
-                                            child: Text(
-                                              '+5',
-                                              style: TextStyle(
-                                                fontFamily: 'monospace',
-                                                color: Color(0xFF7DF4FF),
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // Column 2: Max Sit-Ups
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF171B26),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFF1C1F2A)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Row(
-                                  children: [
-                                    Icon(Icons.accessibility_new, color: Color(0xFF00F0FF), size: 16),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      'CORE STABILITY',
-                                      style: TextStyle(
-                                        fontFamily: 'monospace',
-                                        color: Color(0xFF7DF4FF),
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'MAX SIT-UPS',
-                                  style: TextStyle(fontFamily: 'monospace', color: Color(0xFF849495), fontSize: 9),
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                                  textBaseline: TextBaseline.alphabetic,
-                                  children: [
-                                    Text(
-                                      _situps.toString(),
-                                      style: const TextStyle(
-                                        fontFamily: 'monospace',
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF00F0FF),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Text(
-                                      'REPS',
-                                      style: TextStyle(fontFamily: 'monospace', color: Color(0xFF00DBE9), fontSize: 10),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    _buildSmallStepper(icon: Icons.remove, onTap: () => _adjustSitups(-1)),
-                                    const SizedBox(width: 6),
-                                    _buildSmallStepper(icon: Icons.add, onTap: () => _adjustSitups(1)),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: GestureDetector(
-                                        onTap: () => _adjustSitups(5),
-                                        child: Container(
-                                          height: 32,
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF313540),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: const Center(
-                                            child: Text(
-                                              '+5',
-                                              style: TextStyle(
-                                                fontFamily: 'monospace',
-                                                color: Color(0xFF7DF4FF),
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // ==============================================================
-                    // 5. REAL-TIME DYNAMIC BMI & SYSTEM APPRAISAL WINDOW
-                    // ==============================================================
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1C1F2A),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF262A35)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            blurRadius: 16,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Header appraisal
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Row(
-                                children: [
-                                  Icon(Icons.verified, color: Color(0xFFD2BBFF), size: 16),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    '[ SYSTEM APPRAISAL COMPLETE ]',
-                                    style: TextStyle(
-                                      fontFamily: 'monospace',
-                                      color: Color(0xFFEADDFF),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.8,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF262A35),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Row(
-                                  children: [
-                                    Icon(Icons.circle, color: Color(0xFF6FFBBE), size: 6),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'LIVE SYNC',
-                                      style: TextStyle(
-                                        fontFamily: 'monospace',
-                                        color: Color(0xFF6FFBBE),
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Score and Badge
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'CALCULATED VESSEL SCORE',
-                                    style: TextStyle(
-                                      fontFamily: 'monospace',
-                                      color: Color(0xFF849495),
-                                      fontSize: 9,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                                    textBaseline: TextBaseline.alphabetic,
-                                    children: [
-                                      Text(
-                                        _calculatedBmi.toString(),
-                                        style: const TextStyle(
-                                          fontFamily: 'monospace',
-                                          fontSize: 30,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF7DF4FF),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      const Text(
-                                        'BMI',
-                                        style: TextStyle(
-                                          fontFamily: 'monospace',
-                                          color: Color(0xFF00DBE9),
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF313540),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        width: 6,
-                                        height: 6,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: _bmiStatusColor,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 5),
-                                      Flexible(
-                                        child: Text(
-                                          _bmiStatusText,
-                                          style: TextStyle(
-                                            fontFamily: 'monospace',
-                                            color: _bmiStatusColor,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-
-                          // Multi-Segment Visual BMI Range Gauge
-                          const Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('16.0 SLENDER', style: TextStyle(fontFamily: 'monospace', color: Color(0xFF849495), fontSize: 7.5)),
-                              Text('18.5 BALANCED', style: TextStyle(fontFamily: 'monospace', color: Color(0xFF849495), fontSize: 7.5)),
-                              Text('25.0 OVER', style: TextStyle(fontFamily: 'monospace', color: Color(0xFF849495), fontSize: 7.5)),
-                              Text('30.0+ APEX', style: TextStyle(fontFamily: 'monospace', color: Color(0xFF849495), fontSize: 7.5)),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-
-                          // Gauge Bar
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              final totalWidth = constraints.maxWidth;
-                              final markerPosition = (totalWidth * _bmiGaugePercentage).clamp(0.0, totalWidth - 8);
-
-                              return SizedBox(
-                                height: 14,
-                                child: Stack(
-                                  alignment: Alignment.centerLeft,
-                                  children: [
-                                    // 4 Segment track
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(6),
-                                      child: Row(
-                                        children: [
-                                          Expanded(flex: 22, child: Container(color: const Color(0xFF313540))),
-                                          const SizedBox(width: 2),
-                                          Expanded(flex: 38, child: Container(color: const Color(0xFF65F2B5))),
-                                          const SizedBox(width: 2),
-                                          Expanded(flex: 25, child: Container(color: const Color(0xFF6001D1))),
-                                          const SizedBox(width: 2),
-                                          Expanded(flex: 15, child: Container(color: const Color(0xFF93000A))),
-                                        ],
-                                      ),
-                                    ),
-
-                                    // Moving Active Needle / Marker
-                                    Positioned(
-                                      left: markerPosition,
-                                      child: Container(
-                                        width: 8,
-                                        height: 14,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF00F0FF),
-                                          borderRadius: BorderRadius.circular(3),
-                                          boxShadow: const [
-                                            BoxShadow(
-                                              color: Color(0xFF00F0FF),
-                                              blurRadius: 8,
-                                              spreadRadius: 1,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Starting Vitals Allocation Readout
-                          Row(
-                            children: [
-                              // HP Gauge
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF0A0E18),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          const Row(
-                                            children: [
-                                              Icon(Icons.favorite, color: Color(0xFFFFB4AB), size: 12),
-                                              SizedBox(width: 4),
-                                              Text(
-                                                'BASE HP',
-                                                style: TextStyle(
-                                                  fontFamily: 'monospace',
-                                                  color: Color(0xFFFFB4AB),
-                                                  fontSize: 9,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          Text(
-                                            '$_calculatedBaseHp / $_calculatedBaseHp',
-                                            style: const TextStyle(
-                                              fontFamily: 'monospace',
-                                              color: Color(0xFFFFB4AB),
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Container(
-                                        height: 4,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF262A35),
-                                          borderRadius: BorderRadius.circular(2),
-                                        ),
-                                        child: FractionallySizedBox(
-                                          alignment: Alignment.centerLeft,
-                                          widthFactor: 1.0,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFFF2A54),
-                                              borderRadius: BorderRadius.circular(2),
-                                              boxShadow: const [
-                                                BoxShadow(color: Color(0xFFFF2A54), blurRadius: 4),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-
-                              // Stamina Gauge
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF0A0E18),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          const Row(
-                                            children: [
-                                              Icon(Icons.bolt, color: Color(0xFF4EDEA3), size: 11),
-                                              SizedBox(width: 3),
-                                              Text(
-                                                'BASE STAMINA',
-                                                style: TextStyle(
-                                                  fontFamily: 'monospace',
-                                                  color: Color(0xFF4EDEA3),
-                                                  fontSize: 8.5,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          Text(
-                                            '$_calculatedBaseStamina / $_calculatedBaseStamina',
-                                            style: const TextStyle(
-                                              fontFamily: 'monospace',
-                                              color: Color(0xFF4EDEA3),
-                                              fontSize: 8.5,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Container(
-                                        height: 4,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF262A35),
-                                          borderRadius: BorderRadius.circular(2),
-                                        ),
-                                        child: FractionallySizedBox(
-                                          alignment: Alignment.centerLeft,
-                                          widthFactor: 1.0,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF65F2B5),
-                                              borderRadius: BorderRadius.circular(2),
-                                              boxShadow: const [
-                                                BoxShadow(color: Color(0xFF65F2B5), blurRadius: 4),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Assigned Starting Hunter Rank Banner
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0A0E18),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF262A35),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: const Color(0xFF00F0FF)),
-                                  ),
-                                  child: const Center(
-                                    child: Text(
-                                      'E',
-                                      style: TextStyle(
-                                        fontFamily: 'monospace',
-                                        color: Color(0xFF00F0FF),
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                const Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'RANK E - RECRUIT HUNTER',
-                                        style: TextStyle(
-                                          fontFamily: 'monospace',
-                                          color: Color(0xFF00F0FF),
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Vessel ready for Awakening Sequence',
-                                        style: TextStyle(color: Color(0xFF849495), fontSize: 10),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Icon(Icons.military_tech, color: Color(0xFF00F0FF), size: 22),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ==============================================================
-                    // 6. FINAL CTA & DISCLAIMER
-                    // ==============================================================
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _handleCompleteAwakening,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _isAwakeningTriggered ? const Color(0xFF65F2B5) : const Color(0xFF00F0FF),
-                        foregroundColor: const Color(0xFF002022),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        elevation: 8,
-                        shadowColor: const Color(0xFF00F0FF).withValues(alpha: 0.4),
-                      ),
-                      child: _isAwakeningTriggered
-                          ? const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.done_all, color: Colors.black, size: 20),
-                                SizedBox(width: 8),
-                                Text(
-                                  'AWAKENING COMPLETE! ENTERING GATE',
-                                  style: TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                              ],
-                            )
-                          : const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'COMPLETE AWAKENING & INITIALIZE SYSTEM',
-                                  style: TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w900,
+                                child: Text(
+                                  '[SYS // ONBOARDING]',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: LevMaxTheme.mono(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF00DBE9),
                                     letterSpacing: 0.8,
                                   ),
                                 ),
-                                SizedBox(width: 6),
-                                Icon(Icons.arrow_forward, size: 18),
-                              ],
-                            ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Protocol disclaimer
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.sync, color: Color(0xFF849495), size: 14),
-                        SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            'SYSTEM METRICS SYNC WITH GOOGLE FIT & APPLE HEALTH PROTOCOLS',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              color: Color(0xFF849495),
-                              fontSize: 9,
-                            ),
-                            textAlign: TextAlign.center,
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 2),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'HUNTER CALIBRATION',
+                              style: LevMaxTheme.headline(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: LevMaxTheme.onSurface,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 20),
                   ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+
+              // Sisi Kanan: SEQ / PHASE 01/02 & Avatar
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'SEQ',
+                        style: LevMaxTheme.mono(
+                          fontSize: 8.5,
+                          color: LevMaxTheme.outline,
+                        ),
+                      ),
+                      Text(
+                        'PHASE 01/02',
+                        style: LevMaxTheme.mono(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: LevMaxTheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: LevMaxTheme.primary,
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.person,
+                        size: 18,
+                        color: LevMaxTheme.onPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
+  // ============================================================================
+  // KOMPONEN 2: NARRATIVE INTRO & TELEMETRY HEADER
+  // ============================================================================
+  Widget _buildNarrativeIntroHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Baris 1: Status Phase & Sync Capsule
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (context, child) {
+                    return Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF00DBE9).withValues(
+                          alpha: 0.4 + (_pulseController.value * 0.6),
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0xFF00DBE9),
+                            blurRadius: 6,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'PHASE 02 // VESSEL CALIBRATION',
+                  style: LevMaxTheme.mono(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF00DBE9),
+                    letterSpacing: 1.1,
+                  ),
+                ),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: LevMaxTheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'SYNC: READY',
+                style: LevMaxTheme.mono(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF4EDEA3),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Judul Utama Monolith
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'NEW HUNTER ONBOARDING: STATS CALIBRATION',
+            style: LevMaxTheme.headline(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: LevMaxTheme.primary,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+
+        // Subdeskripsi
+        const Text(
+          'Enter your physical vessel metrics to calculate your starting Hunter Rank and baseline vitals.',
+          style: TextStyle(
+            fontSize: 12,
+            color: LevMaxTheme.onSurfaceVariant,
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================================
+  // KOMPONEN 3: VESSEL HEIGHT STEPPER CARD (DENGAN SILUET & VERTICAL RULER)
+  // ============================================================================
+  Widget _buildVesselHeightCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: LevMaxTheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF1E293B)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header Card
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.height,
+                      color: Color(0xFF00DBE9),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'VESSEL HEIGHT [VERTICAL STAT]',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: LevMaxTheme.mono(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF00DBE9),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: LevMaxTheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'AXIS: Z-HEIGHT',
+                  style: LevMaxTheme.mono(
+                    fontSize: 9.5,
+                    color: LevMaxTheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Grid 2 Kolom: Kiri Kontrol & Kanan Grafis Siluet
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Kiri: Angka & Stepper
+              Expanded(
+                flex: 6,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          _heightCm.toInt().toString(),
+                          style: LevMaxTheme.headline(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: LevMaxTheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'CM',
+                          style: LevMaxTheme.mono(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF00DBE9),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        _buildStepperButton(
+                          icon: Icons.remove,
+                          onTap: () => _adjustHeight(-1),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildStepperButton(
+                          icon: Icons.add,
+                          onTap: () => _adjustHeight(1),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => _adjustHeight(5),
+                          child: Container(
+                            height: 44,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: LevMaxTheme.surfaceContainer,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFF262A35)),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '+5',
+                                style: LevMaxTheme.mono(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF00DBE9),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Kanan: Pixel Silhouette & Vertical Ruler Ticks
+              Expanded(
+                flex: 5,
+                child: SizedBox(
+                  height: 104,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // Animated Pixel Silhouette
+                      AnimatedBuilder(
+                        animation: _pulseController,
+                        builder: (context, child) {
+                          return CustomPaint(
+                            size: const Size(44, 96),
+                            painter: _PixelSilhouettePainter(
+                              heightCm: _heightCm,
+                              pulseValue: _pulseController.value,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Vertical Height Ruler Ticks
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildRulerTick('200', _heightCm >= 195 && _heightCm <= 205),
+                          _buildRulerTick('180', _heightCm >= 178 && _heightCm < 185),
+                          _buildRulerTick(
+                            _heightCm.toInt().toString(),
+                            true,
+                            showLine: true,
+                          ),
+                          _buildRulerTick('160', _heightCm >= 155 && _heightCm < 165),
+                          _buildRulerTick('140', _heightCm >= 135 && _heightCm < 145),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRulerTick(String label, bool isActive, {bool showLine = false}) {
+    return Row(
+      children: [
+        if (showLine) ...[
+          Container(
+            width: 8,
+            height: 1.5,
+            color: LevMaxTheme.primaryContainer,
+          ),
+          const SizedBox(width: 4),
+        ],
+        Text(
+          label,
+          style: LevMaxTheme.mono(
+            fontSize: isActive ? 10 : 8.5,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            color: isActive ? LevMaxTheme.primaryContainer : LevMaxTheme.outline,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================================
+  // KOMPONEN 4: VESSEL MASS CARD (DENGAN UNIT SWITCHER KG / LBS)
+  // ============================================================================
+  Widget _buildVesselMassCard() {
+    final displayWeight = _weightUnit == 'kg'
+        ? _weightKg.toStringAsFixed(1)
+        : (_weightKg * 2.20462).toStringAsFixed(1);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: LevMaxTheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF1E293B)),
+      ),
+      child: Column(
+        children: [
+          // Header Card
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.scale,
+                      color: Color(0xFF00DBE9),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'VESSEL MASS [GRAVITY RESISTANCE]',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: LevMaxTheme.mono(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF00DBE9),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Unit Switcher Pill (KG / LBS)
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: LevMaxTheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => _toggleWeightUnit('kg'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _weightUnit == 'kg'
+                              ? LevMaxTheme.primaryContainer
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'KG',
+                          style: LevMaxTheme.mono(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: _weightUnit == 'kg'
+                                ? LevMaxTheme.onPrimary
+                                : LevMaxTheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => _toggleWeightUnit('lbs'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _weightUnit == 'lbs'
+                              ? LevMaxTheme.primaryContainer
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'LBS',
+                          style: LevMaxTheme.mono(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: _weightUnit == 'lbs'
+                                ? LevMaxTheme.onPrimary
+                                : LevMaxTheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Baris Nilai & Stepper
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    displayWeight,
+                    style: LevMaxTheme.headline(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: LevMaxTheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _weightUnit.toUpperCase(),
+                    style: LevMaxTheme.mono(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF00DBE9),
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  _buildStepperButton(
+                    icon: Icons.remove,
+                    onTap: () => _adjustWeight(-0.5),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildStepperButton(
+                    icon: Icons.add,
+                    onTap: () => _adjustWeight(0.5),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================================
+  // KOMPONEN 5: UPPER BODY & CORE STRENGTH GRID (2 KOLOM KARTU STEPPER REPETISI)
+  // ============================================================================
+  Widget _buildStrengthCalibrationGrid() {
+    return Row(
+      children: [
+        // Kartu 1: Max Push-Ups (Upper Strength)
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: LevMaxTheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF1E293B)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.fitness_center,
+                      color: Color(0xFF00DBE9),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'UPPER STRENGTH',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: LevMaxTheme.mono(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF00DBE9),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'MAX PUSH-UPS',
+                  style: LevMaxTheme.mono(
+                    fontSize: 9,
+                    color: LevMaxTheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      _pushups.toString(),
+                      style: LevMaxTheme.headline(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: LevMaxTheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'REPS',
+                      style: LevMaxTheme.mono(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF00DBE9),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _buildSmallStepper(
+                      icon: Icons.remove,
+                      onTap: () => _adjustPushups(-1),
+                    ),
+                    const SizedBox(width: 6),
+                    _buildSmallStepper(
+                      icon: Icons.add,
+                      onTap: () => _adjustPushups(1),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _adjustPushups(5),
+                        child: Container(
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: LevMaxTheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '+5',
+                              style: LevMaxTheme.mono(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF00DBE9),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+
+        // Kartu 2: Max Sit-Ups (Core Stability)
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: LevMaxTheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF1E293B)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.accessibility_new,
+                      color: Color(0xFF00DBE9),
+                      size: 16,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'CORE STABILITY',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: LevMaxTheme.mono(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF00DBE9),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'MAX SIT-UPS',
+                  style: LevMaxTheme.mono(
+                    fontSize: 9,
+                    color: LevMaxTheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      _situps.toString(),
+                      style: LevMaxTheme.headline(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: LevMaxTheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'REPS',
+                      style: LevMaxTheme.mono(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF00DBE9),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _buildSmallStepper(
+                      icon: Icons.remove,
+                      onTap: () => _adjustSitups(-1),
+                    ),
+                    const SizedBox(width: 6),
+                    _buildSmallStepper(
+                      icon: Icons.add,
+                      onTap: () => _adjustSitups(1),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _adjustSitups(5),
+                        child: Container(
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: LevMaxTheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '+5',
+                              style: LevMaxTheme.mono(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF00DBE9),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================================
+  // KOMPONEN 6: REAL-TIME DYNAMIC BMI & SYSTEM APPRAISAL WINDOW
+  // ============================================================================
+  Widget _buildSystemAppraisalWindow() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: LevMaxTheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF262A35)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header Appraisal Window
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.verified,
+                      color: LevMaxTheme.secondary,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '[ SYSTEM APPRAISAL COMPLETE ]',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: LevMaxTheme.mono(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: LevMaxTheme.secondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: LevMaxTheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedBuilder(
+                      animation: _pulseController,
+                      builder: (context, child) {
+                        return Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF4EDEA3).withValues(
+                              alpha: 0.4 + (_pulseController.value * 0.6),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'LIVE SYNC',
+                      style: LevMaxTheme.mono(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF4EDEA3),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // BMI Readout & Status Tag
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'CALCULATED VESSEL SCORE',
+                    style: LevMaxTheme.mono(
+                      fontSize: 9.5,
+                      color: LevMaxTheme.onSurfaceVariant,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        _calculatedBmi.toString(),
+                        style: LevMaxTheme.headline(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF00DBE9),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'BMI',
+                        style: LevMaxTheme.mono(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF00DBE9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(width: 8),
+
+              // Reaktif Status Tag
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: LevMaxTheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _bmiStatusColor,
+                          boxShadow: [
+                            BoxShadow(color: _bmiStatusColor, blurRadius: 4),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          _bmiStatusText,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: LevMaxTheme.mono(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.bold,
+                            color: _bmiStatusColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Multi-Segment Visual BMI Range Gauge
+          SizedBox(
+            width: double.infinity,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('16.0 SLENDER', style: LevMaxTheme.mono(fontSize: 8.5, color: LevMaxTheme.onSurfaceVariant)),
+                  const SizedBox(width: 14),
+                  Text('18.5 BALANCED', style: LevMaxTheme.mono(fontSize: 8.5, color: LevMaxTheme.onSurfaceVariant)),
+                  const SizedBox(width: 14),
+                  Text('25.0 OVER', style: LevMaxTheme.mono(fontSize: 8.5, color: LevMaxTheme.onSurfaceVariant)),
+                  const SizedBox(width: 14),
+                  Text('30.0+ APEX', style: LevMaxTheme.mono(fontSize: 8.5, color: LevMaxTheme.onSurfaceVariant)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Bar Track (Height 12px) dengan 4 Segmen Warna & Moving Active Marker
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final totalWidth = constraints.maxWidth;
+              final markerPosition = (totalWidth * _bmiGaugePercentage).clamp(0.0, totalWidth - 8);
+
+              return SizedBox(
+                height: 14,
+                child: Stack(
+                  alignment: Alignment.centerLeft,
+                  children: [
+                    // 4 Segmen Warna Bar Track
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        height: 12,
+                        color: LevMaxTheme.surfaceContainerLowest,
+                        child: Row(
+                          children: [
+                            // 1. Underweight / Slender (Grey)
+                            Expanded(
+                              flex: 22,
+                              child: Container(color: LevMaxTheme.surfaceContainerHighest),
+                            ),
+                            const SizedBox(width: 2),
+                            // 2. Normal / Balanced (Mint Green)
+                            Expanded(
+                              flex: 38,
+                              child: Container(color: LevMaxTheme.tertiaryContainer),
+                            ),
+                            const SizedBox(width: 2),
+                            // 3. Overweight / Guard (Violet)
+                            Expanded(
+                              flex: 25,
+                              child: Container(color: LevMaxTheme.secondaryContainer),
+                            ),
+                            const SizedBox(width: 2),
+                            // 4. Heavy Tank / Apex (Dark Crimson)
+                            Expanded(
+                              flex: 15,
+                              child: Container(color: const Color(0xFF93000A)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Active BMI Needle / Marker
+                    Positioned(
+                      left: markerPosition,
+                      child: Container(
+                        width: 8,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: LevMaxTheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(3),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: LevMaxTheme.primaryContainer,
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Starting Vitals Allocation Readout (2 Kolom)
+          Row(
+            children: [
+              // Kolom 1: Base HP
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: LevMaxTheme.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF1E293B)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.favorite,
+                                    color: LevMaxTheme.hpRed,
+                                    size: 13,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'BASE HP',
+                                    style: LevMaxTheme.mono(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: LevMaxTheme.hpRedLabel,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '$_calculatedBaseHp / $_calculatedBaseHp',
+                                style: LevMaxTheme.mono(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: LevMaxTheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: LevMaxTheme.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: 1.0,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: LevMaxTheme.hpRed,
+                              borderRadius: BorderRadius.circular(2),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: LevMaxTheme.hpRed,
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Kolom 2: Base Stamina
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: LevMaxTheme.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF1E293B)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.bolt,
+                                    color: LevMaxTheme.tertiaryContainer,
+                                    size: 13,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'BASE STAMINA',
+                                    style: LevMaxTheme.mono(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: LevMaxTheme.tertiaryContainer,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '$_calculatedBaseStamina / $_calculatedBaseStamina',
+                                style: LevMaxTheme.mono(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: LevMaxTheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: LevMaxTheme.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: 1.0,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: LevMaxTheme.tertiaryContainer,
+                              borderRadius: BorderRadius.circular(2),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: LevMaxTheme.tertiaryContainer,
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Assigned Starting Hunter Rank Banner
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: LevMaxTheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFF1E293B)),
+            ),
+            child: Row(
+              children: [
+                // Square Rank Badge 40x40
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: LevMaxTheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFF00DBE9),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _calculatedRank,
+                      style: LevMaxTheme.headline(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF00DBE9),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+
+                // Rank Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _rankTitle,
+                        style: LevMaxTheme.headline(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: LevMaxTheme.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Vessel ready for Awakening Sequence',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: LevMaxTheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Icon(
+                  Icons.military_tech,
+                  color: Color(0xFF00DBE9),
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================================
+  // KOMPONEN 7: FINAL CTA BUTTON & PROTOCOL DISCLAIMER
+  // ============================================================================
+  Widget _buildFinalCtaAndDisclaimer() {
+    return Column(
+      children: [
+        // Main CTA Button
+        GestureDetector(
+          onTap: _isLoading ? null : _handleCompleteAwakening,
+          child: Container(
+            height: 48,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: _isAwakeningTriggered
+                  ? LevMaxTheme.tertiaryContainer
+                  : LevMaxTheme.primaryContainer,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: LevMaxTheme.primaryContainer.withValues(alpha: 0.4),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Center(
+              child: _isLoading
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.2,
+                            color: LevMaxTheme.onPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'AWAKENING PROTOCOL INITIALIZED...',
+                          style: LevMaxTheme.mono(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: LevMaxTheme.onPrimary,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'COMPLETE AWAKENING & INITIALIZE SYSTEM',
+                          style: LevMaxTheme.mono(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: LevMaxTheme.onPrimary,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.arrow_forward,
+                          color: LevMaxTheme.onPrimary,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Protocol Disclaimer
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.sync,
+              color: LevMaxTheme.outline,
+              size: 14,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                'SYSTEM METRICS SYNC WITH GOOGLE FIT & APPLE HEALTH PROTOCOLS',
+                textAlign: TextAlign.center,
+                style: LevMaxTheme.mono(
+                  fontSize: 9,
+                  color: LevMaxTheme.outline,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ============================================================================
+  // REUSABLE STEPPER CONTROLS
+  // ============================================================================
   Widget _buildStepperButton({required IconData icon, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 38,
-        height: 38,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
-          color: const Color(0xFF262A35),
-          borderRadius: BorderRadius.circular(6),
+          color: LevMaxTheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: const Color(0xFF313540)),
         ),
         child: Center(
-          child: Icon(icon, color: const Color(0xFF00F0FF), size: 18),
+          child: Icon(
+            icon,
+            color: LevMaxTheme.primary,
+            size: 20,
+          ),
         ),
       ),
     );
@@ -1530,15 +1863,73 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 32,
-        height: 32,
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
-          color: const Color(0xFF262A35),
-          borderRadius: BorderRadius.circular(4),
+          color: LevMaxTheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(color: const Color(0xFF313540)),
         ),
         child: Center(
-          child: Icon(icon, color: const Color(0xFF00F0FF), size: 16),
+          child: Icon(
+            icon,
+            color: LevMaxTheme.primary,
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ============================================================================
+  // BUILD METHOD UTAMA
+  // ============================================================================
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: LevMaxTheme.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Komponen 1: Sticky Top Navigation Bar (64px)
+            _buildStickyTopNavigationBar(),
+
+            // Main Scrollable Body
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Komponen 2: Narrative Intro & Telemetry Header
+                    _buildNarrativeIntroHeader(),
+                    const SizedBox(height: 18),
+
+                    // Komponen 3: Vessel Height Stepper Card
+                    _buildVesselHeightCard(),
+                    const SizedBox(height: 14),
+
+                    // Komponen 4: Vessel Mass Card
+                    _buildVesselMassCard(),
+                    const SizedBox(height: 14),
+
+                    // Komponen 5: Upper Body & Core Strength Grid
+                    _buildStrengthCalibrationGrid(),
+                    const SizedBox(height: 16),
+
+                    // Komponen 6: Real-Time Dynamic BMI & System Appraisal Window
+                    _buildSystemAppraisalWindow(),
+                    const SizedBox(height: 20),
+
+                    // Komponen 7: Final CTA Button & Protocol Disclaimer
+                    _buildFinalCtaAndDisclaimer(),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1546,49 +1937,81 @@ class _OnboardingPageState extends State<OnboardingPage> with SingleTickerProvid
 }
 
 // ==============================================================================
-// CUSTOM PAINTER: PIXEL SILHOUETTE FOR HEIGHT RULER
+// CUSTOM PAINTER: PIXEL SILHOUETTE FOR HEIGHT RULER & GLOWING MANA CORE
 // ==============================================================================
 class _PixelSilhouettePainter extends CustomPainter {
   final double heightCm;
-  const _PixelSilhouettePainter({required this.heightCm});
+  final double pulseValue;
+
+  const _PixelSilhouettePainter({
+    required this.heightCm,
+    required this.pulseValue,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF00DBE9).withValues(alpha: 0.7)
+      ..color = const Color(0xFF00DBE9).withValues(alpha: 0.85)
       ..style = PaintingStyle.fill;
 
-    // Scale factor based on heightCm (140 to 200 cm mapped to 0.7 .. 1.0)
-    final scale = ((heightCm - 120.0) / 100.0).clamp(0.65, 1.05);
+    // Scale factor dinamis berdasarkan heightCm (120 - 230 cm)
+    final scale = ((heightCm - 120.0) / 110.0).clamp(0.68, 1.05);
 
     canvas.save();
     canvas.translate(size.width / 2, size.height);
     canvas.scale(scale, scale);
 
-    // Pixelated hunter humanoid body
-    // Head
-    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(-6, -74, 12, 12), const Radius.circular(2)), paint);
-    // Torso
-    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(-9, -60, 18, 30), const Radius.circular(2)), paint);
-    // Left Arm
-    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(-16, -58, 5, 24), const Radius.circular(2)), paint);
-    // Right Arm
-    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(11, -58, 5, 24), const Radius.circular(2)), paint);
-    // Left Leg
-    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(-8, -28, 7, 28), const Radius.circular(2)), paint);
-    // Right Leg
-    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(1, -28, 7, 28), const Radius.circular(2)), paint);
+    // 1. Head (Pixel Block)
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(-7, -80, 14, 14), const Radius.circular(2)),
+      paint,
+    );
 
-    // Mana Core Pulse Dot
-    final corePaint = Paint()
-      ..color = const Color(0xFF00F0FF)
+    // 2. Torso (Pixel Block)
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(-10, -64, 20, 32), const Radius.circular(2)),
+      paint,
+    );
+
+    // 3. Left Arm
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(-17, -62, 5, 26), const Radius.circular(2)),
+      paint,
+    );
+
+    // 4. Right Arm
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(12, -62, 5, 26), const Radius.circular(2)),
+      paint,
+    );
+
+    // 5. Left Leg
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(-9, -30, 8, 30), const Radius.circular(2)),
+      paint,
+    );
+
+    // 6. Right Leg
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(1, -30, 8, 30), const Radius.circular(2)),
+      paint,
+    );
+
+    // 7. Glowing Mana Core Pulse Dot di Bagian Dada
+    final manaGlowPaint = Paint()
+      ..color = LevMaxTheme.primaryContainer.withValues(alpha: 0.3 + (pulseValue * 0.5))
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    canvas.drawCircle(const Offset(0, -50), 6.0 + (pulseValue * 2.0), manaGlowPaint);
+
+    final manaCorePaint = Paint()
+      ..color = Colors.white
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(const Offset(0, -46), 3.5, corePaint);
+    canvas.drawCircle(const Offset(0, -50), 3.0, manaCorePaint);
 
     canvas.restore();
   }
 
   @override
   bool shouldRepaint(covariant _PixelSilhouettePainter oldDelegate) =>
-      oldDelegate.heightCm != heightCm;
+      oldDelegate.heightCm != heightCm || oldDelegate.pulseValue != pulseValue;
 }
