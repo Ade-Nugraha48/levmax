@@ -375,7 +375,7 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
   // ==========================================================================
   Widget _buildProtocolTelemetryBadge() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: const Color(0xFF1C1F2A),
         borderRadius: BorderRadius.circular(8),
@@ -387,36 +387,43 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  FadeTransition(
-                    opacity: _pulseController,
-                    child: Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF00F0FF),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(color: Color(0xFF00F0FF), blurRadius: 6, spreadRadius: 1),
-                        ],
+              Expanded(
+                child: Row(
+                  children: [
+                    FadeTransition(
+                      opacity: _pulseController,
+                      child: Container(
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF00F0FF),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(color: Color(0xFF00F0FF), blurRadius: 6, spreadRadius: 1),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'GYROSCOPE AXIS-6 SYNC',
-                    style: LevMaxTheme.mono(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF00F0FF),
-                      letterSpacing: 0.8,
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'GYROSCOPE AXIS-6 SYNC',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: LevMaxTheme.mono(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF00F0FF),
+                          letterSpacing: 0.4,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
                   color: const Color(0xFF262A35),
                   borderRadius: BorderRadius.circular(4),
@@ -425,11 +432,11 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(Icons.bolt, size: 12, color: Color(0xFF4EDEA3)),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 3),
                     Text(
                       'FOCUS BUFF (+15% EXP)',
                       style: LevMaxTheme.mono(
-                        fontSize: 10,
+                        fontSize: 9.5,
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFF4EDEA3),
                       ),
@@ -443,15 +450,20 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '[DEEP WORK PROTOCOL]',
-                style: LevMaxTheme.headline(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFFDFE2F1),
-                  letterSpacing: 0.5,
+              Expanded(
+                child: Text(
+                  '[DEEP WORK PROTOCOL]',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: LevMaxTheme.headline(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFFDFE2F1),
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
                 '45M CAP // SECTOR-07',
                 style: LevMaxTheme.mono(
@@ -864,21 +876,28 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.auto_stories, size: 16, color: Color(0xFFD2BBFF)),
-                  const SizedBox(width: 8),
-                  Text(
-                    'SCHOLAR VESSEL SANCTUARY',
-                    style: LevMaxTheme.headline(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFFD2BBFF),
-                      letterSpacing: 0.5,
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(Icons.auto_stories, size: 16, color: Color(0xFFD2BBFF)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'SCHOLAR VESSEL SANCTUARY',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: LevMaxTheme.headline(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFD2BBFF),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(

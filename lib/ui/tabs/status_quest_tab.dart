@@ -19,6 +19,7 @@ import '../../services/notification_service.dart';
 import '../../services/supabase_api_service.dart';
 import '../penalty/penalty_minigame_page.dart';
 import '../quests/sensor_study_page.dart';
+import '../quests/sensor_workout_page.dart';
 
 class StatusQuestTab extends StatefulWidget {
   final UserModel player;
@@ -1403,6 +1404,17 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
               ),
             ),
           );
+        } else if (categoryLower == 'workout') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SensorWorkoutPage(
+                quest: quest,
+                player: widget.player,
+                onQuestCompleted: () => _toggleQuestCompletion(quest),
+              ),
+            ),
+          );
         }
       },
       child: Container(
@@ -1570,6 +1582,17 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => SensorStudyPage(
+                                quest: quest,
+                                player: widget.player,
+                                onQuestCompleted: () => _toggleQuestCompletion(quest),
+                              ),
+                            ),
+                          );
+                        } else if (categoryLower == 'workout') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SensorWorkoutPage(
                                 quest: quest,
                                 player: widget.player,
                                 onQuestCompleted: () => _toggleQuestCompletion(quest),
