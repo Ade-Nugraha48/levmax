@@ -293,8 +293,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
     return Scaffold(
       backgroundColor: LevMaxTheme.background,
-      appBar: _currentIndex == 0
-          ? null // Tab 1: Status & Daily Quests menampilkan Sticky Tactical Header Bar kustom sendiri
+      appBar: (_currentIndex == 0 || _currentIndex == 1)
+          ? null // Tab 1 & Tab 2: Menampilkan Sticky Tactical Header Bar kustom sendiri
           : PreferredSize(
               preferredSize: const Size.fromHeight(56),
               child: Container(

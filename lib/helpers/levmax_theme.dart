@@ -23,6 +23,7 @@ class LevMaxTheme {
 
   static const Color tertiaryContainer = Color(0xFF65F2B5); // Neon Mint Green (EXP Bar, Cardio, Buff)
   static const Color tertiaryFixedDim = Color(0xFF4EDEA3); // Label EXP & Ikon petir
+  static const Color tertiaryFixed = Color(0xFF4EDEA3); // Teks status ELIGIBLE / OPEN
 
   static const Color secondary = Color(0xFFD2BBFF); // Soft Lavender (Study, Shadow Initiate)
   static const Color secondaryContainer = Color(0xFF6001D1); // Deep Violet (Tombol FOCUS)
@@ -31,6 +32,7 @@ class LevMaxTheme {
   static const Color hpRedLabel = Color(0xFFF87171);
   static const Color goldAmber = Color(0xFFFCD34D);
   static const Color goldCoin = Color(0xFFFBBF24);
+  static const Color amberGold = Color(0xFFFBBF24); // Vault Gold, Raid Boss, Cashout button
   static const Color errorCoral = Color(0xFFFFB4AB); // Teks PENALTY
   static const Color onSurface = Color(0xFFDFE2F1); // Teks utama putih keperakan
   static const Color onSurfaceVariant = Color(0xFFB9CACB); // Teks sekunder
