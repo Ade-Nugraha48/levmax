@@ -45,6 +45,15 @@ class QuestModel extends HiveObject {
   @HiveField(11)
   String scheduledDate; // Format: YYYY-MM-DD
 
+  @HiveField(12)
+  bool isAccepted; // Apakah quest sudah diambil ke slot harian
+
+  @HiveField(13)
+  String statType; // STR, AGI, INT, CHA
+
+  @HiveField(14)
+  int statReward; // Tambahan poin stat atribut RPG saat selesai
+
   QuestModel({
     required this.id,
     required this.title,
@@ -58,7 +67,31 @@ class QuestModel extends HiveObject {
     this.isCompleted = false,
     this.isPenaltyQuest = false,
     required this.scheduledDate,
+    this.isAccepted = true,
+    this.statType = 'STR',
+    this.statReward = 3,
   });
+
+  /// Stat efektif berdasarkan konfigurasi atau pemetaan kategori otomatis
+  String get effectiveStatType {
+    if (statType.isNotEmpty && statType != 'STR') return statType;
+    switch (category.toLowerCase()) {
+      case 'workout':
+        return 'STR';
+      case 'cardio':
+        return 'AGI';
+      case 'study':
+      case 'work':
+      case 'productivity':
+        return 'INT';
+      case 'skincare':
+      case 'postur':
+      case 'posture':
+        return 'CHA';
+      default:
+        return 'STR';
+    }
+  }
 
   /// Persentase progres penyelesaian quest (0.0 s.d. 1.0)
   double get progressPercentage {
@@ -81,6 +114,9 @@ class QuestModel extends HiveObject {
       'is_completed': isCompleted,
       'is_penalty_quest': isPenaltyQuest,
       'quest_date': scheduledDate,
+      'is_accepted': isAccepted,
+      'stat_type': statType,
+      'stat_reward': statReward,
     };
     if (userId != null) {
       map['user_id'] = userId;
@@ -103,6 +139,9 @@ class QuestModel extends HiveObject {
       isCompleted: map['is_completed'] == true,
       isPenaltyQuest: map['is_penalty_quest'] == true,
       scheduledDate: map['quest_date']?.toString() ?? DateTime.now().toIso8601String().substring(0, 10),
+      isAccepted: map['is_accepted'] == null ? true : map['is_accepted'] == true,
+      statType: map['stat_type']?.toString() ?? 'STR',
+      statReward: map['stat_reward'] is int ? map['stat_reward'] : int.tryParse(map['stat_reward']?.toString() ?? '3') ?? 3,
     );
   }
 
@@ -120,6 +159,9 @@ class QuestModel extends HiveObject {
     bool? isCompleted,
     bool? isPenaltyQuest,
     String? scheduledDate,
+    bool? isAccepted,
+    String? statType,
+    int? statReward,
   }) {
     return QuestModel(
       id: id ?? this.id,
@@ -134,6 +176,9 @@ class QuestModel extends HiveObject {
       isCompleted: isCompleted ?? this.isCompleted,
       isPenaltyQuest: isPenaltyQuest ?? this.isPenaltyQuest,
       scheduledDate: scheduledDate ?? this.scheduledDate,
+      isAccepted: isAccepted ?? this.isAccepted,
+      statType: statType ?? this.statType,
+      statReward: statReward ?? this.statReward,
     );
   }
 }
@@ -168,13 +213,16 @@ class QuestAdapter extends TypeAdapter<QuestModel> {
       isCompleted: fields[9] as bool? ?? false,
       isPenaltyQuest: fields[10] as bool? ?? false,
       scheduledDate: fields[11] as String? ?? '',
+      isAccepted: fields[12] as bool? ?? true,
+      statType: fields[13] as String? ?? 'STR',
+      statReward: fields[14] as int? ?? 3,
     );
   }
 
   @override
   void write(BinaryWriter writer, QuestModel obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -198,7 +246,13 @@ class QuestAdapter extends TypeAdapter<QuestModel> {
       ..writeByte(10)
       ..write(obj.isPenaltyQuest)
       ..writeByte(11)
-      ..write(obj.scheduledDate);
+      ..write(obj.scheduledDate)
+      ..writeByte(12)
+      ..write(obj.isAccepted)
+      ..writeByte(13)
+      ..write(obj.statType)
+      ..writeByte(14)
+      ..write(obj.statReward);
   }
 
   @override

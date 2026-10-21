@@ -129,6 +129,10 @@ class _GameOverPageState extends State<GameOverPage> with TickerProviderStateMix
         exp: 0,
         gold: 0,
         isPenaltyActive: false,
+        str: 10,
+        agi: 10,
+        intStat: 10,
+        cha: 10,
       );
 
       await SupabaseApiService.savePlayerCache(updatedPlayer);

@@ -75,7 +75,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     if (player.lastActiveDate.isNotEmpty && player.lastActiveDate != today) {
       // Terjadi pergantian hari (melewati pukul 23:59)
       final questBox = Hive.box<QuestModel>(HiveBoxes.questBox);
-      final hasIncompleteQuests = questBox.values.any((q) => !q.isCompleted);
+      final hasIncompleteQuests = questBox.values.any((q) => q.isAccepted && !q.isCompleted);
 
       if (hasIncompleteQuests) {
         int hpDeduction = 20;
