@@ -6,7 +6,9 @@
 // ==============================================================================
 
 import 'package:hive/hive.dart';
-import '../models/alarm_model.dart';
+import '../models/quest_model.dart';
+import '../models/block_model.dart';
+import '../models/feedback_model.dart';
 
 class HiveBoxes {
   // ============================================================================
@@ -28,7 +30,7 @@ class HiveBoxes {
   // ============================================================================
   // 2. NAMA BOX LEGACY / PENDUKUNG (UNTUK KOMPATIBILITAS MUNDUR)
   // ============================================================================
-  static const String questBox = questCacheBox;
+  static const String questBox = 'quest_box';
   static const String blockchainBox = 'blockchain_box';
   static const String playerBox = 'player_cache_box';
   static const String feedbackBox = 'feedback_box';
@@ -61,23 +63,19 @@ class HiveBoxes {
   // 4. METODE INISIALISASI & MEMBUKA SELURUH BOX HIVE
   // ============================================================================
 
-  /// Membuka 4 Box inti dan mendaftarkan Adapter yang diperlukan
+  /// Membuka seluruh box dan mendaftarkan Adapter yang diperlukan
   static Future<void> openAllBoxes() async {
-    // Registrasi TypeAdapter AlarmModel manual jika belum terdaftar
-    if (!Hive.isAdapterRegistered(3)) {
-      Hive.registerAdapter(AlarmModelAdapter());
-    }
-
     // Buka 4 Box Utama Arsitektur Baru
-    await Hive.openBox(authBox);
-    await Hive.openBox(questCacheBox);
-    await Hive.openBox<AlarmModel>(alarmBox);
-    await Hive.openBox(aiChatBox);
+    if (!Hive.isBoxOpen(authBox)) await Hive.openBox(authBox);
+    if (!Hive.isBoxOpen(questCacheBox)) await Hive.openBox(questCacheBox);
+    if (!Hive.isBoxOpen(alarmBox)) await Hive.openBox<AlarmModel>(alarmBox);
+    if (!Hive.isBoxOpen(aiChatBox)) await Hive.openBox(aiChatBox);
 
     // Buka Box Pendukung untuk menjamin backward compatibility
-    if (!Hive.isBoxOpen(playerBox)) {
-      await Hive.openBox(playerBox);
-    }
+    if (!Hive.isBoxOpen(questBox)) await Hive.openBox<QuestModel>(questBox);
+    if (!Hive.isBoxOpen(blockchainBox)) await Hive.openBox<BlockModel>(blockchainBox);
+    if (!Hive.isBoxOpen(feedbackBox)) await Hive.openBox<FeedbackModel>(feedbackBox);
+    if (!Hive.isBoxOpen(playerBox)) await Hive.openBox(playerBox);
   }
 
   /// Helper untuk mengambil AuthBox

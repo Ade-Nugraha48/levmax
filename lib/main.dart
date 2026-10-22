@@ -63,29 +63,38 @@ void main() async {
   }
 
   // 1. Inisialisasi Lapisan 2 DB: Hive NoSQL
-  await Hive.initFlutter();
+  try {
+    await Hive.initFlutter();
 
-  // 2. Registrasi TypeAdapter Manual (Bekerja langsung tanpa build_runner)
-  Hive.registerAdapter(QuestAdapter());
-  Hive.registerAdapter(BlockAdapter());
-  Hive.registerAdapter(FeedbackAdapter());
+    // 2. Registrasi TypeAdapter Manual jika belum terdaftar
+    if (!Hive.isAdapterRegistered(0)) Hive.registerAdapter(QuestAdapter());
+    if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(BlockAdapter());
+    if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(FeedbackAdapter());
 
-  // 3. Membuka Box Hive (Arsitektur Baru: authBox, questCacheBox, alarmBox, aiChatBox)
-  await HiveBoxes.openAllBoxes();
-  await Hive.openBox<QuestModel>(HiveBoxes.questBox);
-  await Hive.openBox<BlockModel>(HiveBoxes.blockchainBox);
-  await Hive.openBox<FeedbackModel>(HiveBoxes.feedbackBox);
+    // 3. Membuka Box Hive
+    await HiveBoxes.openAllBoxes();
 
-  // 4. Inisialisasi Genesis Block Blockchain jika belum ada
-  await BlockchainService.ensureGenesisBlock();
+    // 4. Inisialisasi Genesis Block Blockchain jika belum ada
+    await BlockchainService.ensureGenesisBlock();
+  } catch (e, stack) {
+    debugPrint('[main] Hive DB initialization error: $e\n$stack');
+  }
 
   // 5. Inisialisasi Notifikasi Lokal (FR-6.2)
-  await NotificationService.initialize();
+  try {
+    await NotificationService.initialize();
+  } catch (e) {
+    debugPrint('[main] NotificationService initialization error: $e');
+  }
 
-  // 6. Validasi Sesi SharedPreferences (Auto-Logout jika inaktif > 60 menit)
-  final isSessionExpired = await UserInfo.checkSessionTimeout();
-  if (isSessionExpired) {
-    await UserInfo.logout();
+  // 6. Validasi Sesi (Auto-Logout jika inaktif > 60 menit)
+  try {
+    final isSessionExpired = await UserInfo.checkSessionTimeout();
+    if (isSessionExpired) {
+      await UserInfo.logout();
+    }
+  } catch (e) {
+    debugPrint('[main] Session check error: $e');
   }
 
   runApp(const LevMaxApp());
