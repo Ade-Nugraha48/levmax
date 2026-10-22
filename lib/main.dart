@@ -72,9 +72,15 @@ void main() async {
 
   // 3. Membuka Box Hive (Arsitektur Baru: authBox, questCacheBox, alarmBox, aiChatBox)
   await HiveBoxes.openAllBoxes();
-  await Hive.openBox<QuestModel>(HiveBoxes.questBox);
-  await Hive.openBox<BlockModel>(HiveBoxes.blockchainBox);
-  await Hive.openBox<FeedbackModel>(HiveBoxes.feedbackBox);
+  if (!Hive.isBoxOpen(HiveBoxes.questBox)) {
+    await Hive.openBox<QuestModel>(HiveBoxes.questBox);
+  }
+  if (!Hive.isBoxOpen(HiveBoxes.blockchainBox)) {
+    await Hive.openBox<BlockModel>(HiveBoxes.blockchainBox);
+  }
+  if (!Hive.isBoxOpen(HiveBoxes.feedbackBox)) {
+    await Hive.openBox<FeedbackModel>(HiveBoxes.feedbackBox);
+  }
 
   // 4. Inisialisasi Genesis Block Blockchain jika belum ada
   await BlockchainService.ensureGenesisBlock();

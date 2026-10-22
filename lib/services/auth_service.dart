@@ -104,20 +104,26 @@ class AuthService {
     final effectiveFp = isFingerprint ?? isBiometric;
     final effectiveBio = isBiometric || effectiveFace || effectiveFp;
 
-    // 4. Inisialisasi Objek Hunter Level 1 Rank F
-    final tempId = DateTime.now().millisecondsSinceEpoch % 1000000;
+    // 4. Inisialisasi Objek Hunter Level 1 Rank F dengan UUID v4 standar RFC 4122
+    final newUserId = generateUuidV4();
     final newUser = UserModel.initial(
-      id: tempId,
+      id: newUserId,
       username: trimmedUsername,
       email: trimmedEmail,
       passwordHash: hashedPassword,
       biometricEnabled: effectiveBio,
     );
 
-    // 5. Kirim HTTP POST ke Supabase REST API
-    final createdUser = await SupabaseApiService.createUser(newUser) ?? newUser;
+    // 5. Kirim data Hunter ke Supabase Cloud Database
+    final createdUser = await SupabaseApiService.createUser(newUser);
+    if (createdUser == null) {
+      return {
+        'success': false,
+        'message': 'Gagal menyimpan data Hunter ke Supabase. Periksa koneksi internet Anda.',
+      };
+    }
 
-    // 6. Buat Token Sesi dan simpan status lokal ke SharedPreferences
+    // 6. Buat Token Sesi dan simpan status lokal ke Hive / SharedPreferences
     final token = generateSessionToken(createdUser.username);
     final expiresAt = DateTime.now().add(const Duration(hours: 1));
 
@@ -138,12 +144,14 @@ class AuthService {
       await UserInfo.setBiometricEmail(createdUser.email);
     }
 
-    // 7. Simpan Token Sesi ke tabel user_tokens di Supabase
-    await SupabaseApiService.saveUserToken(
-      userId: createdUser.id,
-      authKey: token,
-      expiresAt: expiresAt,
-    );
+    // 7. Simpan Token Sesi ke tabel user_tokens di Supabase jika tabel tersedia
+    try {
+      await SupabaseApiService.saveUserToken(
+        userId: createdUser.id,
+        authKey: token,
+        expiresAt: expiresAt,
+      );
+    } catch (_) {}
 
     return {
       'success': true,

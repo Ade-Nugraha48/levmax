@@ -28,7 +28,7 @@ class HiveBoxes {
   // ============================================================================
   // 2. NAMA BOX LEGACY / PENDUKUNG (UNTUK KOMPATIBILITAS MUNDUR)
   // ============================================================================
-  static const String questBox = questCacheBox;
+  static const String questBox = 'quest_box';
   static const String blockchainBox = 'blockchain_box';
   static const String playerBox = 'player_cache_box';
   static const String feedbackBox = 'feedback_box';

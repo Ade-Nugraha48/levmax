@@ -291,6 +291,45 @@ class UserModel {
     return map;
   }
 
+  /// Serialisasi ke JSON Map khusus tabel 'users' di Supabase Cloud Database.
+  /// Hanya menyertakan 17 kolom resmi Supabase PostgreSQL:
+  /// id, email, username, password_hash, height, weight, bmi_score, rank,
+  /// exp, hp, str, agi, int, cha, gold, is_onboarded, created_at.
+  Map<String, dynamic> toSupabaseJson() {
+    final map = <String, dynamic>{
+      'username': username,
+      'email': email,
+      'height': height,
+      'weight': weight,
+      'bmi_score': bmiScore,
+      'rank': rank,
+      'exp': exp,
+      'hp': hp,
+      'str': str,
+      'agi': agi,
+      'int': intStat,
+      'cha': cha,
+      'gold': gold,
+      'is_onboarded': isOnboarded,
+    };
+
+    // Sertakan id HANYA jika berupa format valid UUID RFC 4122 (36 karakter)
+    final uuidRegex = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+    if (id.isNotEmpty && uuidRegex.hasMatch(id)) {
+      map['id'] = id;
+    }
+
+    if (passwordHash.isNotEmpty) {
+      map['password_hash'] = passwordHash;
+    }
+
+    if (createdAt.isNotEmpty) {
+      map['created_at'] = createdAt;
+    }
+
+    return map;
+  }
+
   Map<String, dynamic> toMap() => toJson();
   factory UserModel.fromMap(Map<String, dynamic> map) => UserModel.fromJson(map);
 

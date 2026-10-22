@@ -358,33 +358,67 @@ class SupabaseService {
   }
 
   static Future<UserModel?> createUser(UserModel user) async {
-    final userWithId = user.id.isEmpty ? user.copyWith(id: generateUuidV4()) : user;
+    final uuidRegex = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+    final validId = (user.id.isNotEmpty && uuidRegex.hasMatch(user.id))
+        ? user.id
+        : generateUuidV4();
+    final userWithId = user.copyWith(id: validId);
 
     if (!isConfigured) {
+      debugPrint('[SupabaseService] Supabase not configured. Using local fallback.');
       await savePlayerCache(userWithId);
       return userWithId;
     }
 
+    final payload = userWithId.toSupabaseJson();
+    debugPrint('[SupabaseService] Sending payload to Supabase: $payload');
+
+    // 1. Coba melalui Supabase Flutter Client SDK
+    try {
+      final res = await client
+          .from('users')
+          .insert(payload)
+          .select()
+          .single()
+          .timeout(const Duration(seconds: 10));
+
+      final created = UserModel.fromJson(res);
+      await savePlayerCache(created);
+      debugPrint('[SupabaseService] User successfully created via SDK with ID: ${created.id}');
+      return created;
+    } catch (sdkError) {
+      debugPrint('[SupabaseService] SDK insert failed ($sdkError), trying REST HTTP POST fallback...');
+    }
+
+    // 2. Fallback ke Direct HTTP REST POST
     try {
       final uri = Uri.parse('$supabaseUrl/rest/v1/users');
       final res = await http
-          .post(uri, headers: _headers, body: jsonEncode(userWithId.toJson()))
-          .timeout(const Duration(seconds: 8));
+          .post(uri, headers: _headers, body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 10));
+
+      debugPrint('[SupabaseService] HTTP REST Response: status=${res.statusCode}, body=${res.body}');
 
       if (res.statusCode == 201 || res.statusCode == 200) {
-        final List list = jsonDecode(res.body);
-        if (list.isNotEmpty) {
-          final created = UserModel.fromJson(list.first as Map<String, dynamic>);
+        final dynamic decoded = jsonDecode(res.body);
+        Map<String, dynamic>? data;
+        if (decoded is List && decoded.isNotEmpty) {
+          data = decoded.first as Map<String, dynamic>;
+        } else if (decoded is Map<String, dynamic>) {
+          data = decoded;
+        }
+        if (data != null) {
+          final created = UserModel.fromJson(data);
           await savePlayerCache(created);
           return created;
         }
       }
-    } catch (e) {
-      debugPrint('[SupabaseService] createUser error: $e');
+    } catch (httpError) {
+      debugPrint('[SupabaseService] HTTP REST error: $httpError');
     }
 
-    await savePlayerCache(userWithId);
-    return userWithId;
+    debugPrint('[SupabaseService] ERROR: Failed to insert user to Supabase.');
+    return null;
   }
 
   static Future<bool> updateUser(UserModel user) async {
@@ -392,10 +426,26 @@ class SupabaseService {
 
     if (!isConfigured || user.id.isEmpty) return true;
 
+    final payload = user.toSupabaseJson();
+    payload.remove('id'); // Primary key tidak di-update pada PATCH
+
+    // 1. Coba melalui Supabase SDK Client
+    try {
+      await client
+          .from('users')
+          .update(payload)
+          .eq('id', user.id)
+          .timeout(const Duration(seconds: 10));
+      return true;
+    } catch (sdkError) {
+      debugPrint('[SupabaseService] SDK update error ($sdkError), trying REST HTTP...');
+    }
+
+    // 2. Fallback ke REST HTTP PATCH
     try {
       final uri = Uri.parse('$supabaseUrl/rest/v1/users?id=eq.${user.id}');
       final res = await http
-          .patch(uri, headers: _headers, body: jsonEncode(user.toJson()))
+          .patch(uri, headers: _headers, body: jsonEncode(payload))
           .timeout(const Duration(seconds: 8));
 
       return res.statusCode == 200 || res.statusCode == 204;
