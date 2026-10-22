@@ -13,7 +13,7 @@ class FeedbackModel extends HiveObject {
   int id;
 
   @HiveField(1)
-  int userId;
+  dynamic userId;
 
   @HiveField(2)
   String namaMahasiswa;
@@ -130,7 +130,7 @@ class FeedbackAdapter extends TypeAdapter<FeedbackModel> {
     }
     return FeedbackModel(
       id: fields[0] as int? ?? 0,
-      userId: fields[1] as int? ?? 0,
+      userId: fields[1] ?? 0,
       namaMahasiswa: fields[2] as String? ?? '',
       nim: fields[3] as String? ?? '',
       kesan: fields[4] as String? ?? '',

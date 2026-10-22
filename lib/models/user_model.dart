@@ -1,24 +1,23 @@
 // ==============================================================================
 // LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
 // File: lib/models/user_model.dart
-// Deskripsi: Model Player/User sesuai Tabel 'users' Supabase & Cache Hive
-//            Mencakup Atribut RPG, Data Fisik BMI, & Helper Game Balancing
+// Deskripsi: Model Pengguna/Player dengan UUID (String), Atribut RPG Seimbang
+//            (STR, AGI, INT, CHA), Data Fisik (height, weight, bmi_score),
+//            serta helper gamifikasi Leveling & Rank Solo Leveling.
 // ==============================================================================
 
-import 'package:flutter/material.dart';
-
 class UserModel {
-  final int id;
+  final String id; // UUID String
   final String username;
   final String email;
   final String passwordHash;
   final bool biometricEnabled;
   final bool isOnboarded;
 
-  // Statistik Fisik Awal (Onboarding)
-  final double tbCm;
-  final double bbKg;
-  final double bmi;
+  // Statistik Fisik (Antropometri & Kalibrasi Awal)
+  final int height; // Dalam cm (contoh: 175)
+  final double weight; // Dalam kg (contoh: 68.5)
+  final double bmiScore; // BMI Index (contoh: 22.37)
   final int maxPushup;
   final int maxSitup;
   final int maxSquat;
@@ -29,23 +28,34 @@ class UserModel {
   // Atribut Gamifikasi Solo Leveling (Status Window)
   final int level;
   final String rank; // F, E, D, C, B, A, S
-  final int hp; // Maks 100, jika <= 0 = Game Over
-  final int exp; // Setiap 100 EXP = Level Up
-  final int gold; // Diuangkan di Guild Exchange (1 Gold = Rp 1.000)
+  final int hp; // 0 - 100, jika <= 0 = Game Over
+  final int exp; // EXP saat ini menuju Level Up berikutnya
+  final int gold; // Mata uang virtual Vault
+
+  // 4 Pilar Atribut RPG Utama
+  final int str; // Kekuatan (Strength)
+  final int agi; // Kelincahan (Agility)
+  final int intStat; // Kepintaran (Intelligence, mapping dari kolom 'int')
+  final int cha; // Kharisma (Charisma)
+
+  // Status Penalti & Tracking Waktu
   final bool isPenaltyActive;
   final String lastActiveDate; // Format YYYY-MM-DD
   final String createdAt;
 
   UserModel({
-    this.id = 0,
+    dynamic id = '',
     required this.username,
     required this.email,
     this.passwordHash = '',
     this.biometricEnabled = false,
     this.isOnboarded = false,
-    this.tbCm = 0.0,
-    this.bbKg = 0.0,
-    this.bmi = 0.0,
+    int? height,
+    double? weight,
+    double? bmiScore,
+    double? tbCm,
+    double? bbKg,
+    double? bmi,
     this.maxPushup = 10,
     this.maxSitup = 10,
     this.maxSquat = 10,
@@ -57,29 +67,84 @@ class UserModel {
     this.hp = 100,
     this.exp = 0,
     this.gold = 0,
+    this.str = 10,
+    this.agi = 10,
+    this.intStat = 10,
+    this.cha = 10,
     this.isPenaltyActive = false,
     this.lastActiveDate = '',
     this.createdAt = '',
-  });
+  })  : id = id?.toString() ?? '',
+        height = height ?? (tbCm != null ? tbCm.toInt() : 170),
+        weight = weight ?? (bbKg ?? 65.0),
+        bmiScore = bmiScore ?? (bmi ?? 22.49);
 
-  /// Factory untuk membuat UserModel baru dengan nilai default awal
+  // ============================================================================
+  // GETTERS UNTUK KOMPATIBILITAS KODE LAMA (BACKWARD COMPATIBILITY)
+  // ============================================================================
+  double get tbCm => height.toDouble();
+  double get bbKg => weight;
+  double get bmi => bmiScore;
+
+  /// Kategori BMI (Underweight, Normal, Overweight, Obese)
+  String get bmiCategory {
+    if (bmiScore < 18.5) return 'Underweight';
+    if (bmiScore < 25.0) return 'Normal';
+    if (bmiScore < 30.0) return 'Overweight';
+    return 'Obese';
+  }
+
+  /// Gelar Kehormatan berdasarkan Rank
+  String get rankTitle {
+    switch (rank.toUpperCase()) {
+      case 'S':
+        return 'National Level / Monarch';
+      case 'A':
+        return 'Elite Hunter';
+      case 'B':
+        return 'High-Rank Hunter';
+      case 'C':
+        return 'Mid-Rank Hunter';
+      case 'D':
+        return 'Novice Hunter';
+      case 'E':
+        return 'Low-Rank Hunter';
+      default:
+        return 'The Weakest Hunter';
+    }
+  }
+
+  /// Nilai rata-rata dari keempat atribut RPG
+  double get averageStat => (str + agi + intStat + cha) / 4.0;
+
+  /// Nilai atribut terlemah
+  int get minStat => [str, agi, intStat, cha].reduce((a, b) => a < b ? a : b);
+
+  /// Nilai atribut terkuat
+  int get maxStat => [str, agi, intStat, cha].reduce((a, b) => a > b ? a : b);
+
+  /// Memeriksa apakah distribusi atribut seimbang (selisih max - min <= 35)
+  bool get isBalanced => (maxStat - minStat) <= 35;
+
+  /// Factory untuk membuat UserModel baru dengan nilai default
   factory UserModel.initial({
-    required int id,
+    dynamic id,
     required String username,
     required String email,
     String passwordHash = '',
     bool biometricEnabled = false,
   }) {
+    final now = DateTime.now();
     return UserModel(
-      id: id,
+      id: id?.toString() ?? '',
       username: username,
       email: email,
       passwordHash: passwordHash,
       biometricEnabled: biometricEnabled,
       isOnboarded: false,
-      tbCm: 170.0,
-      bbKg: 65.0,
-      bmi: 22.49,
+      height: 170,
+      weight: 65.0,
+      bmiScore: 22.49,
       maxPushup: 10,
       maxSitup: 10,
       maxSquat: 10,
@@ -91,131 +156,107 @@ class UserModel {
       hp: 100,
       exp: 0,
       gold: 0,
+      str: 10,
+      agi: 10,
+      intStat: 10,
+      cha: 10,
       isPenaltyActive: false,
-      lastActiveDate: DateTime.now().toIso8601String().substring(0, 10),
-      createdAt: DateTime.now().toIso8601String(),
+      lastActiveDate: now.toIso8601String().substring(0, 10),
+      createdAt: now.toIso8601String(),
     );
   }
 
-  /// Kalkulasi Rank otomatis berdasarkan Level (Bab 5 Rules)
-  static String calculateRank(int lvl) {
-    if (lvl >= 30) return 'S';
-    if (lvl >= 21) return 'A';
-    if (lvl >= 15) return 'B';
-    if (lvl >= 10) return 'C';
-    if (lvl >= 6) return 'D';
-    if (lvl >= 3) return 'E';
-    return 'F';
-  }
+  /// Deserialisasi dari JSON Supabase PostgREST
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    final rawId = json['id'];
+    final idString = rawId != null ? rawId.toString() : '';
 
-  /// Gelar / Title Hunter berdasarkan Rank
-  String get rankTitle {
-    switch (rank.toUpperCase()) {
-      case 'S':
-        return 'Shadow Monarch';
-      case 'A':
-        return 'National Level Hunter';
-      case 'B':
-        return 'Elite Hunter';
-      case 'C':
-        return 'High Achiever';
-      case 'D':
-        return 'Iron Disciplined';
-      case 'E':
-        return 'Awakened Novice';
-      default:
-        return 'Unawakened Trainee';
+    int parseHeight() {
+      if (json['height'] != null) {
+        return (json['height'] is num)
+            ? (json['height'] as num).toInt()
+            : int.tryParse(json['height'].toString()) ?? 170;
+      }
+      if (json['tb_cm'] != null) {
+        return (json['tb_cm'] is num)
+            ? (json['tb_cm'] as num).toInt()
+            : (double.tryParse(json['tb_cm'].toString())?.toInt() ?? 170);
+      }
+      return 170;
     }
-  }
 
-  /// Warna bingkai avatar sesuai Rank (Bab 5 Rules)
-  Color get rankColor {
-    switch (rank.toUpperCase()) {
-      case 'S':
-        return const Color(0xFF7B1FA2); // Deep Purple dengan glow
-      case 'A':
-        return const Color(0xFFD500F9); // Purple Accent
-      case 'B':
-        return const Color(0xFF00E5FF); // Cyan Accent
-      case 'C':
-        return const Color(0xFFFFB300); // Amber / Gold
-      case 'D':
-        return const Color(0xFF607D8B); // Blue Grey
-      case 'E':
-        return const Color(0xFF795548); // Brown
-      default:
-        return const Color(0xFF9E9E9E); // Grey
+    double parseWeight() {
+      final raw = json['weight'] ?? json['bb_kg'];
+      if (raw is num) return raw.toDouble();
+      return double.tryParse(raw?.toString() ?? '65.0') ?? 65.0;
     }
-  }
 
-  /// Warna sekunder untuk efek gradien border frame
-  Color get rankColorSecondary {
-    switch (rank.toUpperCase()) {
-      case 'S':
-        return const Color(0xFFFFD700); // Emas berkilau Solo Leveling
-      case 'A':
-        return const Color(0xFF651FFF);
-      case 'B':
-        return const Color(0xFF2979FF);
-      case 'C':
-        return const Color(0xFFFF6D00);
-      case 'D':
-        return const Color(0xFF455A64);
-      case 'E':
-        return const Color(0xFF4E342E);
-      default:
-        return const Color(0xFF616161);
+    double parseBmi() {
+      final raw = json['bmi_score'] ?? json['bmi'];
+      if (raw is num) return raw.toDouble();
+      return double.tryParse(raw?.toString() ?? '22.49') ?? 22.49;
     }
-  }
 
-  /// Kategori BMI (Underweight, Normal, Overweight)
-  String get bmiCategory {
-    if (bmi < 18.5) return 'Underweight (Kurang BB)';
-    if (bmi <= 24.9) return 'Normal (Ideal)';
-    if (bmi <= 29.9) return 'Overweight (Kelebihan BB)';
-    return 'Obese (Obesitas)';
-  }
-
-  /// Rekomendasi latihan sesuai kategori BMI
-  String get bmiRecommendation {
-    if (bmi < 18.5) {
-      return 'Fokus: Strength Workout (Massa Otot) & Asupan Kalori Tinggi Protein.';
-    } else if (bmi <= 24.9) {
-      return 'Fokus: Seimbang (Workout, Cardio, Skincare Looksmaxxing, & Disiplin Belajar).';
-    } else {
-      return 'Fokus: Cardio (Run/Jogging) Defisit Kalori & Latihan Endurance.';
+    int parseIntStat() {
+      final raw = json['int'] ?? json['int_stat'] ?? json['intStat'];
+      if (raw is num) return raw.toInt();
+      return int.tryParse(raw?.toString() ?? '10') ?? 10;
     }
+
+    int parseNum(dynamic val, int defaultVal) {
+      if (val is num) return val.toInt();
+      return int.tryParse(val?.toString() ?? '$defaultVal') ?? defaultVal;
+    }
+
+    double parseDouble(dynamic val, double defaultVal) {
+      if (val is num) return val.toDouble();
+      return double.tryParse(val?.toString() ?? '$defaultVal') ?? defaultVal;
+    }
+
+    return UserModel(
+      id: idString,
+      username: json['username']?.toString() ?? 'Hunter',
+      email: json['email']?.toString() ?? '',
+      passwordHash: json['password_hash']?.toString() ?? '',
+      biometricEnabled: json['biometric_enabled'] as bool? ?? false,
+      isOnboarded: json['is_onboarded'] as bool? ?? false,
+      height: parseHeight(),
+      weight: parseWeight(),
+      bmiScore: parseBmi(),
+      maxPushup: parseNum(json['max_pushup'], 10),
+      maxSitup: parseNum(json['max_situp'], 10),
+      maxSquat: parseNum(json['max_squat'], 10),
+      maxPullup: parseNum(json['max_pullup'], 5),
+      maxRunKm: parseDouble(json['max_run_km'], 2.0),
+      pace2kmMenit: parseDouble(json['pace_2km_menit'], 15.0),
+      level: parseNum(json['level'], 1),
+      rank: json['rank']?.toString().toUpperCase() ?? 'F',
+      hp: parseNum(json['hp'], 100),
+      exp: parseNum(json['exp'], 0),
+      gold: parseNum(json['gold'], 0),
+      str: parseNum(json['str'], 10),
+      agi: parseNum(json['agi'], 10),
+      intStat: parseIntStat(),
+      cha: parseNum(json['cha'], 10),
+      isPenaltyActive: json['is_penalty_active'] as bool? ?? false,
+      lastActiveDate: json['last_active_date']?.toString() ?? '',
+      createdAt: json['created_at']?.toString() ?? '',
+    );
   }
 
-  /// Rumus Target Adaptif Harian (Bab 5 Rules):
-  /// targetHariIni = (kapasitasMaks * (0.60 + ((level - 1) * 0.05))).round()
-  int calculateAdaptiveTarget(int kapasitasMaks) {
-    if (kapasitasMaks <= 0) kapasitasMaks = 10;
-    final factor = 0.60 + ((level - 1) * 0.05);
-    final target = (kapasitasMaks * factor).round();
-    return target < 1 ? 1 : target;
-  }
-
-  /// Rumus Target Adaptif Lari (Km)
-  double calculateAdaptiveRunKm(double maxKm) {
-    if (maxKm <= 0) maxKm = 2.0;
-    final factor = 0.60 + ((level - 1) * 0.05);
-    final target = maxKm * factor;
-    return double.parse(target.toStringAsFixed(1));
-  }
-
-  /// Mengonversi objek ke Map persis sesuai nama kolom Supabase SQL
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
+  /// Serialisasi ke JSON Map untuk dikirim ke Supabase REST API
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{
       'username': username,
       'email': email,
-      'password_hash': passwordHash,
       'biometric_enabled': biometricEnabled,
       'is_onboarded': isOnboarded,
-      'tb_cm': tbCm,
-      'bb_kg': bbKg,
-      'bmi': bmi,
+      'height': height,
+      'weight': weight,
+      'bmi_score': bmiScore,
+      'tb_cm': height.toDouble(),
+      'bb_kg': weight,
+      'bmi': bmiScore,
       'max_pushup': maxPushup,
       'max_situp': maxSitup,
       'max_squat': maxSquat,
@@ -227,49 +268,42 @@ class UserModel {
       'hp': hp,
       'exp': exp,
       'gold': gold,
+      'str': str,
+      'agi': agi,
+      'int': intStat, // Mapping resmi ke kolom 'int' PostgreSQL
+      'int_stat': intStat, // Alias untuk kompatibilitas
+      'cha': cha,
       'is_penalty_active': isPenaltyActive,
-      'last_active_date': lastActiveDate,
-      'created_at': createdAt,
+      'last_active_date': lastActiveDate.isNotEmpty
+          ? lastActiveDate
+          : DateTime.now().toIso8601String().substring(0, 10),
     };
+
+    if (id.isNotEmpty) {
+      map['id'] = id;
+    }
+    if (passwordHash.isNotEmpty) {
+      map['password_hash'] = passwordHash;
+    }
+    if (createdAt.isNotEmpty) {
+      map['created_at'] = createdAt;
+    }
+    return map;
   }
 
-  /// Mengonversi Map (dari Supabase / Hive JSON) ke objek UserModel
-  factory UserModel.fromMap(Map<String, dynamic> map) {
-    return UserModel(
-      id: map['id'] is int ? map['id'] : int.tryParse(map['id']?.toString() ?? '0') ?? 0,
-      username: map['username']?.toString() ?? '',
-      email: map['email']?.toString() ?? '',
-      passwordHash: map['password_hash']?.toString() ?? '',
-      biometricEnabled: map['biometric_enabled'] == true,
-      isOnboarded: map['is_onboarded'] == true,
-      tbCm: (map['tb_cm'] is num) ? (map['tb_cm'] as num).toDouble() : double.tryParse(map['tb_cm']?.toString() ?? '0') ?? 0.0,
-      bbKg: (map['bb_kg'] is num) ? (map['bb_kg'] as num).toDouble() : double.tryParse(map['bb_kg']?.toString() ?? '0') ?? 0.0,
-      bmi: (map['bmi'] is num) ? (map['bmi'] as num).toDouble() : double.tryParse(map['bmi']?.toString() ?? '0') ?? 0.0,
-      maxPushup: map['max_pushup'] is int ? map['max_pushup'] : int.tryParse(map['max_pushup']?.toString() ?? '10') ?? 10,
-      maxSitup: map['max_situp'] is int ? map['max_situp'] : int.tryParse(map['max_situp']?.toString() ?? '10') ?? 10,
-      maxSquat: map['max_squat'] is int ? map['max_squat'] : int.tryParse(map['max_squat']?.toString() ?? '10') ?? 10,
-      maxPullup: map['max_pullup'] is int ? map['max_pullup'] : int.tryParse(map['max_pullup']?.toString() ?? '5') ?? 5,
-      maxRunKm: (map['max_run_km'] is num) ? (map['max_run_km'] as num).toDouble() : double.tryParse(map['max_run_km']?.toString() ?? '2.0') ?? 2.0,
-      pace2kmMenit: (map['pace_2km_menit'] is num) ? (map['pace_2km_menit'] as num).toDouble() : double.tryParse(map['pace_2km_menit']?.toString() ?? '15.0') ?? 15.0,
-      level: map['level'] is int ? map['level'] : int.tryParse(map['level']?.toString() ?? '1') ?? 1,
-      rank: map['rank']?.toString() ?? 'F',
-      hp: map['hp'] is int ? map['hp'] : int.tryParse(map['hp']?.toString() ?? '100') ?? 100,
-      exp: map['exp'] is int ? map['exp'] : int.tryParse(map['exp']?.toString() ?? '0') ?? 0,
-      gold: map['gold'] is int ? map['gold'] : int.tryParse(map['gold']?.toString() ?? '0') ?? 0,
-      isPenaltyActive: map['is_penalty_active'] == true,
-      lastActiveDate: map['last_active_date']?.toString() ?? '',
-      createdAt: map['created_at']?.toString() ?? '',
-    );
-  }
+  Map<String, dynamic> toMap() => toJson();
+  factory UserModel.fromMap(Map<String, dynamic> map) => UserModel.fromJson(map);
 
-  /// Membuat salinan objek dengan modifikasi nilai tertentu
   UserModel copyWith({
-    int? id,
+    dynamic id,
     String? username,
     String? email,
     String? passwordHash,
     bool? biometricEnabled,
     bool? isOnboarded,
+    int? height,
+    double? weight,
+    double? bmiScore,
     double? tbCm,
     double? bbKg,
     double? bmi,
@@ -284,20 +318,24 @@ class UserModel {
     int? hp,
     int? exp,
     int? gold,
+    int? str,
+    int? agi,
+    int? intStat,
+    int? cha,
     bool? isPenaltyActive,
     String? lastActiveDate,
     String? createdAt,
   }) {
     return UserModel(
-      id: id ?? this.id,
+      id: id?.toString() ?? this.id,
       username: username ?? this.username,
       email: email ?? this.email,
       passwordHash: passwordHash ?? this.passwordHash,
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
       isOnboarded: isOnboarded ?? this.isOnboarded,
-      tbCm: tbCm ?? this.tbCm,
-      bbKg: bbKg ?? this.bbKg,
-      bmi: bmi ?? this.bmi,
+      height: height ?? (tbCm != null ? tbCm.toInt() : this.height),
+      weight: weight ?? (bbKg ?? this.weight),
+      bmiScore: bmiScore ?? (bmi ?? this.bmiScore),
       maxPushup: maxPushup ?? this.maxPushup,
       maxSitup: maxSitup ?? this.maxSitup,
       maxSquat: maxSquat ?? this.maxSquat,
@@ -309,9 +347,25 @@ class UserModel {
       hp: hp ?? this.hp,
       exp: exp ?? this.exp,
       gold: gold ?? this.gold,
+      str: str ?? this.str,
+      agi: agi ?? this.agi,
+      intStat: intStat ?? this.intStat,
+      cha: cha ?? this.cha,
       isPenaltyActive: isPenaltyActive ?? this.isPenaltyActive,
       lastActiveDate: lastActiveDate ?? this.lastActiveDate,
       createdAt: createdAt ?? this.createdAt,
     );
+  }
+
+  /// Menghitung Rank otomatis berdasarkan Level dan Keseimbangan Stat (Bab 5 Rules)
+  static String calculateRank(int level, {int? minStatValue}) {
+    final minS = minStatValue ?? (level * 2);
+    if (level >= 91 && minS >= 225) return 'S';
+    if (level >= 71 && minS >= 165) return 'A';
+    if (level >= 51 && minS >= 115) return 'B';
+    if (level >= 31 && minS >= 75) return 'C';
+    if (level >= 16 && minS >= 45) return 'D';
+    if (level >= 6 && minS >= 20) return 'E';
+    return 'F';
   }
 }

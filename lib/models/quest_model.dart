@@ -6,6 +6,7 @@
 // ==============================================================================
 
 import 'package:hive/hive.dart';
+export 'quest_models.dart';
 
 @HiveType(typeId: 0)
 class QuestModel extends HiveObject {

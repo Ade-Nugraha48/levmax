@@ -141,7 +141,7 @@ class _BiometricGatePageState extends State<BiometricGatePage>
 
     if (scanSuccess == true) {
       final bioUserId = await UserInfo.getBiometricUserId();
-      if (bioUserId != null && bioUserId > 0) {
+      if (bioUserId != null && bioUserId.toString().isNotEmpty && bioUserId.toString() != '0') {
         final res = await AuthService.finalizeBiometricSession(bioUserId, 'Fingerprint');
         if (!mounted) return;
         _handleGateResult(res);

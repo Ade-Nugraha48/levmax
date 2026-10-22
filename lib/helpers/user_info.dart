@@ -1,421 +1,374 @@
 // ==============================================================================
 // LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
 // File: lib/helpers/user_info.dart
-// Deskripsi: Lapisan 1 Arsitektur DB - Manajemen Sesi Login via SharedPreferences
-//            dengan validasi kedaluwarsa sesi otomatis 60 menit (Auto-Logout)
-//            dan penyimpanan Token-Bound Biometric Session (Standar Industri).
+// Deskripsi: Manajemen Sesi & Kredensial Pengguna via Hive (authBox)
+//            Menggantikan SharedPreferences lama untuk efisiensi & kecepatan I/O.
 // ==============================================================================
 
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hive/hive.dart';
+import 'hive_boxes.dart';
 
 class UserInfo {
   // ============================================================================
-  // KUNCI PENYIMPANAN SESI & IDENTITAS (STANDAR SPESIFIKASI)
+  // KUNCI-KUNCI PENYIMPANAN DI AUTH_BOX
   // ============================================================================
-  static const String keyToken = 'token';
-  static const String keyUserID = 'userID';
-  static const String keyUsername = 'username';
-  static const String keyEmail = 'email';
-  static const String keyLogin = 'login';
-  static const String keyIsOnboarded = 'isOnboarded';
-  static const String keyLastActive = 'lastActive';
+  static const String keyAccessToken = HiveBoxes.keyAccessToken;
+  static const String keyUserId = HiveBoxes.keyUserId;
+  static const String keyIsBiometricEnabled = HiveBoxes.keyIsBiometricEnabled;
+  static const String keyBiometricCredential = HiveBoxes.keyBiometricCredential;
 
-  // Kunci-kunci spesifik Face ID & Fingerprint Perangkat (Terpisah)
-  static const String keyBiometricEnabled = 'biometric_enabled';
-  static const String keyFaceIdEnabled = 'face_id_enabled';
-  static const String keyFingerprintEnabled = 'fingerprint_enabled';
+  // Kunci Profil & Keadaan Sesi
+  static const String keyUsername = HiveBoxes.keyUsername;
+  static const String keyEmail = HiveBoxes.keyEmail;
+  static const String keyIsLoggedIn = HiveBoxes.keyIsLoggedIn;
+  static const String keyIsOnboarded = HiveBoxes.keyIsOnboarded;
+  static const String keyLastActive = HiveBoxes.keyLastActive;
+  static const String keyFaceIdEnabled = HiveBoxes.keyFaceIdEnabled;
+  static const String keyFingerprintEnabled = HiveBoxes.keyFingerprintEnabled;
   static const String keyBiometricUserId = 'biometric_user_id';
   static const String keyBiometricEmail = 'biometric_email';
   static const String keyPendingBiometricSetup = 'pending_biometric_setup';
 
-  // Kunci Patokan Wajah Sekuritas (Setor Wajah / Face Enrollment)
+  // Kunci Keamanan Wajah & Sidik Jari
   static const String keyHasEnrolledFace = 'has_enrolled_face';
   static const String keyEnrolledFaceTemplate = 'enrolled_face_template';
   static const String keyFaceEnrolledAt = 'face_enrolled_at';
-
-  // Kunci Patokan Sidik Jari Sekuritas (Setor Sidik Jari / Fingerprint Enrollment)
   static const String keyHasEnrolledFingerprint = 'has_enrolled_fingerprint';
   static const String keyFingerprintEnrolledAt = 'fingerprint_enrolled_at';
 
-  // ============================================================================
-  // TOKEN & USER IDENTITY
-  // ============================================================================
-
-  /// Menyimpan auth_key token sesi aktif (dari tabel user_tokens Supabase)
-  static Future<bool> setToken(String value) async {
-    final pref = await SharedPreferences.getInstance();
-    return await pref.setString(keyToken, value);
+  static Future<Box> _ensureAuthBox() async {
+    if (Hive.isBoxOpen(HiveBoxes.authBox)) {
+      return Hive.box(HiveBoxes.authBox);
+    }
+    return await Hive.openBox(HiveBoxes.authBox);
   }
 
-  /// Mengambil auth_key token sesi aktif
+  /// Memperbarui stempel waktu aktivitas terakhir ke waktu saat ini
+  static Future<void> updateLastActive() async {
+    await setLastActive(DateTime.now().toIso8601String());
+  }
+
+  // ============================================================================
+  // TOKEN & USER IDENTITY (UUID)
+  // ============================================================================
+
+  /// Menyimpan access_token sesi aktif
+  static Future<void> setToken(String value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyAccessToken, value);
+  }
+
+  /// Mengambil access_token sesi aktif
   static Future<String?> getToken() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getString(keyToken);
+    final box = await _ensureAuthBox();
+    return box.get(keyAccessToken) as String?;
   }
 
-  /// Menyimpan ID unik Player yang sedang aktif (userID di PostgreSQL)
-  static Future<bool> setUserID(int value) async {
-    final pref = await SharedPreferences.getInstance();
-    return await pref.setInt(keyUserID, value);
+  /// Menyimpan ID unik Player (UUID String)
+  static Future<void> setUserId(String value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyUserId, value);
   }
 
-  /// Mengambil ID unik Player yang sedang aktif
-  static Future<int?> getUserID() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getInt(keyUserID);
+  /// Mengambil ID unik Player (UUID String)
+  static Future<String?> getUserId() async {
+    final box = await _ensureAuthBox();
+    final val = box.get(keyUserId);
+    return val?.toString();
+  }
+
+  /// Alias serbaguna untuk setUserID (mendukung String UUID maupun legacy int)
+  static Future<void> setUserID(dynamic value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyUserId, value?.toString() ?? '');
+  }
+
+  /// Alias serbaguna untuk getUserID (mengembalikan UUID String)
+  static Future<dynamic> getUserID() async {
+    return await getUserId();
   }
 
   /// Menyimpan Username Hunter
-  static Future<bool> setUsername(String value) async {
-    final pref = await SharedPreferences.getInstance();
-    return await pref.setString(keyUsername, value);
+  static Future<void> setUsername(String value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyUsername, value);
   }
 
   /// Mengambil Username Hunter
   static Future<String?> getUsername() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getString(keyUsername);
+    final box = await _ensureAuthBox();
+    return box.get(keyUsername) as String?;
   }
 
   /// Menyimpan Email terdaftar
-  static Future<bool> setEmail(String value) async {
-    final pref = await SharedPreferences.getInstance();
-    return await pref.setString(keyEmail, value);
+  static Future<void> setEmail(String value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyEmail, value);
   }
 
   /// Mengambil Email terdaftar
   static Future<String?> getEmail() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getString(keyEmail);
+    final box = await _ensureAuthBox();
+    return box.get(keyEmail) as String?;
   }
 
   // ============================================================================
   // STATUS LOGIN & ONBOARDING
   // ============================================================================
 
-  /// Menyimpan status login aktif (true jika sudah login)
-  static Future<bool> setLoginStatus(bool value) async {
-    final pref = await SharedPreferences.getInstance();
-    return await pref.setBool(keyLogin, value);
+  /// Menyimpan status login aktif
+  static Future<void> setLoginStatus(bool value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyIsLoggedIn, value);
   }
 
   /// Mengambil status login aktif
   static Future<bool> getLoginStatus() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getBool(keyLogin) ?? false;
+    final box = await _ensureAuthBox();
+    return (box.get(keyIsLoggedIn) as bool?) ?? false;
   }
 
   /// Menyimpan status penyelesaian Onboarding fisik Player
-  static Future<bool> setIsOnboarded(bool value) async {
-    final pref = await SharedPreferences.getInstance();
-    return await pref.setBool(keyIsOnboarded, value);
+  static Future<void> setIsOnboarded(bool value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyIsOnboarded, value);
   }
 
   /// Mengambil status penyelesaian Onboarding fisik Player
   static Future<bool> getIsOnboarded() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getBool(keyIsOnboarded) ?? false;
+    final box = await _ensureAuthBox();
+    return (box.get(keyIsOnboarded) as bool?) ?? false;
   }
 
   // ============================================================================
-  // MANAJEMEN SESI BIOMETRIK LOKAL (FACE ID & FINGERPRINT TERPISAH)
+  // KREDENSIAL BIOMETRIK & INTEGRASI PERANGKAT
   // ============================================================================
 
-  /// Menyimpan status apakah Face ID aktif di perangkat ini
-  static Future<bool> setFaceIdEnabled(bool value) async {
-    final pref = await SharedPreferences.getInstance();
-    final res = await pref.setBool(keyFaceIdEnabled, value);
-    // Sinkronkan key umum biometric_enabled
-    final fp = pref.getBool(keyFingerprintEnabled) ?? false;
-    await pref.setBool(keyBiometricEnabled, value || fp);
-    return res;
+  /// Menyimpan status umum biometrik aktif
+  static Future<void> setBiometricEnabled(bool value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyIsBiometricEnabled, value);
   }
 
-  /// Mengambil status apakah Face ID aktif di perangkat ini
-  static Future<bool> getFaceIdEnabled() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getBool(keyFaceIdEnabled) ?? false;
-  }
-
-  /// Menyimpan status apakah Fingerprint aktif di perangkat ini
-  static Future<bool> setFingerprintEnabled(bool value) async {
-    final pref = await SharedPreferences.getInstance();
-    final res = await pref.setBool(keyFingerprintEnabled, value);
-    // Sinkronkan key umum biometric_enabled
-    final face = pref.getBool(keyFaceIdEnabled) ?? false;
-    await pref.setBool(keyBiometricEnabled, value || face);
-    return res;
-  }
-
-  /// Mengambil status apakah Fingerprint aktif di perangkat ini
-  static Future<bool> getFingerprintEnabled() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getBool(keyFingerprintEnabled) ?? false;
-  }
-
-  /// Menyimpan status apakah Face ID/Biometrik aktif di perangkat ini (Umum)
-  static Future<bool> setBiometricEnabled(bool value) async {
-    final pref = await SharedPreferences.getInstance();
-    return await pref.setBool(keyBiometricEnabled, value);
-  }
-
-  /// Mengambil status apakah salah satu biometrik (Face ID atau Fingerprint) aktif
+  /// Mengambil status umum biometrik aktif
   static Future<bool> getBiometricEnabled() async {
-    final pref = await SharedPreferences.getInstance();
-    final face = pref.getBool(keyFaceIdEnabled) ?? false;
-    final fp = pref.getBool(keyFingerprintEnabled) ?? false;
-    final general = pref.getBool(keyBiometricEnabled) ?? false;
-    return face || fp || general;
+    final box = await _ensureAuthBox();
+    return (box.get(keyIsBiometricEnabled) as bool?) ?? false;
   }
 
-  /// Menyimpan User ID pemilik biometrik di perangkat ini
-  /// PENTING: Nilai ini TIDAK dihapus saat normal logout agar user bisa Quick Login dengan Face ID
-  static Future<bool> setBiometricUserId(int value) async {
-    final pref = await SharedPreferences.getInstance();
-    return await pref.setInt(keyBiometricUserId, value);
+  /// Menyimpan kredensial/token biometrik perangkat
+  static Future<void> setBiometricCredential(String value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyBiometricCredential, value);
   }
 
-  /// Mengambil User ID pemilik biometrik di perangkat ini
-  static Future<int?> getBiometricUserId() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getInt(keyBiometricUserId);
+  /// Mengambil kredensial/token biometrik perangkat
+  static Future<String?> getBiometricCredential() async {
+    final box = await _ensureAuthBox();
+    return box.get(keyBiometricCredential) as String?;
   }
 
-  /// Menyimpan Email akun yang terhubung dengan Face ID di perangkat ini
-  /// Digunakan untuk menampilkan teks ramah: "Masuk kembali sebagai player@levmax.com dengan Face ID"
-  static Future<bool> setBiometricEmail(String value) async {
-    final pref = await SharedPreferences.getInstance();
-    return await pref.setString(keyBiometricEmail, value);
+  /// Menyimpan status Face ID aktif
+  static Future<void> setFaceIdEnabled(bool value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyFaceIdEnabled, value);
+    final fp = (box.get(keyFingerprintEnabled) as bool?) ?? false;
+    await box.put(keyIsBiometricEnabled, value || fp);
   }
 
-  /// Mengambil Email akun yang terhubung dengan Face ID di perangkat ini
+  /// Mengambil status Face ID aktif
+  static Future<bool> getFaceIdEnabled() async {
+    final box = await _ensureAuthBox();
+    return (box.get(keyFaceIdEnabled) as bool?) ?? false;
+  }
+
+  /// Menyimpan status Fingerprint aktif
+  static Future<void> setFingerprintEnabled(bool value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyFingerprintEnabled, value);
+    final face = (box.get(keyFaceIdEnabled) as bool?) ?? false;
+    await box.put(keyIsBiometricEnabled, value || face);
+  }
+
+  /// Mengambil status Fingerprint aktif
+  static Future<bool> getFingerprintEnabled() async {
+    final box = await _ensureAuthBox();
+    return (box.get(keyFingerprintEnabled) as bool?) ?? false;
+  }
+
+  static Future<void> setBiometricUserId(dynamic value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyBiometricUserId, value?.toString() ?? '');
+  }
+
+  static Future<String?> getBiometricUserId() async {
+    final box = await _ensureAuthBox();
+    return box.get(keyBiometricUserId)?.toString();
+  }
+
+  static Future<void> setBiometricEmail(String value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyBiometricEmail, value);
+  }
+
   static Future<String?> getBiometricEmail() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getString(keyBiometricEmail);
+    final box = await _ensureAuthBox();
+    return box.get(keyBiometricEmail) as String?;
   }
 
-  /// Menyimpan flag pending lazy enrollment (saat user klik Face ID sebelum setup)
-  static Future<bool> setPendingBiometricSetup(bool value) async {
-    final pref = await SharedPreferences.getInstance();
-    return await pref.setBool(keyPendingBiometricSetup, value);
+  static Future<void> setPendingBiometricSetup(bool value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyPendingBiometricSetup, value);
   }
 
-  /// Mengambil flag pending lazy enrollment
   static Future<bool> getPendingBiometricSetup() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getBool(keyPendingBiometricSetup) ?? false;
+    final box = await _ensureAuthBox();
+    return (box.get(keyPendingBiometricSetup) as bool?) ?? false;
   }
 
-  // ============================================================================
-  // PATOKAN WAJAH SEKURITAS (SETOR WAJAH / ENROLLMENT FACE ID)
-  // ============================================================================
-
-  /// Menyimpan status apakah user telah menyetor wajah patokan
-  static Future<bool> setHasEnrolledFace(bool value) async {
-    final pref = await SharedPreferences.getInstance();
-    return await pref.setBool(keyHasEnrolledFace, value);
+  static Future<void> setHasEnrolledFace(bool value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyHasEnrolledFace, value);
   }
 
-  /// Memeriksa apakah user sudah menyetor wajah patokan yang valid
   static Future<bool> getHasEnrolledFace() async {
-    final pref = await SharedPreferences.getInstance();
-    final hasEnrolled = pref.getBool(keyHasEnrolledFace) ?? false;
-    final template = pref.getString(keyEnrolledFaceTemplate);
-    return hasEnrolled && (template != null && template.isNotEmpty);
+    final box = await _ensureAuthBox();
+    return (box.get(keyHasEnrolledFace) as bool?) ?? false;
   }
 
-  /// Menyimpan template vektor biometrik patokan wajah Hunter
-  static Future<bool> saveEnrolledFaceTemplate(Map<String, double> template) async {
-    final pref = await SharedPreferences.getInstance();
-    final jsonStr = jsonEncode(template);
-    final nowIso = DateTime.now().toIso8601String();
-    await pref.setString(keyFaceEnrolledAt, nowIso);
-    await pref.setString(keyEnrolledFaceTemplate, jsonStr);
-    return await pref.setBool(keyHasEnrolledFace, true);
-  }
-
-  /// Mengambil template vektor biometrik patokan wajah Hunter
-  static Future<Map<String, double>?> getEnrolledFaceTemplate() async {
-    final pref = await SharedPreferences.getInstance();
-    final jsonStr = pref.getString(keyEnrolledFaceTemplate);
-    if (jsonStr == null || jsonStr.isEmpty) return null;
-    try {
-      final decoded = jsonDecode(jsonStr) as Map<String, dynamic>;
-      return decoded.map((k, v) => MapEntry(k, (v as num).toDouble()));
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// Mengambil waktu ISO saat wajah patokan didaftarkan
-  static Future<String?> getFaceEnrolledAt() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getString(keyFaceEnrolledAt);
-  }
-
-  /// Menghapus patokan wajah yang tersimpan di perangkat ini
-  static Future<bool> deleteEnrolledFaceTemplate() async {
-    final pref = await SharedPreferences.getInstance();
-    await pref.remove(keyEnrolledFaceTemplate);
-    await pref.remove(keyFaceEnrolledAt);
-    return await pref.setBool(keyHasEnrolledFace, false);
-  }
-
-  // ============================================================================
-  // PATOKAN SIDIK JARI SEKURITAS (SETOR SIDIK JARI / ENROLLMENT FINGERPRINT)
-  // ============================================================================
-
-  /// Menyimpan status apakah user telah menyetor sidik jari patokan
-  static Future<bool> setHasEnrolledFingerprint(bool value) async {
-    final pref = await SharedPreferences.getInstance();
-    return await pref.setBool(keyHasEnrolledFingerprint, value);
-  }
-
-  /// Memeriksa apakah user sudah menyetor sidik jari patokan
-  static Future<bool> getHasEnrolledFingerprint() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getBool(keyHasEnrolledFingerprint) ?? false;
-  }
-
-  /// Menyimpan status konfirmasi setoran sidik jari patokan Hunter
-  static Future<bool> saveEnrolledFingerprint() async {
-    final pref = await SharedPreferences.getInstance();
-    final nowIso = DateTime.now().toIso8601String();
-    await pref.setString(keyFingerprintEnrolledAt, nowIso);
-    return await pref.setBool(keyHasEnrolledFingerprint, true);
-  }
-
-  /// Mengambil waktu ISO saat sidik jari patokan didaftarkan
-  static Future<String?> getFingerprintEnrolledAt() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getString(keyFingerprintEnrolledAt);
-  }
-
-  /// Menghapus patokan sidik jari yang tersimpan di perangkat ini
-  static Future<bool> deleteEnrolledFingerprint() async {
-    final pref = await SharedPreferences.getInstance();
-    await pref.remove(keyFingerprintEnrolledAt);
-    return await pref.setBool(keyHasEnrolledFingerprint, false);
-  }
-
-  // ============================================================================
-  // MANAJEMEN WAKTU & TIMEOUT SESI 1 JAM (AUTO-LOGOUT 60 MENIT)
-  // ============================================================================
-
-  /// Menyimpan timestamp waktu aktivitas terakhir dalam format ISO-8601
-  static Future<bool> setLastActive(String isoTime) async {
-    final pref = await SharedPreferences.getInstance();
-    return await pref.setString(keyLastActive, isoTime);
-  }
-
-  /// Mengambil timestamp waktu aktivitas terakhir
-  static Future<String?> getLastActive() async {
-    final pref = await SharedPreferences.getInstance();
-    return pref.getString(keyLastActive);
-  }
-
-  /// Memperbarui timestamp aktivitas ke waktu saat ini
-  static Future<void> updateLastActive() async {
-    final nowIso = DateTime.now().toIso8601String();
-    await setLastActive(nowIso);
-  }
-
-  /// Menghitung selisih menit sejak aktivitas terakhir
-  static Future<int> getInactiveMinutes() async {
-    final pref = await SharedPreferences.getInstance();
-    final lastActiveStr = pref.getString(keyLastActive);
-    if (lastActiveStr == null || lastActiveStr.isEmpty) return 999999;
-    final lastActive = DateTime.tryParse(lastActiveStr);
-    if (lastActive == null) return 999999;
-    return DateTime.now().difference(lastActive).inMinutes;
-  }
-
-  /// Memeriksa apakah sesi telah kedaluwarsa (> 60 menit dari aktivitas terakhir).
-  /// Sesuai Spesifikasi:
-  /// - Jika tidak login -> return true.
-  /// - Jika inaktif > 60 menit -> panggil autoLogout() dan return true.
-  /// - Jika masih valid -> perbarui lastActive dan return false.
-  static Future<bool> checkSessionTimeout() async {
-    final pref = await SharedPreferences.getInstance();
-    final isLoggedIn = pref.getBool(keyLogin) ?? false;
-    
-    if (!isLoggedIn) {
-      return true;
-    }
-
-    final inactiveMins = await getInactiveMinutes();
-    if (inactiveMins >= 60) {
-      // Sesi 1 jam habis -> cabut sesi aktif (Auto-Logout)
-      await autoLogout();
-      return true;
-    }
-
-    // Sesi masih valid: perbarui timestamp aktivitas terakhir
-    await updateLastActive();
-    return false;
-  }
-
-  // ============================================================================
-  // LOGOUT SESI STANDAR INDUSTRI
-  // ============================================================================
-
-  /// Auto-Logout saat sesi inaktif melebihi 60 menit:
-  /// Mencabut token dan status login, namun TETAP MEMPERTAHANKAN biometric_user_id & biometric_email
-  /// agar user dapat membuka kembali aplikasi secara instan menggunakan Face ID / Biometrik.
-  static Future<void> autoLogout() async {
-    final pref = await SharedPreferences.getInstance();
-    await pref.remove(keyToken);
-    await pref.setBool(keyLogin, false);
-    await pref.remove(keyLastActive);
-  }
-
-  /// Normal Logout (dipicu user di menu profil):
-  /// Sama seperti auto-logout, mempertahankan biometric_user_id & biometric_email pada perangkat
-  /// untuk fitur Quick Login yang aman.
-  static Future<void> logout() async {
-    await autoLogout();
-  }
-
-  /// Menonaktifkan fitur Face ID pada perangkat ini
+  /// Menonaktifkan Face ID
   static Future<void> disableFaceId() async {
-    final pref = await SharedPreferences.getInstance();
-    await pref.setBool(keyFaceIdEnabled, false);
-    final fp = pref.getBool(keyFingerprintEnabled) ?? false;
-    await pref.setBool(keyBiometricEnabled, fp);
-    if (!fp) {
-      await pref.remove(keyBiometricUserId);
-      await pref.remove(keyBiometricEmail);
-    }
+    await setFaceIdEnabled(false);
   }
 
-  /// Menonaktifkan fitur Fingerprint pada perangkat ini
+  /// Menonaktifkan Fingerprint
   static Future<void> disableFingerprint() async {
-    final pref = await SharedPreferences.getInstance();
-    await pref.setBool(keyFingerprintEnabled, false);
-    final face = pref.getBool(keyFaceIdEnabled) ?? false;
-    await pref.setBool(keyBiometricEnabled, face);
-    if (!face) {
-      await pref.remove(keyBiometricUserId);
-      await pref.remove(keyBiometricEmail);
+    await setFingerprintEnabled(false);
+  }
+
+  /// Menonaktifkan seluruh biometrik
+  static Future<void> disableBiometrics() async {
+    await setBiometricEnabled(false);
+    await setFaceIdEnabled(false);
+    await setFingerprintEnabled(false);
+  }
+
+  static Future<void> saveEnrolledFaceTemplate(dynamic template) async {
+    final box = await _ensureAuthBox();
+    if (template is Map) {
+      await box.put(keyEnrolledFaceTemplate, jsonEncode(template));
+    } else {
+      await box.put(keyEnrolledFaceTemplate, template?.toString());
+    }
+    await box.put(keyHasEnrolledFace, true);
+    await box.put(keyFaceEnrolledAt, DateTime.now().toIso8601String());
+  }
+
+  static Future<void> setEnrolledFaceTemplate(String value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyEnrolledFaceTemplate, value);
+  }
+
+  static Future<Map<String, dynamic>?> getEnrolledFaceTemplate() async {
+    final box = await _ensureAuthBox();
+    final raw = box.get(keyEnrolledFaceTemplate);
+    if (raw == null) return null;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    if (raw is String) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  static Future<void> setFaceEnrolledAt(String value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyFaceEnrolledAt, value);
+  }
+
+  static Future<String?> getFaceEnrolledAt() async {
+    final box = await _ensureAuthBox();
+    return box.get(keyFaceEnrolledAt) as String?;
+  }
+
+  static Future<void> saveEnrolledFingerprint([dynamic template]) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyHasEnrolledFingerprint, true);
+    await box.put(keyFingerprintEnrolledAt, DateTime.now().toIso8601String());
+  }
+
+  static Future<void> setHasEnrolledFingerprint(bool value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyHasEnrolledFingerprint, value);
+  }
+
+  static Future<bool> getHasEnrolledFingerprint() async {
+    final box = await _ensureAuthBox();
+    return (box.get(keyHasEnrolledFingerprint) as bool?) ?? false;
+  }
+
+  static Future<void> setFingerprintEnrolledAt(String value) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyFingerprintEnrolledAt, value);
+  }
+
+  static Future<String?> getFingerprintEnrolledAt() async {
+    final box = await _ensureAuthBox();
+    return box.get(keyFingerprintEnrolledAt) as String?;
+  }
+
+  /// Auto logout alias untuk sesi kedaluwarsa
+  static Future<void> autoLogout() async {
+    await logout();
+  }
+
+  // ============================================================================
+  // SESI AKTIF & AUTO-TIMEOUT (60 MENIT)
+  // ============================================================================
+
+  /// Menyimpan stempel waktu aktivitas terakhir
+  static Future<void> setLastActive(String isoTimestamp) async {
+    final box = await _ensureAuthBox();
+    await box.put(keyLastActive, isoTimestamp);
+  }
+
+  /// Mengambil stempel waktu aktivitas terakhir
+  static Future<String?> getLastActive() async {
+    final box = await _ensureAuthBox();
+    return box.get(keyLastActive) as String?;
+  }
+
+  /// Memeriksa apakah sesi telah kedaluwarsa (> 60 menit inaktif)
+  static Future<bool> checkSessionTimeout() async {
+    final lastActiveStr = await getLastActive();
+    if (lastActiveStr == null || lastActiveStr.isEmpty) return false;
+
+    try {
+      final lastActive = DateTime.parse(lastActiveStr);
+      final diff = DateTime.now().difference(lastActive);
+      return diff.inMinutes >= 60;
+    } catch (_) {
+      return false;
     }
   }
 
-  /// Menonaktifkan fitur Biometrik sepenuhnya pada perangkat ini:
-  /// Menghapus biometric_enabled, face_id_enabled, fingerprint_enabled, biometric_user_id, dan biometric_email.
-  static Future<void> disableBiometrics() async {
-    final pref = await SharedPreferences.getInstance();
-    await pref.setBool(keyBiometricEnabled, false);
-    await pref.setBool(keyFaceIdEnabled, false);
-    await pref.setBool(keyFingerprintEnabled, false);
-    await pref.remove(keyBiometricUserId);
-    await pref.remove(keyBiometricEmail);
-    await pref.remove(keyPendingBiometricSetup);
+  /// Mengeluarkan pengguna dan membersihkan data sesi di authBox
+  static Future<void> logout() async {
+    final box = await _ensureAuthBox();
+    await box.delete(keyAccessToken);
+    await box.delete(keyUserId);
+    await box.delete(keyUsername);
+    await box.delete(keyEmail);
+    await box.delete(keyIsLoggedIn);
+    await box.delete(keyIsOnboarded);
+    await box.delete(keyLastActive);
   }
 
-  /// Reset total data aplikasi jika user ingin menghapus seluruh jejak lokal (Factory Reset)
-  static Future<void> clearAll() async {
-    final pref = await SharedPreferences.getInstance();
-    await pref.clear();
+  /// Membersihkan seluruh data di AuthBox
+  static Future<void> clearSession() async {
+    await logout();
   }
 }

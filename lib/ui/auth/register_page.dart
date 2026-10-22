@@ -1,15 +1,17 @@
 // ==============================================================================
 // LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
 // File: lib/ui/auth/register_page.dart
-// Deskripsi: Layanan Registrasi Akun Hunter Enkripsi SHA-256 (Alur 1)
-//            dengan opsi aktivasi Face ID / Biometrik & penanganan NotEnrolled dialog.
+// Deskripsi: Layanan Registrasi Akun Hunter (Enkripsi SHA-256 & Supabase Auth)
+//            dengan Biometric Setup Langsung (Face ID & Fingerprint via local_auth)
+//            dan Redirect ke LoginPage setelah pendaftaran berhasil.
 // ==============================================================================
 
 import 'package:flutter/material.dart';
+import '../../helpers/levmax_theme.dart';
+import '../../helpers/user_info.dart';
+import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/biometric_service.dart';
-import '../onboarding/onboarding_page.dart';
-import 'face_scan_camera_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -18,30 +20,43 @@ class RegisterPage extends StatefulWidget {
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _RegisterPageState extends State<RegisterPage>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+
+  // Form Controllers
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  // State Keamanan & Visibilitas Password
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
-  bool _faceIdEnabled = false;
-  bool _fingerprintEnabled = false;
   bool _isLoading = false;
-  String? _errorMessage;
 
+  // Biometric Setup State (local_auth Langsung di Registrasi)
+  bool _faceIdVerified = false;
+  bool _fingerprintVerified = false;
   BiometricCapability? _capability;
+
+  // Animasi Glitch / Pulse HUD
+  late AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
-    _detectBiometricCapability();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _detectBiometrics();
   }
 
   @override
   void dispose() {
+    _pulseController.dispose();
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -49,7 +64,8 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  Future<void> _detectBiometricCapability() async {
+  /// Memeriksa ketersediaan hardware biometrik di perangkat pengguna
+  Future<void> _detectBiometrics() async {
     final cap = await BiometricService.checkCapability();
     if (mounted) {
       setState(() {
@@ -59,7 +75,115 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   // ============================================================================
-  // LOGIKA SUBMIT REGISTRASI DENGAN VERIFIKASI FACE ID & FINGERPRINT (ALUR 1)
+  // BIOMETRIC VERIFICATION (local_auth On-The-Spot Verification)
+  // ============================================================================
+
+  /// Menjalankan verifikasi Face ID langsung di halaman registrasi
+  Future<void> _setupFaceId() async {
+    FocusScope.of(context).unfocus();
+
+    if (_faceIdVerified) {
+      // Toggle off jika user ingin membatalkan
+      setState(() {
+        _faceIdVerified = false;
+      });
+      await UserInfo.disableFaceId();
+      _showSnack(
+        'Face ID dinonaktifkan untuk registrasi.',
+        isError: false,
+      );
+      return;
+    }
+
+    final hasHardware = _capability?.hasBiometrics ?? true;
+    if (!hasHardware) {
+      _showSnack('Sensor biometrik tidak didukung pada perangkat ini.', isError: true);
+      return;
+    }
+
+    try {
+      final result = await BiometricService.authenticateFace(
+        reason: 'Pindai wajah Anda untuk mengaktifkan Face ID Hunter LevMax',
+      );
+
+      if (result.success) {
+        setState(() {
+          _faceIdVerified = true;
+        });
+
+        // Simpan preferensi langsung ke Hive authBox
+        await UserInfo.setFaceIdEnabled(true);
+        await UserInfo.setBiometricEnabled(true);
+
+        _showSnack(
+          'Face ID Berhasil Diverifikasi & Diaktifkan!',
+          isSuccess: true,
+        );
+      } else {
+        _showSnack(
+          result.errorMessage ?? 'Verifikasi Face ID dibatalkan atau tidak cocok.',
+          isError: true,
+        );
+      }
+    } catch (e) {
+      _showSnack('Gagal menginisialisasi sensor Face ID: $e', isError: true);
+    }
+  }
+
+  /// Menjalankan verifikasi Fingerprint langsung di halaman registrasi
+  Future<void> _setupFingerprint() async {
+    FocusScope.of(context).unfocus();
+
+    if (_fingerprintVerified) {
+      // Toggle off jika user ingin membatalkan
+      setState(() {
+        _fingerprintVerified = false;
+      });
+      await UserInfo.disableFingerprint();
+      _showSnack(
+        'Fingerprint dinonaktifkan untuk registrasi.',
+        isError: false,
+      );
+      return;
+    }
+
+    final hasHardware = _capability?.hasBiometrics ?? true;
+    if (!hasHardware) {
+      _showSnack('Sensor fingerprint tidak didukung pada perangkat ini.', isError: true);
+      return;
+    }
+
+    try {
+      final result = await BiometricService.authenticateFingerprint(
+        reason: 'Tempelkan sidik jari pada sensor untuk mendaftarkan Fingerprint Hunter',
+      );
+
+      if (result.success) {
+        setState(() {
+          _fingerprintVerified = true;
+        });
+
+        // Simpan preferensi langsung ke Hive authBox
+        await UserInfo.setFingerprintEnabled(true);
+        await UserInfo.setBiometricEnabled(true);
+
+        _showSnack(
+          'Sensor Sidik Jari Berhasil Diverifikasi & Terhubung!',
+          isSuccess: true,
+        );
+      } else {
+        _showSnack(
+          result.errorMessage ?? 'Verifikasi sidik jari dibatalkan atau gagal.',
+          isError: true,
+        );
+      }
+    } catch (e) {
+      _showSnack('Gagal menginisialisasi sensor Fingerprint: $e', isError: true);
+    }
+  }
+
+  // ============================================================================
+  // LOGIKA UTAMA SUBMIT REGISTRASI
   // ============================================================================
   Future<void> _handleRegister() async {
     FocusScope.of(context).unfocus();
@@ -68,76 +192,29 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    bool finalFaceChoice = _faceIdEnabled;
-    bool finalFpChoice = _fingerprintEnabled;
-
-    // Jika user mengaktifkan Face ID, buka kamera depan untuk Face Scan
-    if (_faceIdEnabled) {
-      final scanSuccess = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const FaceScanCameraPage(
-            mode: FaceScanMode.register,
-            title: 'REGISTRASI WAJAH HUNTER',
-            subtitle: 'Pindai wajah Anda melalui kamera depan HP Samsung',
-          ),
-        ),
-      );
-
-      if (scanSuccess != true) {
-        if (!mounted) return;
-        final continueWithout = await showDialog<bool>(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: const Color(0xFF131B2E),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('Face Scan Dibatalkan', style: TextStyle(color: Color(0xFFFFA000))),
-            content: const Text('Pemindaian wajah dibatalkan. Apakah Anda ingin tetap melanjutkan registrasi tanpa mengaktifkan Face ID?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('BATAL', style: TextStyle(color: Colors.grey))),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00E5FF), foregroundColor: Colors.black),
-                child: const Text('LANJUTKAN', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        );
-        if (continueWithout != true) return;
-        finalFaceChoice = false;
-      }
-    }
-
-    // Jika user mengaktifkan Fingerprint, verifikasi sidik jari
-    if (_fingerprintEnabled && finalFaceChoice == false) {
-      // Jika Face ID belum/tidak diverifikasi, verifikasi Fingerprint
-      final authResult = await BiometricService.authenticateFingerprint(
-        reason: 'Verifikasi sidik jari untuk mendaftarkan otorisasi Fingerprint Hunter',
-      );
-
-      if (!authResult.success) {
-        if (!mounted) return;
-        final continueWithout = await _showBiometricFailedDialog(authResult, 'Fingerprint');
-        if (continueWithout != true) {
-          return;
-        }
-        finalFpChoice = false;
-      }
-    }
+    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
-    final res = await AuthService.registerUser(
-      username: _usernameController.text.trim(),
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      isFaceId: finalFaceChoice,
-      isFingerprint: finalFpChoice,
-    );
+    Map<String, dynamic> res;
+    try {
+      res = await AuthService.registerUser(
+        username: username,
+        email: email,
+        password: password,
+        isFaceId: _faceIdVerified,
+        isFingerprint: _fingerprintVerified,
+      );
+    } catch (e) {
+      res = {
+        'success': false,
+        'message': 'Gagal memproses pendaftaran ke Sistem: $e',
+      };
+    }
 
     if (!mounted) return;
 
@@ -146,469 +223,602 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     if (res['success'] == true) {
+      final user = res['user'] as UserModel?;
+
+      // Simpan kredensial biometrik ke Hive authBox jika diverifikasi
+      if (_faceIdVerified || _fingerprintVerified) {
+        await UserInfo.setBiometricEnabled(true);
+        if (_faceIdVerified) await UserInfo.setFaceIdEnabled(true);
+        if (_fingerprintVerified) await UserInfo.setFingerprintEnabled(true);
+        await UserInfo.setBiometricEmail(email);
+        if (user != null) {
+          await UserInfo.setBiometricUserId(user.id);
+        }
+      }
+
+      // Pastikan status login di-reset agar user login ulang sesuai requirement
+      await UserInfo.setLoginStatus(false);
+
+      if (!mounted) return;
+
+      // Berikan notifikasi sukses yang megah
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.verified, color: Colors.black),
-              const SizedBox(width: 10),
+              const Icon(Icons.verified, color: LevMaxTheme.primaryContainer, size: 24),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  res['message'] ?? 'Hunter Berhasil Dibangkitkan!',
-                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                  'Registrasi Berhasil! Silakan Login Ulang untuk mengaktifkan Vessel.',
+                  style: LevMaxTheme.mono(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: LevMaxTheme.onPrimaryFixed,
+                  ),
                 ),
               ),
             ],
           ),
-          backgroundColor: const Color(0xFF00E5FF),
+          backgroundColor: LevMaxTheme.surfaceContainerHighest,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: const BorderSide(color: LevMaxTheme.primaryContainer, width: 1.5),
+          ),
+          duration: const Duration(seconds: 4),
         ),
       );
 
-      // Setelah registrasi sukses, lanjut ke Onboarding Fisik BMI & Target Awal
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const OnboardingPage()),
-        (route) => false,
-      );
+      // Arahkan kembali ke LoginPage sesuai diagram navigasi:
+      // Login -> Belum punya akun? -> Register -> Login Ulang -> Cek is_onboarded -> Onboarding Kamera -> Main Navigation
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     } else {
-      setState(() {
-        _errorMessage = res['message'] ?? 'Registrasi gagal diproses Sistem.';
-      });
-      _showErrorSnackBar(_errorMessage!);
+      _showSnack(res['message'] ?? 'Registrasi gagal diproses.', isError: true);
     }
   }
 
-  /// Dialog penanganan saat verifikasi Face ID atau Fingerprint gagal / NotEnrolled
-  Future<bool?> _showBiometricFailedDialog(BiometricAuthResult result, String methodName) {
-    String message = result.errorMessage ?? 'Verifikasi biometrik tidak berhasil.';
-    if (result.isNotEnrolled) {
-      message = 'Sensor $methodName belum didaftarkan di Pengaturan HP Samsung Anda.';
-    }
-
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF131B2E),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFFFFA000), width: 1.5),
-        ),
-        title: Row(
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: Color(0xFFFFA000), size: 26),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                '$methodName Belum Terverifikasi',
-                style: const TextStyle(color: Color(0xFFFFA000), fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          '$message\n\nApakah Anda ingin tetap melanjutkan pendaftaran akun tanpa mengaktifkan $methodName untuk saat ini?',
-          style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('BATAL', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00E5FF),
-              foregroundColor: Colors.black,
-            ),
-            child: const Text('LANJUTKAN', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showErrorSnackBar(String message) {
+  void _showSnack(String msg, {bool isError = false, bool isSuccess = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message, style: const TextStyle(color: Colors.white))),
-          ],
+        content: Text(
+          msg,
+          style: LevMaxTheme.mono(
+            fontSize: 11,
+            color: isError
+                ? LevMaxTheme.hpRed
+                : (isSuccess ? LevMaxTheme.primaryContainer : LevMaxTheme.onSurface),
+          ),
         ),
-        backgroundColor: const Color(0xFFFF1744),
+        backgroundColor: LevMaxTheme.surfaceContainerLow,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(
+            color: isError
+                ? LevMaxTheme.hpRed
+                : (isSuccess ? LevMaxTheme.primaryContainer : LevMaxTheme.outline),
+          ),
+        ),
       ),
     );
   }
 
+  // ============================================================================
+  // BUILD UI (SOLO LEVELING TACTICAL AWAKENING AESTHETIC)
+  // ============================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E1A),
+      backgroundColor: LevMaxTheme.surfaceContainerLowest,
       appBar: AppBar(
-        title: const Text('REKRUTMEN HUNTER'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF00E5FF)),
+          icon: const Icon(Icons.arrow_back_ios_new, color: LevMaxTheme.primaryContainer, size: 18),
           onPressed: () => Navigator.pop(context),
+        ),
+        centerTitle: true,
+        title: Text(
+          'AWAKEN NEW VESSEL',
+          style: LevMaxTheme.headline(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: LevMaxTheme.primaryContainer,
+            letterSpacing: 1.5,
+          ),
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 10),
+              // Header Subtitle
               Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7B1FA2).withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF7B1FA2)),
-                  ),
-                  child: const Text(
-                    'AWAKENING REGISTRATION',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2.0,
-                      color: Color(0xFF00E5FF),
+                child: Column(
+                  children: [
+                    Text(
+                      '[ INITIALIZE HUNTER PROFILE ]',
+                      style: LevMaxTheme.mono(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: LevMaxTheme.primary,
+                        letterSpacing: 1.2,
+                      ),
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Daftarkan Identitas Hunter Anda',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Sistem akan mencatat data Anda ke PostgreSQL Supabase & Rantai Blok Anti-Cheat',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withValues(alpha: 0.7),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Daftarkan identitas Anda ke dalam Sistem untuk membuka potensi kekuatan tak terbatas.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: LevMaxTheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 24),
 
-              if (_errorMessage != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF1744).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFFF1744)),
-                  ),
-                  child: Row(
+              // Tactical Form Card
+              Container(
+                decoration: BoxDecoration(
+                  color: LevMaxTheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF1E293B)),
+                ),
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(Icons.error_outline, color: Color(0xFFFF1744), size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: Color(0xFFFF1744), fontSize: 13),
+                      // 1. Username
+                      _buildFieldHeader('HUNTER CODENAME / USERNAME', Icons.badge_outlined),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _usernameController,
+                        style: LevMaxTheme.mono(fontSize: 13, color: LevMaxTheme.primary),
+                        decoration: _buildInputDecoration(
+                          hint: 'sung_jinwoo',
+                          icon: Icons.person_outline,
                         ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Username wajib diisi';
+                          }
+                          if (value.trim().length < 3) {
+                            return 'Username minimal 3 karakter';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 2. Email
+                      _buildFieldHeader('VESSEL EMAIL ADDRESS', Icons.email_outlined),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        style: LevMaxTheme.mono(fontSize: 13, color: LevMaxTheme.primary),
+                        decoration: _buildInputDecoration(
+                          hint: 'hunter@monarch.sys',
+                          icon: Icons.alternate_email,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Email wajib diisi';
+                          }
+                          final regex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                          if (!regex.hasMatch(value.trim())) {
+                            return 'Format email tidak valid';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 3. Password
+                      _buildFieldHeader('SECURITY KEY (PASSWORD)', Icons.lock_outline),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        style: LevMaxTheme.mono(fontSize: 13, color: LevMaxTheme.primary),
+                        decoration: _buildInputDecoration(
+                          hint: 'Minimal 8 karakter',
+                          icon: Icons.key_outlined,
+                          suffix: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                              color: LevMaxTheme.outline,
+                              size: 18,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Password wajib diisi';
+                          }
+                          if (value.length < 8) {
+                            return 'Password minimal 8 karakter';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 4. Konfirmasi Password
+                      _buildFieldHeader('CONFIRM SECURITY KEY', Icons.lock_clock_outlined),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _confirmPasswordController,
+                        obscureText: _obscureConfirm,
+                        style: LevMaxTheme.mono(fontSize: 13, color: LevMaxTheme.primary),
+                        decoration: _buildInputDecoration(
+                          hint: 'Ulangi password di atas',
+                          icon: Icons.verified_user_outlined,
+                          suffix: IconButton(
+                            icon: Icon(
+                              _obscureConfirm ? Icons.visibility_off : Icons.visibility,
+                              color: LevMaxTheme.outline,
+                              size: 18,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureConfirm = !_obscureConfirm;
+                              });
+                            },
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Konfirmasi password wajib diisi';
+                          }
+                          if (value != _passwordController.text) {
+                            return 'Password konfirmasi tidak cocok';
+                          }
+                          return null;
+                        },
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-              ],
+              ),
+              const SizedBox(height: 20),
 
-              Form(
-                key: _formKey,
+              // ================================================================
+              // BIOMETRIC SETUP SECTION (ELEGAN & TERVERIFIKASI LANGSUNG)
+              // ================================================================
+              Container(
+                decoration: BoxDecoration(
+                  color: LevMaxTheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: (_faceIdVerified || _fingerprintVerified)
+                        ? LevMaxTheme.primaryContainer.withValues(alpha: 0.5)
+                        : const Color(0xFF1E293B),
+                  ),
+                ),
+                padding: const EdgeInsets.all(16),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextFormField(
-                      controller: _usernameController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        labelText: 'Username Hunter',
-                        labelStyle: const TextStyle(color: Color(0xFF00E5FF)),
-                        prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF00E5FF)),
-                        filled: true,
-                        fillColor: const Color(0xFF131B2E),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF1E293B)),
+                    Row(
+                      children: [
+                        const Icon(Icons.fingerprint, color: LevMaxTheme.primaryContainer, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'BIOMETRIC VESSEL LINKAGE',
+                          style: LevMaxTheme.headline(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: LevMaxTheme.primaryContainer,
+                            letterSpacing: 1.0,
+                          ),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF00E5FF), width: 2),
-                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Verifikasi dan tautkan sensor biometrik perangkat saat ini untuk Quick Login instan tanpa password.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: LevMaxTheme.onSurfaceVariant,
+                        height: 1.3,
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Username wajib diisi.';
-                        }
-                        if (value.trim().length < 3) {
-                          return 'Username minimal 3 karakter.';
-                        }
-                        return null;
-                      },
                     ),
                     const SizedBox(height: 16),
 
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        labelText: 'Alamat Email',
-                        labelStyle: const TextStyle(color: Color(0xFF00E5FF)),
-                        prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF00E5FF)),
-                        filled: true,
-                        fillColor: const Color(0xFF131B2E),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF1E293B)),
+                    // Grid 2 Tombol Setup Biometrik Elegan
+                    Row(
+                      children: [
+                        // Tombol 1: Face ID Setup
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: _setupFaceId,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 250),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: _faceIdVerified
+                                    ? LevMaxTheme.primaryContainer.withValues(alpha: 0.15)
+                                    : LevMaxTheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: _faceIdVerified
+                                      ? LevMaxTheme.primaryContainer
+                                      : const Color(0xFF334155),
+                                  width: _faceIdVerified ? 1.5 : 1.0,
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    _faceIdVerified ? Icons.face : Icons.face_unlock_outlined,
+                                    size: 28,
+                                    color: _faceIdVerified
+                                        ? LevMaxTheme.primaryContainer
+                                        : LevMaxTheme.outline,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'FACE ID',
+                                    style: LevMaxTheme.mono(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: _faceIdVerified
+                                          ? LevMaxTheme.primaryContainer
+                                          : LevMaxTheme.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: _faceIdVerified
+                                          ? LevMaxTheme.primaryContainer.withValues(alpha: 0.2)
+                                          : Colors.black26,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      _faceIdVerified ? 'VERIFIED ✓' : 'TAP TO SETUP',
+                                      style: LevMaxTheme.mono(
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: _faceIdVerified
+                                            ? LevMaxTheme.primaryContainer
+                                            : LevMaxTheme.outline,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF00E5FF), width: 2),
+                        const SizedBox(width: 12),
+
+                        // Tombol 2: Fingerprint Setup
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: _setupFingerprint,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 250),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: _fingerprintVerified
+                                    ? LevMaxTheme.secondary.withValues(alpha: 0.15)
+                                    : LevMaxTheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: _fingerprintVerified
+                                      ? LevMaxTheme.secondary
+                                      : const Color(0xFF334155),
+                                  width: _fingerprintVerified ? 1.5 : 1.0,
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.fingerprint,
+                                    size: 28,
+                                    color: _fingerprintVerified
+                                        ? LevMaxTheme.secondary
+                                        : LevMaxTheme.outline,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'FINGERPRINT',
+                                    style: LevMaxTheme.mono(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: _fingerprintVerified
+                                          ? LevMaxTheme.secondary
+                                          : LevMaxTheme.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: _fingerprintVerified
+                                          ? LevMaxTheme.secondary.withValues(alpha: 0.2)
+                                          : Colors.black26,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      _fingerprintVerified ? 'VERIFIED ✓' : 'TAP TO SETUP',
+                                      style: LevMaxTheme.mono(
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: _fingerprintVerified
+                                            ? LevMaxTheme.secondary
+                                            : LevMaxTheme.outline,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Email wajib diisi.';
-                        }
-                        final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                        if (!emailRegex.hasMatch(value.trim())) {
-                          return 'Format alamat email tidak valid.';
-                        }
-                        return null;
-                      },
+                      ],
                     ),
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: _obscurePassword,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        labelText: 'Password (Minimal 8 Karakter)',
-                        labelStyle: const TextStyle(color: Color(0xFF00E5FF)),
-                        prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF00E5FF)),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                            color: const Color(0xFF00E5FF),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFF131B2E),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF1E293B)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF00E5FF), width: 2),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Password wajib diisi.';
-                        }
-                        if (value.length < 8) {
-                          return 'Password minimal 8 karakter.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _confirmPasswordController,
-                      obscureText: _obscureConfirm,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        labelText: 'Konfirmasi Password',
-                        labelStyle: const TextStyle(color: Color(0xFF00E5FF)),
-                        prefixIcon: const Icon(Icons.lock_reset, color: Color(0xFF00E5FF)),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirm ? Icons.visibility_off : Icons.visibility,
-                            color: const Color(0xFF00E5FF),
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureConfirm = !_obscureConfirm;
-                            });
-                          },
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFF131B2E),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF1E293B)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF00E5FF), width: 2),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Konfirmasi password wajib diisi.';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'Konfirmasi password tidak cocok.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Switch 1: Opsi Face ID (Jika didukung hardware)
-                    if (_capability?.hasFace ?? true)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF131B2E),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _faceIdEnabled ? const Color(0xFF00E5FF) : const Color(0xFF1E293B),
-                            width: _faceIdEnabled ? 1.5 : 1.0,
-                          ),
-                        ),
-                        child: SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          secondary: Icon(
-                            Icons.face_unlock_outlined,
-                            color: _faceIdEnabled ? const Color(0xFF00E5FF) : Colors.grey,
-                            size: 26,
-                          ),
-                          title: const Text(
-                            'Aktifkan Face ID untuk Akses Cepat',
-                            style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(
-                            'Verifikasi wajah saat menekan tombol Daftar',
-                            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
-                          ),
-                          activeThumbColor: const Color(0xFF00E5FF),
-                          value: _faceIdEnabled,
-                          onChanged: (val) {
-                            setState(() {
-                              _faceIdEnabled = val;
-                            });
-                          },
-                        ),
-                      ),
-                    if (_capability?.hasFace ?? true) const SizedBox(height: 12),
-
-                    // Switch 2: Opsi Fingerprint (Jika didukung hardware)
-                    if (_capability?.hasFingerprint ?? true)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF131B2E),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _fingerprintEnabled ? const Color(0xFF00E5FF) : const Color(0xFF1E293B),
-                            width: _fingerprintEnabled ? 1.5 : 1.0,
-                          ),
-                        ),
-                        child: SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          secondary: Icon(
-                            Icons.fingerprint,
-                            color: _fingerprintEnabled ? const Color(0xFF00E5FF) : Colors.grey,
-                            size: 26,
-                          ),
-                          title: const Text(
-                            'Aktifkan Fingerprint untuk Akses Cepat',
-                            style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(
-                            'Verifikasi sidik jari saat menekan tombol Daftar',
-                            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
-                          ),
-                          activeThumbColor: const Color(0xFF00E5FF),
-                          value: _fingerprintEnabled,
-                          onChanged: (val) {
-                            setState(() {
-                              _fingerprintEnabled = val;
-                            });
-                          },
-                        ),
-                      ),
                   ],
                 ),
               ),
               const SizedBox(height: 28),
 
-              ElevatedButton(
-                onPressed: _isLoading ? null : _handleRegister,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00E5FF),
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 6,
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.black),
-                      )
-                    : const Text(
-                        'AWAKEN AS HUNTER (DAFTAR)',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+              // ================================================================
+              // CTA BUTTON: REGISTER HUNTER VESSEL
+              // ================================================================
+              GestureDetector(
+                onTap: _isLoading ? null : _handleRegister,
+                child: Container(
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: LevMaxTheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x3300F0FF),
+                        blurRadius: 18,
+                        offset: Offset(0, 4),
                       ),
-              ),
-              const SizedBox(height: 20),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Sudah memiliki otorisasi? ',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
+                    ],
                   ),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Text(
-                      'MASUK KE SISTEM',
-                      style: TextStyle(
-                        color: Color(0xFF00E5FF),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        decoration: TextDecoration.underline,
+                  child: Center(
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: LevMaxTheme.onPrimary,
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'AWAKEN VESSEL [REGISTER]',
+                                style: LevMaxTheme.mono(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: LevMaxTheme.onPrimary,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(
+                                Icons.bolt,
+                                color: LevMaxTheme.onPrimary,
+                                size: 18,
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Link ke LoginPage
+              Center(
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 4,
+                  children: [
+                    Text(
+                      'Sudah memiliki Vessel Hunter?',
+                      style: LevMaxTheme.mono(
+                        fontSize: 11,
+                        color: LevMaxTheme.onSurfaceVariant,
                       ),
                     ),
-                  ),
-                ],
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Text(
+                        '[ MASUK KE SISTEM / LOGIN ]',
+                        style: LevMaxTheme.mono(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: LevMaxTheme.primaryContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFieldHeader(String label, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: LevMaxTheme.primaryContainer),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: LevMaxTheme.mono(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: LevMaxTheme.primary,
+            letterSpacing: 0.6,
+          ),
+        ),
+      ],
+    );
+  }
+
+  InputDecoration _buildInputDecoration({
+    required String hint,
+    required IconData icon,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      filled: true,
+      fillColor: LevMaxTheme.surfaceContainerLowest,
+      hintText: hint,
+      hintStyle: LevMaxTheme.mono(fontSize: 12, color: LevMaxTheme.outline),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      prefixIcon: Icon(icon, size: 18, color: LevMaxTheme.outline),
+      suffixIcon: suffix,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFF1E293B)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFF1E293B)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: LevMaxTheme.primaryContainer, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: LevMaxTheme.hpRed, width: 1.2),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: LevMaxTheme.hpRed, width: 1.5),
       ),
     );
   }
