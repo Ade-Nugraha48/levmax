@@ -26,6 +26,7 @@ import '../../services/blockchain_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/supabase_api_service.dart';
 import '../chat/system_ai_chat_modal.dart';
+import '../gamification/mini_games_page.dart';
 import '../quests/sensor_study_page.dart';
 import '../quests/sensor_workout_page.dart';
 
@@ -1051,6 +1052,23 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                 ),
               ),
 
+              // Tombol Mini-Games Arcade Training Ground
+              IconButton(
+                icon: const Icon(Icons.sports_esports, color: LevMaxTheme.amberGold, size: 22),
+                tooltip: 'Training Ground // Mini-Games',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MiniGamesPage(
+                        player: widget.player,
+                        onPlayerUpdated: widget.onPlayerUpdated,
+                      ),
+                    ),
+                  ).then((_) => widget.onPlayerUpdated());
+                },
+              ),
+
               // Tombol Logout Power Merah
               IconButton(
                 icon: const Icon(Icons.power_settings_new, color: Color(0xFFEF4444), size: 22),
@@ -1382,6 +1400,42 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.0,
                         ),
+                      ),
+                    ),
+                  ),
+
+                  // Tombol ARCADE Training Ground (+50G)
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MiniGamesPage(
+                            player: widget.player,
+                            onPlayerUpdated: widget.onPlayerUpdated,
+                          ),
+                        ),
+                      ).then((_) => widget.onPlayerUpdated());
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF171B26),
+                      foregroundColor: LevMaxTheme.amberGold,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: const BorderSide(color: Color(0xFFFBBF24), width: 1.2),
+                      ),
+                      elevation: 4,
+                    ),
+                    icon: const Icon(Icons.sports_esports, size: 16, color: Color(0xFFFBBF24)),
+                    label: Text(
+                      'ARCADE +50G',
+                      style: LevMaxTheme.mono(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFFFBBF24),
+                        letterSpacing: 0.8,
                       ),
                     ),
                   ),
