@@ -104,14 +104,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         _isFingerprintConfigured = fpConfigured;
 
         if (_emailOrUsernameController.text.isEmpty) {
-          if (bioEmail != null && bioEmail.isNotEmpty) {
-            _emailOrUsernameController.text = bioEmail;
+          if (savedUsername != null && savedUsername.isNotEmpty) {
+            _emailOrUsernameController.text = savedUsername;
           } else if (savedEmail != null && savedEmail.isNotEmpty) {
             _emailOrUsernameController.text = savedEmail;
-          } else if (savedUsername != null && savedUsername.isNotEmpty) {
-            _emailOrUsernameController.text = savedUsername;
-          } else {
-            _emailOrUsernameController.text = 'sung.jinwoo@monarch.sys';
+          } else if (bioEmail != null && bioEmail.isNotEmpty) {
+            _emailOrUsernameController.text = bioEmail;
           }
         }
       });
@@ -936,11 +934,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(builder: (_) => const RegisterPage()),
                             );
+                            if (mounted) {
+                              _initBiometricState();
+                            }
                           },
                           child: Text(
                             '[ AWAKEN NEW VESSEL / REGISTER ]',
