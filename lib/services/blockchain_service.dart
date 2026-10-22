@@ -30,7 +30,7 @@ class BlockchainService {
   }
 
   /// Memastikan Genesis Block tersedia saat pertama kali Hunter terbangun
-  static Future<void> ensureGenesisBlock({int? userId}) async {
+  static Future<void> ensureGenesisBlock({dynamic userId}) async {
     final box = Hive.box<BlockModel>(HiveBoxes.blockchainBox);
     if (box.isEmpty) {
       final now = DateTime.now().toIso8601String();
@@ -54,14 +54,14 @@ class BlockchainService {
 
       // Sinkronisasi ke Supabase jika userId tersedia
       final uid = userId ?? await UserInfo.getUserID();
-      if (uid != null && uid > 0) {
+      if (uid != null && uid.toString().isNotEmpty) {
         await SupabaseApiService.syncBlock(block: genesisBlock, userId: uid);
       }
     }
   }
 
   /// Menambahkan blok baru ke rantai blockchain lokal & cadangkan ke Supabase
-  static Future<BlockModel> addBlock(String action, {int? userId}) async {
+  static Future<BlockModel> addBlock(String action, {dynamic userId}) async {
     final box = Hive.box<BlockModel>(HiveBoxes.blockchainBox);
 
     // Pastikan ada blok awal jika masih kosong
@@ -94,7 +94,7 @@ class BlockchainService {
 
     // Sinkronisasi ke Supabase (Lapisan 3)
     final uid = userId ?? await UserInfo.getUserID();
-    if (uid != null && uid > 0) {
+    if (uid != null && uid.toString().isNotEmpty) {
       await SupabaseApiService.syncBlock(block: newBlock, userId: uid);
     }
 

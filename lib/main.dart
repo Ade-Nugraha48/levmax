@@ -70,10 +70,10 @@ void main() async {
   Hive.registerAdapter(BlockAdapter());
   Hive.registerAdapter(FeedbackAdapter());
 
-  // 3. Membuka 4 Box Utama Hive
+  // 3. Membuka Box Hive (Arsitektur Baru: authBox, questCacheBox, alarmBox, aiChatBox)
+  await HiveBoxes.openAllBoxes();
   await Hive.openBox<QuestModel>(HiveBoxes.questBox);
   await Hive.openBox<BlockModel>(HiveBoxes.blockchainBox);
-  await Hive.openBox(HiveBoxes.playerBox);
   await Hive.openBox<FeedbackModel>(HiveBoxes.feedbackBox);
 
   // 4. Inisialisasi Genesis Block Blockchain jika belum ada

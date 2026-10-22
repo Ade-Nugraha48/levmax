@@ -115,7 +115,7 @@ class AuthService {
     );
 
     // 5. Kirim HTTP POST ke Supabase REST API
-    final createdUser = await SupabaseApiService.createUser(newUser);
+    final createdUser = await SupabaseApiService.createUser(newUser) ?? newUser;
 
     // 6. Buat Token Sesi dan simpan status lokal ke SharedPreferences
     final token = generateSessionToken(createdUser.username);
@@ -248,7 +248,7 @@ class AuthService {
     final isFaceConfigured = await UserInfo.getFaceIdEnabled();
     final biometricUserId = await UserInfo.getBiometricUserId();
 
-    if (!isFaceConfigured || biometricUserId == null || biometricUserId <= 0) {
+    if (!isFaceConfigured || biometricUserId == null || biometricUserId.isEmpty || biometricUserId == '0') {
       return {
         'success': false,
         'notConfigured': true,
@@ -278,7 +278,7 @@ class AuthService {
     final isFpConfigured = await UserInfo.getFingerprintEnabled();
     final biometricUserId = await UserInfo.getBiometricUserId();
 
-    if (!isFpConfigured || biometricUserId == null || biometricUserId <= 0) {
+    if (!isFpConfigured || biometricUserId == null || biometricUserId.isEmpty || biometricUserId == '0') {
       return {
         'success': false,
         'notConfigured': true,
@@ -304,7 +304,7 @@ class AuthService {
   /// Melakukan login instan setelah pemindaian kamera wajah (Face Scan Kamera) berhasil
   static Future<Map<String, dynamic>> finalizeFaceScanLogin() async {
     final biometricUserId = await UserInfo.getBiometricUserId();
-    if (biometricUserId == null || biometricUserId <= 0) {
+    if (biometricUserId == null || biometricUserId.isEmpty || biometricUserId == '0') {
       return {
         'success': false,
         'message': 'Akun Hunter belum terdaftar untuk pemindaian wajah.',
@@ -316,7 +316,7 @@ class AuthService {
   /// Melakukan login instan setelah pemindaian sidik jari (Fingerprint Scan) berhasil
   static Future<Map<String, dynamic>> finalizeFingerprintLogin() async {
     final biometricUserId = await UserInfo.getBiometricUserId();
-    if (biometricUserId == null || biometricUserId <= 0) {
+    if (biometricUserId == null || biometricUserId.isEmpty || biometricUserId == '0') {
       return {
         'success': false,
         'message': 'Akun Hunter belum terdaftar untuk sensor sidik jari.',
@@ -327,7 +327,7 @@ class AuthService {
 
   /// Mengatur status Fingerprint setelah verifikasi sensor berhasil
   static Future<Map<String, dynamic>> setFingerprintStatusForUser({
-    required int userId,
+    required dynamic userId,
     required bool enable,
   }) async {
     if (enable) {
@@ -354,7 +354,7 @@ class AuthService {
 
   /// Mengatur status Face ID setelah verifikasi kamera berhasil
   static Future<Map<String, dynamic>> setFaceIdStatusForUser({
-    required int userId,
+    required dynamic userId,
     required bool enable,
   }) async {
     if (enable) {
@@ -380,13 +380,13 @@ class AuthService {
   }
 
   /// Helper untuk memfinalisasi sesi token setelah autentikasi biometrik berhasil
-  static Future<Map<String, dynamic>> _finalizeBiometricSession(int biometricUserId, String methodLabel) =>
+  static Future<Map<String, dynamic>> _finalizeBiometricSession(dynamic biometricUserId, String methodLabel) =>
       finalizeBiometricSession(biometricUserId, methodLabel);
 
-  static Future<Map<String, dynamic>> finalizeBiometricSession(int biometricUserId, String methodLabel) async {
+  static Future<Map<String, dynamic>> finalizeBiometricSession(dynamic biometricUserId, String methodLabel) async {
     UserModel? user;
     final cached = SupabaseApiService.getPlayerCache();
-    if (cached != null && cached.id == biometricUserId) {
+    if (cached != null && (cached.id == biometricUserId.toString() || cached.id == biometricUserId)) {
       user = cached;
     } else {
       user = await SupabaseApiService.getUserById(biometricUserId);
@@ -439,7 +439,7 @@ class AuthService {
     final isBiometricConfigured = await UserInfo.getBiometricEnabled();
     final biometricUserId = await UserInfo.getBiometricUserId();
 
-    if (!isBiometricConfigured || biometricUserId == null || biometricUserId <= 0) {
+    if (!isBiometricConfigured || biometricUserId == null || biometricUserId.isEmpty || biometricUserId == '0') {
       return {
         'success': false,
         'notConfigured': true,
@@ -509,7 +509,7 @@ class AuthService {
 
   /// Mengaktifkan atau menonaktifkan Fingerprint secara independen dengan verifikasi wajib
   static Future<Map<String, dynamic>> toggleFingerprintForUser({
-    required int userId,
+    required dynamic userId,
     required bool enable,
     String? localizedReason,
   }) async {
@@ -549,11 +549,11 @@ class AuthService {
   }
 
   /// Helper untuk mensinkronisasi status umum biometric_enabled ke Supabase
-  static Future<void> _syncSupabaseBiometricStatus(int userId) async {
+  static Future<void> _syncSupabaseBiometricStatus(dynamic userId) async {
     final isAnyActive = await UserInfo.getBiometricEnabled();
 
     UserModel? user;
-    if (userId > 0) {
+    if (userId != null && userId.toString().isNotEmpty && userId.toString() != '0') {
       user = await SupabaseApiService.getUserById(userId);
     }
     user ??= SupabaseApiService.getPlayerCache();
@@ -562,7 +562,7 @@ class AuthService {
       final updatedUser = user.copyWith(biometricEnabled: isAnyActive);
       await SupabaseApiService.savePlayerCache(updatedUser);
 
-      if (updatedUser.id > 0) {
+      if (updatedUser.id.isNotEmpty && updatedUser.id != '0') {
         await SupabaseApiService.updateUser(updatedUser);
       }
     }
@@ -570,7 +570,7 @@ class AuthService {
 
   /// Mengaktifkan atau menonaktifkan Face ID / Biometrik umum (Backward Compatibility)
   static Future<Map<String, dynamic>> toggleBiometricForUser({
-    required int userId,
+    required dynamic userId,
     required bool enable,
     String? localizedReason,
   }) async {

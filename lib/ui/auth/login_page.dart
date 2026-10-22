@@ -172,7 +172,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
     if (res['success'] == true) {
       final user = res['user'] as UserModel?;
-      final userId = user?.id ?? 1;
+      final userId = user?.id ?? '';
 
       // Lazy Enrollment Biometrik: Jika sebelumnya pengguna sempat klik Face ID / Fingerprint
       if (_pendingBiometricEnrollment) {
@@ -295,7 +295,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   // ============================================================================
   // DIALOG PROMPT LAZY ENROLLMENT BIOMETRIK
   // ============================================================================
-  Future<void> _showLazyBiometricPromptDialog(int userId) async {
+  Future<void> _showLazyBiometricPromptDialog(dynamic userId) async {
     final choice = await showDialog<String>(
       context: context,
       barrierDismissible: false,
