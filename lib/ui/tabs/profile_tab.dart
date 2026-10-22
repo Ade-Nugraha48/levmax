@@ -24,7 +24,7 @@ import '../../services/auth_service.dart';
 import '../auth/face_scan_camera_page.dart';
 import '../auth/fingerprint_scan_page.dart';
 import '../auth/login_page.dart';
-import 'status_quest_tab.dart'; // Reusing HunterPortraitPainter
+
 
 class ProfileTab extends StatefulWidget {
   final UserModel player;
@@ -1951,4 +1951,122 @@ class _ProfileTabState extends State<ProfileTab>
       ),
     );
   }
+}
+
+// ==============================================================================
+// CUSTOM PAINTER: HUNTER SUNG JIN-WOO AVATAR (AWAKENED HUD PORTRAIT)
+// ==============================================================================
+class HunterPortraitPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(8));
+
+    // 1. Dark Gradient Background (Mana Aura)
+    final bgPaint = Paint()
+      ..shader = const RadialGradient(
+        center: Alignment(0.0, -0.2),
+        radius: 0.9,
+        colors: [
+          Color(0xFF1E293B),
+          Color(0xFF0F172A),
+          Color(0xFF080D18),
+        ],
+      ).createShader(rect);
+    canvas.drawRRect(rrect, bgPaint);
+
+    canvas.save();
+    canvas.clipRRect(rrect);
+
+    // 2. Tactical Background Grid
+    final gridPaint = Paint()
+      ..color = const Color(0x1500F0FF)
+      ..strokeWidth = 0.6;
+    for (double x = 0; x < size.width; x += 12) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    }
+    for (double y = 0; y < size.height; y += 12) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    // 3. Shadow Cloak / Hunter Silhouette
+    final cloakPaint = Paint()..color = const Color(0xFF060911);
+    final cloakPath = Path()
+      ..moveTo(size.width * 0.12, size.height)
+      ..lineTo(size.width * 0.22, size.height * 0.58)
+      ..lineTo(size.width * 0.35, size.height * 0.42)
+      ..lineTo(size.width * 0.42, size.height * 0.32)
+      ..lineTo(size.width * 0.58, size.height * 0.32)
+      ..lineTo(size.width * 0.65, size.height * 0.42)
+      ..lineTo(size.width * 0.78, size.height * 0.58)
+      ..lineTo(size.width * 0.88, size.height)
+      ..close();
+    canvas.drawPath(cloakPath, cloakPaint);
+
+    // 4. Anime Hair Spikes (Iconic Jin-Woo bangs)
+    final hairPaint = Paint()..color = const Color(0xFF10192E);
+    final hairPath = Path()
+      ..moveTo(size.width * 0.30, size.height * 0.46)
+      ..lineTo(size.width * 0.36, size.height * 0.22)
+      ..lineTo(size.width * 0.43, size.height * 0.36)
+      ..lineTo(size.width * 0.50, size.height * 0.18)
+      ..lineTo(size.width * 0.57, size.height * 0.36)
+      ..lineTo(size.width * 0.64, size.height * 0.22)
+      ..lineTo(size.width * 0.70, size.height * 0.46)
+      ..close();
+    canvas.drawPath(hairPath, hairPaint);
+
+    // 5. Glowing Cyan Hunter Eyes (Awakened Monarch Gaze)
+    final eyeGlowPaint = Paint()
+      ..color = const Color(0x9900F0FF)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    canvas.drawCircle(Offset(size.width * 0.42, size.height * 0.46), 4, eyeGlowPaint);
+    canvas.drawCircle(Offset(size.width * 0.58, size.height * 0.46), 4, eyeGlowPaint);
+
+    final eyeCorePaint = Paint()..color = const Color(0xFF00F0FF);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(size.width * 0.42, size.height * 0.46), width: 6, height: 2),
+        const Radius.circular(1),
+      ),
+      eyeCorePaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(size.width * 0.58, size.height * 0.46), width: 6, height: 2),
+        const Radius.circular(1),
+      ),
+      eyeCorePaint,
+    );
+
+    // Eye flare horizontal beam
+    final beamPaint = Paint()
+      ..shader = const LinearGradient(
+        colors: [Colors.transparent, Color(0xDD00F0FF), Colors.transparent],
+      ).createShader(Rect.fromLTWH(0, size.height * 0.44, size.width, 4));
+    canvas.drawRect(Rect.fromLTWH(size.width * 0.20, size.height * 0.45, size.width * 0.60, 2), beamPaint);
+
+    // 6. Cybernetic Collar
+    final collarPaint = Paint()
+      ..color = const Color(0x5500F0FF)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    final collarPath = Path()
+      ..moveTo(size.width * 0.36, size.height * 0.64)
+      ..lineTo(size.width * 0.50, size.height * 0.70)
+      ..lineTo(size.width * 0.64, size.height * 0.64);
+    canvas.drawPath(collarPath, collarPaint);
+
+    canvas.restore();
+
+    // 7. Outer Border
+    final borderPaint = Paint()
+      ..color = const Color(0x8800F0FF)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    canvas.drawRRect(rrect, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
