@@ -22,6 +22,7 @@ import 'tabs/dungeon_guild_tab.dart';
 import 'tabs/saran_kesan_tab.dart';
 import 'tabs/feedback_tab.dart';
 import 'tabs/profile_tab.dart';
+import 'shop/shop_page.dart';
 
 class MainNavigationPage extends StatefulWidget {
   const MainNavigationPage({super.key});
@@ -191,6 +192,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     final items = [
       {'label': 'QUESTS', 'icon': Icons.shield_moon},
       {'label': 'DUNGEON', 'icon': Icons.shield_outlined},
+      {'label': 'TREASURY', 'icon': Icons.storefront},
       {'label': 'ARCHIVE', 'icon': Icons.menu_book_outlined},
       {'label': 'HUNTER', 'icon': Icons.person_outline},
     ];
@@ -267,6 +269,10 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
         onPlayerUpdated: _loadPlayerAndCheckPenalty,
       ),
       DungeonGuildTab(
+        player: _currentPlayer!,
+        onPlayerUpdated: _loadPlayerAndCheckPenalty,
+      ),
+      ShopPage(
         player: _currentPlayer!,
         onPlayerUpdated: _loadPlayerAndCheckPenalty,
       ),
