@@ -53,7 +53,8 @@ class BlockModel extends HiveObject {
       index: map['block_index'] is int
           ? map['block_index']
           : int.tryParse(map['block_index']?.toString() ?? '0') ?? 0,
-      timestamp: map['timestamp']?.toString() ?? DateTime.now().toIso8601String(),
+      timestamp:
+          map['timestamp']?.toString() ?? DateTime.now().toIso8601String(),
       action: map['action_data']?.toString() ?? map['action']?.toString() ?? '',
       prevHash: map['prev_hash']?.toString() ?? '',
       currentHash: map['current_hash']?.toString() ?? '',

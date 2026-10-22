@@ -7,6 +7,7 @@
 // ==============================================================================
 
 import 'package:flutter/material.dart';
+
 import '../../helpers/levmax_theme.dart';
 import '../../helpers/user_info.dart';
 import '../../models/user_model.dart';
@@ -88,16 +89,16 @@ class _RegisterPageState extends State<RegisterPage>
         _faceIdVerified = false;
       });
       await UserInfo.disableFaceId();
-      _showSnack(
-        'Face ID dinonaktifkan untuk registrasi.',
-        isError: false,
-      );
+      _showSnack('Face ID dinonaktifkan untuk registrasi.', isError: false);
       return;
     }
 
     final hasHardware = _capability?.hasBiometrics ?? true;
     if (!hasHardware) {
-      _showSnack('Sensor biometrik tidak didukung pada perangkat ini.', isError: true);
+      _showSnack(
+        'Sensor biometrik tidak didukung pada perangkat ini.',
+        isError: true,
+      );
       return;
     }
 
@@ -121,7 +122,8 @@ class _RegisterPageState extends State<RegisterPage>
         );
       } else {
         _showSnack(
-          result.errorMessage ?? 'Verifikasi Face ID dibatalkan atau tidak cocok.',
+          result.errorMessage ??
+              'Verifikasi Face ID dibatalkan atau tidak cocok.',
           isError: true,
         );
       }
@@ -140,16 +142,16 @@ class _RegisterPageState extends State<RegisterPage>
         _fingerprintVerified = false;
       });
       await UserInfo.disableFingerprint();
-      _showSnack(
-        'Fingerprint dinonaktifkan untuk registrasi.',
-        isError: false,
-      );
+      _showSnack('Fingerprint dinonaktifkan untuk registrasi.', isError: false);
       return;
     }
 
     final hasHardware = _capability?.hasBiometrics ?? true;
     if (!hasHardware) {
-      _showSnack('Sensor fingerprint tidak didukung pada perangkat ini.', isError: true);
+      _showSnack(
+        'Sensor fingerprint tidak didukung pada perangkat ini.',
+        isError: true,
+      );
       return;
     }
 
@@ -178,7 +180,10 @@ class _RegisterPageState extends State<RegisterPage>
         );
       }
     } catch (e) {
-      _showSnack('Gagal menginisialisasi sensor Fingerprint: $e', isError: true);
+      _showSnack(
+        'Gagal menginisialisasi sensor Fingerprint: $e',
+        isError: true,
+      );
     }
   }
 
@@ -246,7 +251,11 @@ class _RegisterPageState extends State<RegisterPage>
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.verified, color: LevMaxTheme.primaryContainer, size: 24),
+              const Icon(
+                Icons.verified,
+                color: LevMaxTheme.primaryContainer,
+                size: 24,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -264,7 +273,10 @@ class _RegisterPageState extends State<RegisterPage>
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
-            side: const BorderSide(color: LevMaxTheme.primaryContainer, width: 1.5),
+            side: const BorderSide(
+              color: LevMaxTheme.primaryContainer,
+              width: 1.5,
+            ),
           ),
           duration: const Duration(seconds: 4),
         ),
@@ -288,7 +300,9 @@ class _RegisterPageState extends State<RegisterPage>
             fontSize: 11,
             color: isError
                 ? LevMaxTheme.hpRed
-                : (isSuccess ? LevMaxTheme.primaryContainer : LevMaxTheme.onSurface),
+                : (isSuccess
+                      ? LevMaxTheme.primaryContainer
+                      : LevMaxTheme.onSurface),
           ),
         ),
         backgroundColor: LevMaxTheme.surfaceContainerLow,
@@ -298,7 +312,9 @@ class _RegisterPageState extends State<RegisterPage>
           side: BorderSide(
             color: isError
                 ? LevMaxTheme.hpRed
-                : (isSuccess ? LevMaxTheme.primaryContainer : LevMaxTheme.outline),
+                : (isSuccess
+                      ? LevMaxTheme.primaryContainer
+                      : LevMaxTheme.outline),
           ),
         ),
       ),
@@ -316,7 +332,11 @@ class _RegisterPageState extends State<RegisterPage>
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: LevMaxTheme.primaryContainer, size: 18),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: LevMaxTheme.primaryContainer,
+            size: 18,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
@@ -378,11 +398,17 @@ class _RegisterPageState extends State<RegisterPage>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // 1. Username
-                      _buildFieldHeader('HUNTER CODENAME / USERNAME', Icons.badge_outlined),
+                      _buildFieldHeader(
+                        'HUNTER CODENAME / USERNAME',
+                        Icons.badge_outlined,
+                      ),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _usernameController,
-                        style: LevMaxTheme.mono(fontSize: 13, color: LevMaxTheme.primary),
+                        style: LevMaxTheme.mono(
+                          fontSize: 13,
+                          color: LevMaxTheme.primary,
+                        ),
                         decoration: _buildInputDecoration(
                           hint: 'sung_jinwoo',
                           icon: Icons.person_outline,
@@ -400,12 +426,18 @@ class _RegisterPageState extends State<RegisterPage>
                       const SizedBox(height: 16),
 
                       // 2. Email
-                      _buildFieldHeader('VESSEL EMAIL ADDRESS', Icons.email_outlined),
+                      _buildFieldHeader(
+                        'VESSEL EMAIL ADDRESS',
+                        Icons.email_outlined,
+                      ),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
-                        style: LevMaxTheme.mono(fontSize: 13, color: LevMaxTheme.primary),
+                        style: LevMaxTheme.mono(
+                          fontSize: 13,
+                          color: LevMaxTheme.primary,
+                        ),
                         decoration: _buildInputDecoration(
                           hint: 'hunter@monarch.sys',
                           icon: Icons.alternate_email,
@@ -414,7 +446,9 @@ class _RegisterPageState extends State<RegisterPage>
                           if (value == null || value.trim().isEmpty) {
                             return 'Email wajib diisi';
                           }
-                          final regex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                          final regex = RegExp(
+                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                          );
                           if (!regex.hasMatch(value.trim())) {
                             return 'Format email tidak valid';
                           }
@@ -424,18 +458,26 @@ class _RegisterPageState extends State<RegisterPage>
                       const SizedBox(height: 16),
 
                       // 3. Password
-                      _buildFieldHeader('SECURITY KEY (PASSWORD)', Icons.lock_outline),
+                      _buildFieldHeader(
+                        'SECURITY KEY (PASSWORD)',
+                        Icons.lock_outline,
+                      ),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        style: LevMaxTheme.mono(fontSize: 13, color: LevMaxTheme.primary),
+                        style: LevMaxTheme.mono(
+                          fontSize: 13,
+                          color: LevMaxTheme.primary,
+                        ),
                         decoration: _buildInputDecoration(
                           hint: 'Minimal 8 karakter',
                           icon: Icons.key_outlined,
                           suffix: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
                               color: LevMaxTheme.outline,
                               size: 18,
                             ),
@@ -459,18 +501,26 @@ class _RegisterPageState extends State<RegisterPage>
                       const SizedBox(height: 16),
 
                       // 4. Konfirmasi Password
-                      _buildFieldHeader('CONFIRM SECURITY KEY', Icons.lock_clock_outlined),
+                      _buildFieldHeader(
+                        'CONFIRM SECURITY KEY',
+                        Icons.lock_clock_outlined,
+                      ),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _confirmPasswordController,
                         obscureText: _obscureConfirm,
-                        style: LevMaxTheme.mono(fontSize: 13, color: LevMaxTheme.primary),
+                        style: LevMaxTheme.mono(
+                          fontSize: 13,
+                          color: LevMaxTheme.primary,
+                        ),
                         decoration: _buildInputDecoration(
                           hint: 'Ulangi password di atas',
                           icon: Icons.verified_user_outlined,
                           suffix: IconButton(
                             icon: Icon(
-                              _obscureConfirm ? Icons.visibility_off : Icons.visibility,
+                              _obscureConfirm
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
                               color: LevMaxTheme.outline,
                               size: 18,
                             ),
@@ -516,7 +566,11 @@ class _RegisterPageState extends State<RegisterPage>
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.fingerprint, color: LevMaxTheme.primaryContainer, size: 20),
+                        const Icon(
+                          Icons.fingerprint,
+                          color: LevMaxTheme.primaryContainer,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'BIOMETRIC VESSEL LINKAGE',
@@ -549,10 +603,15 @@ class _RegisterPageState extends State<RegisterPage>
                             onTap: _setupFaceId,
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 250),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 14,
+                              ),
                               decoration: BoxDecoration(
                                 color: _faceIdVerified
-                                    ? LevMaxTheme.primaryContainer.withValues(alpha: 0.15)
+                                    ? LevMaxTheme.primaryContainer.withValues(
+                                        alpha: 0.15,
+                                      )
                                     : LevMaxTheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
@@ -565,7 +624,9 @@ class _RegisterPageState extends State<RegisterPage>
                               child: Column(
                                 children: [
                                   Icon(
-                                    _faceIdVerified ? Icons.face : Icons.face_unlock_outlined,
+                                    _faceIdVerified
+                                        ? Icons.face
+                                        : Icons.face_unlock_outlined,
                                     size: 28,
                                     color: _faceIdVerified
                                         ? LevMaxTheme.primaryContainer
@@ -584,15 +645,21 @@ class _RegisterPageState extends State<RegisterPage>
                                   ),
                                   const SizedBox(height: 4),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: _faceIdVerified
-                                          ? LevMaxTheme.primaryContainer.withValues(alpha: 0.2)
+                                          ? LevMaxTheme.primaryContainer
+                                                .withValues(alpha: 0.2)
                                           : Colors.black26,
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
-                                      _faceIdVerified ? 'VERIFIED ✓' : 'TAP TO SETUP',
+                                      _faceIdVerified
+                                          ? 'VERIFIED ✓'
+                                          : 'TAP TO SETUP',
                                       style: LevMaxTheme.mono(
                                         fontSize: 8.5,
                                         fontWeight: FontWeight.bold,
@@ -615,10 +682,15 @@ class _RegisterPageState extends State<RegisterPage>
                             onTap: _setupFingerprint,
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 250),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 14,
+                              ),
                               decoration: BoxDecoration(
                                 color: _fingerprintVerified
-                                    ? LevMaxTheme.secondary.withValues(alpha: 0.15)
+                                    ? LevMaxTheme.secondary.withValues(
+                                        alpha: 0.15,
+                                      )
                                     : LevMaxTheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
@@ -650,15 +722,22 @@ class _RegisterPageState extends State<RegisterPage>
                                   ),
                                   const SizedBox(height: 4),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: _fingerprintVerified
-                                          ? LevMaxTheme.secondary.withValues(alpha: 0.2)
+                                          ? LevMaxTheme.secondary.withValues(
+                                              alpha: 0.2,
+                                            )
                                           : Colors.black26,
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
-                                      _fingerprintVerified ? 'VERIFIED ✓' : 'TAP TO SETUP',
+                                      _fingerprintVerified
+                                          ? 'VERIFIED ✓'
+                                          : 'TAP TO SETUP',
                                       style: LevMaxTheme.mono(
                                         fontSize: 8.5,
                                         fontWeight: FontWeight.bold,
@@ -810,7 +889,10 @@ class _RegisterPageState extends State<RegisterPage>
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: LevMaxTheme.primaryContainer, width: 1.5),
+        borderSide: const BorderSide(
+          color: LevMaxTheme.primaryContainer,
+          width: 1.5,
+        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),

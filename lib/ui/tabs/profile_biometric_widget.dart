@@ -6,6 +6,7 @@
 // ==============================================================================
 
 import 'package:flutter/material.dart';
+
 import '../../helpers/user_info.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
@@ -99,7 +100,9 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
       MaterialPageRoute(
         builder: (_) => FaceScanCameraPage(
           mode: FaceScanMode.enroll,
-          title: _hasEnrolledFace ? 'PERBARUI WAJAH PATOKAN' : 'SETOR WAJAH PATOKAN',
+          title: _hasEnrolledFace
+              ? 'PERBARUI WAJAH PATOKAN'
+              : 'SETOR WAJAH PATOKAN',
           subtitle: 'Posisikan wajah Anda tegak lurus di lingkaran pemindai untuk merekam patokan',
         ),
       ),
@@ -141,7 +144,9 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
       MaterialPageRoute(
         builder: (_) => FingerprintScanPage(
           mode: FingerprintScanMode.enroll,
-          title: _hasEnrolledFingerprint ? 'PERBARUI SIDIK JARI PATOKAN' : 'SETOR SIDIK JARI PATOKAN',
+          title: _hasEnrolledFingerprint
+              ? 'PERBARUI SIDIK JARI PATOKAN'
+              : 'SETOR SIDIK JARI PATOKAN',
           subtitle: 'Lakukan 3 sentuhan bertahap untuk merekam patokan sidik jari sekuritas',
         ),
       ),
@@ -192,7 +197,11 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
               Expanded(
                 child: Text(
                   'Setor Wajah Patokan',
-                  style: TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    color: Color(0xFF00E5FF),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ],
@@ -212,7 +221,10 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
                 backgroundColor: const Color(0xFF00E5FF),
                 foregroundColor: Colors.black,
               ),
-              child: const Text('SETOR WAJAH SEKARANG', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'SETOR WAJAH SEKARANG',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -239,7 +251,9 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
       MaterialPageRoute(
         builder: (_) => FaceScanCameraPage(
           mode: FaceScanMode.toggle,
-          title: val ? 'KONFIRMASI AKTIFKAN FACE ID' : 'KONFIRMASI NONAKTIFKAN FACE ID',
+          title: val
+              ? 'KONFIRMASI AKTIFKAN FACE ID'
+              : 'KONFIRMASI NONAKTIFKAN FACE ID',
           subtitle: val
               ? 'Verifikasi wajah Anda untuk mengaktifkan Face ID Hunter'
               : 'Verifikasi wajah Anda untuk menonaktifkan fitur ini',
@@ -301,7 +315,11 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
               Expanded(
                 child: Text(
                   'Setor Sidik Jari Patokan',
-                  style: TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    color: Color(0xFF00E5FF),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ],
@@ -321,7 +339,10 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
                 backgroundColor: const Color(0xFF00E5FF),
                 foregroundColor: Colors.black,
               ),
-              child: const Text('SETOR SIDIK JARI SEKARANG', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                'SETOR SIDIK JARI SEKARANG',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -348,7 +369,9 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
       MaterialPageRoute(
         builder: (_) => FingerprintScanPage(
           mode: FingerprintScanMode.toggle,
-          title: val ? 'KONFIRMASI AKTIFKAN FINGERPRINT' : 'KONFIRMASI NONAKTIFKAN FINGERPRINT',
+          title: val
+              ? 'KONFIRMASI AKTIFKAN FINGERPRINT'
+              : 'KONFIRMASI NONAKTIFKAN FINGERPRINT',
           subtitle: val
               ? 'Verifikasi sidik jari Anda untuk mengaktifkan akses cepat'
               : 'Konfirmasi sidik jari Anda untuk menonaktifkan fitur ini',
@@ -392,7 +415,9 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
         content: Row(
           children: [
             Icon(
-              isSuccess ? Icons.check_circle_outline : Icons.warning_amber_rounded,
+              isSuccess
+                  ? Icons.check_circle_outline
+                  : Icons.warning_amber_rounded,
               color: isSuccess ? Colors.black : Colors.white,
             ),
             const SizedBox(width: 10),
@@ -407,7 +432,9 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
             ),
           ],
         ),
-        backgroundColor: isSuccess ? const Color(0xFF00E5FF) : const Color(0xFFFFA000),
+        backgroundColor: isSuccess
+            ? const Color(0xFF00E5FF)
+            : const Color(0xFFFFA000),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 3),
       ),
@@ -481,18 +508,25 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
                     : const Color(0xFF0A0E1A),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: _faceIdEnabled ? const Color(0xFF00E5FF) : const Color(0xFF1E293B),
+                  color: _faceIdEnabled
+                      ? const Color(0xFF00E5FF)
+                      : const Color(0xFF1E293B),
                 ),
               ),
               child: _isProcessingFace
                   ? const SizedBox(
                       width: 24,
                       height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00E5FF)),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF00E5FF),
+                      ),
                     )
                   : Icon(
                       Icons.face_unlock_outlined,
-                      color: _faceIdEnabled ? const Color(0xFF00E5FF) : Colors.grey,
+                      color: _faceIdEnabled
+                          ? const Color(0xFF00E5FF)
+                          : Colors.grey,
                       size: 24,
                     ),
             ),
@@ -508,10 +542,12 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
               !hasFaceHardware
                   ? 'Sensor tidak terdeteksi pada perangkat'
                   : _faceIdEnabled
-                      ? 'Status: Aktif (Otorisasi instan via kamera depan 2D M31)'
-                      : 'Status: Nonaktif (Arahkan wajah untuk Quick Login)',
+                  ? 'Status: Aktif (Otorisasi instan via kamera depan 2D M31)'
+                  : 'Status: Nonaktif (Arahkan wajah untuk Quick Login)',
               style: TextStyle(
-                color: _faceIdEnabled ? const Color(0xFF00E5FF).withValues(alpha: 0.8) : Colors.grey,
+                color: _faceIdEnabled
+                    ? const Color(0xFF00E5FF).withValues(alpha: 0.8)
+                    : Colors.grey,
                 fontSize: 11,
               ),
             ),
@@ -543,16 +579,24 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
               Row(
                 children: [
                   Icon(
-                    _hasEnrolledFace ? Icons.verified_user : Icons.warning_amber_rounded,
-                    color: _hasEnrolledFace ? const Color(0xFF00E5FF) : const Color(0xFFFFB300),
+                    _hasEnrolledFace
+                        ? Icons.verified_user
+                        : Icons.warning_amber_rounded,
+                    color: _hasEnrolledFace
+                        ? const Color(0xFF00E5FF)
+                        : const Color(0xFFFFB300),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      _hasEnrolledFace ? 'PATOKAN WAJAH SEKURITAS TERDAFTAR' : 'WAJAH PATOKAN BELUM DISETOR',
+                      _hasEnrolledFace
+                          ? 'PATOKAN WAJAH SEKURITAS TERDAFTAR'
+                          : 'WAJAH PATOKAN BELUM DISETOR',
                       style: TextStyle(
-                        color: _hasEnrolledFace ? const Color(0xFF00E5FF) : const Color(0xFFFFB300),
+                        color: _hasEnrolledFace
+                            ? const Color(0xFF00E5FF)
+                            : const Color(0xFFFFB300),
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                         letterSpacing: 0.8,
@@ -581,7 +625,9 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
                   size: 16,
                 ),
                 label: Text(
-                  _hasEnrolledFace ? 'PERBARUI WAJAH PATOKAN' : 'SETOR WAJAH SEKARANG',
+                  _hasEnrolledFace
+                      ? 'PERBARUI WAJAH PATOKAN'
+                      : 'SETOR WAJAH SEKARANG',
                   style: const TextStyle(
                     color: Color(0xFF00E5FF),
                     fontWeight: FontWeight.bold,
@@ -591,7 +637,9 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Color(0xFF00E5FF)),
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
             ],
@@ -621,18 +669,25 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
                     : const Color(0xFF0A0E1A),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: _fingerprintEnabled ? const Color(0xFF00E5FF) : const Color(0xFF1E293B),
+                  color: _fingerprintEnabled
+                      ? const Color(0xFF00E5FF)
+                      : const Color(0xFF1E293B),
                 ),
               ),
               child: _isProcessingFingerprint
                   ? const SizedBox(
                       width: 24,
                       height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00E5FF)),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF00E5FF),
+                      ),
                     )
                   : Icon(
                       Icons.fingerprint,
-                      color: _fingerprintEnabled ? const Color(0xFF00E5FF) : Colors.grey,
+                      color: _fingerprintEnabled
+                          ? const Color(0xFF00E5FF)
+                          : Colors.grey,
                       size: 24,
                     ),
             ),
@@ -648,10 +703,12 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
               !hasFpHardware
                   ? 'Sensor sidik jari tidak terdeteksi pada perangkat'
                   : _fingerprintEnabled
-                      ? 'Status: Aktif (Otorisasi instan via sensor sidik jari)'
-                      : 'Status: Nonaktif (Tempelkan jari untuk Quick Login)',
+                  ? 'Status: Aktif (Otorisasi instan via sensor sidik jari)'
+                  : 'Status: Nonaktif (Tempelkan jari untuk Quick Login)',
               style: TextStyle(
-                color: _fingerprintEnabled ? const Color(0xFF00E5FF).withValues(alpha: 0.8) : Colors.grey,
+                color: _fingerprintEnabled
+                    ? const Color(0xFF00E5FF).withValues(alpha: 0.8)
+                    : Colors.grey,
                 fontSize: 11,
               ),
             ),
@@ -683,16 +740,24 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
               Row(
                 children: [
                   Icon(
-                    _hasEnrolledFingerprint ? Icons.verified_user : Icons.warning_amber_rounded,
-                    color: _hasEnrolledFingerprint ? const Color(0xFF00E5FF) : const Color(0xFFFFB300),
+                    _hasEnrolledFingerprint
+                        ? Icons.verified_user
+                        : Icons.warning_amber_rounded,
+                    color: _hasEnrolledFingerprint
+                        ? const Color(0xFF00E5FF)
+                        : const Color(0xFFFFB300),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      _hasEnrolledFingerprint ? 'PATOKAN SIDIK JARI TERDAFTAR' : 'SIDIK JARI PATOKAN BELUM DISETOR',
+                      _hasEnrolledFingerprint
+                          ? 'PATOKAN SIDIK JARI TERDAFTAR'
+                          : 'SIDIK JARI PATOKAN BELUM DISETOR',
                       style: TextStyle(
-                        color: _hasEnrolledFingerprint ? const Color(0xFF00E5FF) : const Color(0xFFFFB300),
+                        color: _hasEnrolledFingerprint
+                            ? const Color(0xFF00E5FF)
+                            : const Color(0xFFFFB300),
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                         letterSpacing: 0.8,
@@ -714,14 +779,18 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
               ),
               const SizedBox(height: 10),
               OutlinedButton.icon(
-                onPressed: _isProcessingFingerprint ? null : _handleEnrollOrUpdateFingerprint,
+                onPressed: _isProcessingFingerprint
+                    ? null
+                    : _handleEnrollOrUpdateFingerprint,
                 icon: Icon(
                   _hasEnrolledFingerprint ? Icons.refresh : Icons.fingerprint,
                   color: const Color(0xFF00E5FF),
                   size: 16,
                 ),
                 label: Text(
-                  _hasEnrolledFingerprint ? 'PERBARUI SIDIK JARI' : 'SETOR SIDIK JARI SEKARANG',
+                  _hasEnrolledFingerprint
+                      ? 'PERBARUI SIDIK JARI'
+                      : 'SETOR SIDIK JARI SEKARANG',
                   style: const TextStyle(
                     color: Color(0xFF00E5FF),
                     fontWeight: FontWeight.bold,
@@ -731,7 +800,9 @@ class _ProfileBiometricWidgetState extends State<ProfileBiometricWidget> {
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Color(0xFF00E5FF)),
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
             ],

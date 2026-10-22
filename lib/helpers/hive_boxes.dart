@@ -6,6 +6,7 @@
 // ==============================================================================
 
 import 'package:hive/hive.dart';
+
 import '../models/alarm_model.dart';
 
 class HiveBoxes {

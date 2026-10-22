@@ -13,7 +13,8 @@ export 'alarm_model.dart';
 class MasterQuestModel {
   final String id; // UUID String
   final String title;
-  final String category; // 'Workout', 'Cardio', 'Appearance', 'Study', 'Mystery'
+  final String
+  category; // 'Workout', 'Cardio', 'Appearance', 'Study', 'Mystery'
   final int baseExp;
   final String targetStat; // 'STR', 'AGI', 'INT', 'CHA'
   final String minRank; // 'F', 'E', 'D', 'C', 'B', 'A', 'S'
@@ -44,8 +45,12 @@ class MasterQuestModel {
       title: json['title']?.toString() ?? 'Quest',
       category: json['category']?.toString() ?? 'Workout',
       baseExp: parseInt(json['base_exp'] ?? json['baseExp'], 25),
-      targetStat: json['target_stat']?.toString() ?? json['targetStat']?.toString() ?? 'STR',
-      minRank: json['min_rank']?.toString() ?? json['minRank']?.toString() ?? 'F',
+      targetStat:
+          json['target_stat']?.toString() ??
+          json['targetStat']?.toString() ??
+          'STR',
+      minRank:
+          json['min_rank']?.toString() ?? json['minRank']?.toString() ?? 'F',
       description: json['description']?.toString(),
       baseGold: parseInt(json['base_gold'] ?? json['baseGold'], 10),
       unit: json['unit']?.toString() ?? 'Reps',
@@ -102,7 +107,8 @@ class DailyUserQuestModel {
   final int targetValue;
   final int achievedValue;
   final String date; // YYYY-MM-DD
-  final MasterQuestModel? questDetail; // Menampung hasil JOIN dengan master_quests
+  final MasterQuestModel?
+  questDetail; // Menampung hasil JOIN dengan master_quests
 
   DailyUserQuestModel({
     required this.id,
@@ -154,11 +160,17 @@ class DailyUserQuestModel {
     return DailyUserQuestModel(
       id: json['id']?.toString() ?? '',
       userId: json['user_id']?.toString() ?? json['userId']?.toString() ?? '',
-      questId: json['quest_id']?.toString() ?? json['questId']?.toString() ?? '',
+      questId:
+          json['quest_id']?.toString() ?? json['questId']?.toString() ?? '',
       status: json['status']?.toString() ?? 'pending',
       targetValue: parseInt(json['target_value'] ?? json['targetValue'], 10),
-      achievedValue: parseInt(json['achieved_value'] ?? json['achievedValue'], 0),
-      date: json['date']?.toString() ?? DateTime.now().toIso8601String().substring(0, 10),
+      achievedValue: parseInt(
+        json['achieved_value'] ?? json['achievedValue'],
+        0,
+      ),
+      date:
+          json['date']?.toString() ??
+          DateTime.now().toIso8601String().substring(0, 10),
       questDetail: detail,
     );
   }
@@ -231,9 +243,15 @@ class ItemShopModel {
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? json['item_name']?.toString() ?? 'Item',
       description: json['description']?.toString() ?? '',
-      priceGold: parseInt(json['price_gold'] ?? json['purchase_price_gold'], 100),
+      priceGold: parseInt(
+        json['price_gold'] ?? json['purchase_price_gold'],
+        100,
+      ),
       prideScore: parseInt(json['pride_score'] ?? json['pride_points'], 0),
-      category: json['category']?.toString() ?? json['item_type']?.toString() ?? 'Consumable',
+      category:
+          json['category']?.toString() ??
+          json['item_type']?.toString() ??
+          'Consumable',
       imageUrl: json['image_url']?.toString(),
     );
   }
@@ -278,9 +296,14 @@ class BlockchainInventoryLogModel {
       id: json['id']?.toString() ?? '',
       userId: json['user_id']?.toString() ?? '',
       itemId: json['item_id']?.toString() ?? '',
-      previousHash: json['previous_hash']?.toString() ?? json['prev_hash']?.toString() ?? '',
+      previousHash:
+          json['previous_hash']?.toString() ??
+          json['prev_hash']?.toString() ??
+          '',
       currentHash: json['current_hash']?.toString() ?? '',
-      timestamp: json['timestamp']?.toString() ?? DateTime.now().toUtc().toIso8601String(),
+      timestamp:
+          json['timestamp']?.toString() ??
+          DateTime.now().toUtc().toIso8601String(),
       status: json['status']?.toString() ?? 'verified',
     );
   }

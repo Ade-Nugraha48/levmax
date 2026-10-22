@@ -6,8 +6,10 @@
 // ==============================================================================
 
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+
 import '../helpers/boxes.dart';
 import '../helpers/user_info.dart';
 import '../models/quest_model.dart';
@@ -55,7 +57,11 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     if (player == null) {
       final username = await UserInfo.getUsername() ?? 'Hunter';
       final email = await UserInfo.getEmail() ?? '';
-      player = UserModel.initial(id: uid ?? 1, username: username, email: email);
+      player = UserModel.initial(
+        id: uid ?? 1,
+        username: username,
+        email: email,
+      );
       await SupabaseApiService.savePlayerCache(player);
     }
 
@@ -101,7 +107,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
         final penaltyQuest = QuestModel(
           id: 'penalty_quest_${DateTime.now().millisecondsSinceEpoch}',
           title: 'EXTRA QUEST: HUKUMAN SISTEM',
-          description: 'Lakukan 50x Push-up penalti untuk memulihkan kehormatan Hunter!',
+          description:
+              'Lakukan 50x Push-up penalti untuk memulihkan kehormatan Hunter!',
           category: 'Workout',
           targetValue: 50,
           currentValue: 0,
@@ -121,7 +128,9 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
         );
 
         await SupabaseApiService.updateUser(player);
-        await NotificationService.showPenaltyNotification(hpDeduction: hpDeduction);
+        await NotificationService.showPenaltyNotification(
+          hpDeduction: hpDeduction,
+        );
 
         if (newHp <= 0) {
           await NotificationService.showGameOverNotification();
@@ -170,13 +179,19 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             const SizedBox(width: 8),
             Text(
               'PENALTY ZONE AKTIF',
-              style: LevMaxTheme.headline(fontSize: 14, color: LevMaxTheme.hpRed),
+              style: LevMaxTheme.headline(
+                fontSize: 14,
+                color: LevMaxTheme.hpRed,
+              ),
             ),
           ],
         ),
         content: Text(
           'Daily Quest kemarin tidak selesai sebelum 23:59!\nHP Anda telah dikurangi oleh Sistem.\n\nMasuki Penalty Zone sekarang dan selesaikan Mini-Game Survival untuk memulihkan +10 HP!',
-          style: LevMaxTheme.mono(fontSize: 11, color: LevMaxTheme.onSurfaceVariant),
+          style: LevMaxTheme.mono(
+            fontSize: 11,
+            color: LevMaxTheme.onSurfaceVariant,
+          ),
         ),
         actions: [
           ElevatedButton(
@@ -190,7 +205,11 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             style: ElevatedButton.styleFrom(backgroundColor: LevMaxTheme.hpRed),
             child: Text(
               'MASUKI PENALTY ZONE',
-              style: LevMaxTheme.mono(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+              style: LevMaxTheme.mono(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
         ],
@@ -219,14 +238,19 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           ),
         ],
         border: Border(
-          top: BorderSide(color: LevMaxTheme.surfaceContainerHighest, width: 1.0),
+          top: BorderSide(
+            color: LevMaxTheme.surfaceContainerHighest,
+            width: 1.0,
+          ),
         ),
       ),
       child: Row(
         children: List.generate(items.length, (index) {
           final item = items[index];
           final isSelected = _currentIndex == index;
-          final color = isSelected ? LevMaxTheme.primaryContainer : LevMaxTheme.outline;
+          final color = isSelected
+              ? LevMaxTheme.primaryContainer
+              : LevMaxTheme.outline;
 
           return Expanded(
             child: InkWell(
@@ -238,17 +262,15 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    item['icon'] as IconData,
-                    size: 22,
-                    color: color,
-                  ),
+                  Icon(item['icon'] as IconData, size: 22, color: color),
                   const SizedBox(height: 4),
                   Text(
                     item['label'] as String,
                     style: LevMaxTheme.mono(
                       fontSize: 10,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                       color: color,
                       letterSpacing: 1.0,
                     ),

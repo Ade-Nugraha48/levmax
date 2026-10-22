@@ -18,8 +18,9 @@ class NotificationService {
 
   /// Inisialisasi plugin notifikasi lokal pada awal aplikasi dibuka
   static Future<void> initialize() async {
-    const androidInitSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInitSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
 
     const darwinInitSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -43,14 +44,16 @@ class NotificationService {
     // Minta izin notifikasi untuk Android 13+ (API 33+)
     final androidImplementation = _notificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     if (androidImplementation != null) {
       await androidImplementation.requestNotificationsPermission();
     }
   }
 
   /// Konfigurasi detail notifikasi untuk Android & iOS
-  static NotificationDetails get _notificationDetails => const NotificationDetails(
+  static NotificationDetails get _notificationDetails =>
+      const NotificationDetails(
         android: AndroidNotificationDetails(
           _channelId,
           _channelName,
@@ -101,7 +104,9 @@ class NotificationService {
   }
 
   /// 4. Notifikasi Pengingat Quest Harian (Daily Reminder)
-  static Future<void> showQuestReminderNotification({required int pendingCount}) async {
+  static Future<void> showQuestReminderNotification({
+    required int pendingCount,
+  }) async {
     await _notificationsPlugin.show(
       104,
       '⚔️ [SISTEM PENGINGAT DAILY QUEST]',
@@ -116,11 +121,6 @@ class NotificationService {
     required String title,
     required String body,
   }) async {
-    await _notificationsPlugin.show(
-      id,
-      title,
-      body,
-      _notificationDetails,
-    );
+    await _notificationsPlugin.show(id, title, body, _notificationDetails);
   }
 }

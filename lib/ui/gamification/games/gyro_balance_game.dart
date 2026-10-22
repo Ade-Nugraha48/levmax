@@ -10,6 +10,7 @@
 
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sensors_plus/sensors_plus.dart';
@@ -32,12 +33,7 @@ class GyroBalanceGamePage extends StatefulWidget {
   State<GyroBalanceGamePage> createState() => _GyroBalanceGamePageState();
 }
 
-enum GameState {
-  ready,
-  playing,
-  failed,
-  won,
-}
+enum GameState { ready, playing, failed, won }
 
 class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
     with TickerProviderStateMixin {
@@ -58,7 +54,8 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
   // Parameter Fisika & Arena
   static const double _targetRingRadius = 110.0; // Radius Cincin Target
   static const double _coreRadius = 18.0; // Radius Bola Mana Core
-  static const double _maxSafeDistance = _targetRingRadius - _coreRadius; // ~92px
+  static const double _maxSafeDistance =
+      _targetRingRadius - _coreRadius; // ~92px
   static const double _sensorSensitivity = 0.85;
   static const double _dampingFriction = 0.92;
 
@@ -129,27 +126,28 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
     // 1. Pasang Stream Accelerometer untuk input kemiringan perangkat
     _accelSubscription?.cancel();
     try {
-      _accelSubscription = accelerometerEventStream(
-        samplingPeriod: SensorInterval.gameInterval,
-      ).listen(
-        (AccelerometerEvent event) {
-          if (_gameState != GameState.playing) return;
-          _rawSensorX = event.x;
-          _rawSensorY = event.y;
+      _accelSubscription =
+          accelerometerEventStream(
+            samplingPeriod: SensorInterval.gameInterval,
+          ).listen(
+            (AccelerometerEvent event) {
+              if (_gameState != GameState.playing) return;
+              _rawSensorX = event.x;
+              _rawSensorY = event.y;
 
-          // Dalam orientasi portrait:
-          // Miring ke kanan: event.x negatif -> gaya gerak ke kanan (+ax)
-          // Miring ke depan: event.y negatif -> gaya gerak ke atas (-ay)
-          final ax = -event.x * _sensorSensitivity;
-          final ay = event.y * _sensorSensitivity;
+              // Dalam orientasi portrait:
+              // Miring ke kanan: event.x negatif -> gaya gerak ke kanan (+ax)
+              // Miring ke depan: event.y negatif -> gaya gerak ke atas (-ay)
+              final ax = -event.x * _sensorSensitivity;
+              final ay = event.y * _sensorSensitivity;
 
-          _velX = (_velX + ax) * _dampingFriction;
-          _velY = (_velY + ay) * _dampingFriction;
-        },
-        onError: (e) {
-          debugPrint('[GyroGame] Accelerometer stream error: $e');
-        },
-      );
+              _velX = (_velX + ax) * _dampingFriction;
+              _velY = (_velY + ay) * _dampingFriction;
+            },
+            onError: (e) {
+              debugPrint('[GyroGame] Accelerometer stream error: $e');
+            },
+          );
     } catch (e) {
       debugPrint('[GyroGame] Failed to listen to accelerometer: $e');
     }
@@ -229,7 +227,10 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
   @override
   Widget build(BuildContext context) {
     final distance = math.sqrt((_ballX * _ballX) + (_ballY * _ballY));
-    final stabilityRatio = (1.0 - (distance / _maxSafeDistance)).clamp(0.0, 1.0);
+    final stabilityRatio = (1.0 - (distance / _maxSafeDistance)).clamp(
+      0.0,
+      1.0,
+    );
     final isNearEdge = distance > (_maxSafeDistance * 0.72);
 
     return Scaffold(
@@ -313,14 +314,21 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
             children: [
               // Tombol Kembali / Exit
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, color: LevMaxTheme.onSurfaceVariant, size: 20),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new,
+                  color: LevMaxTheme.onSurfaceVariant,
+                  size: 20,
+                ),
                 onPressed: () => Navigator.pop(context),
                 tooltip: 'Exit Game',
               ),
 
               // Mode Banner
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF171B26),
                   borderRadius: BorderRadius.circular(6),
@@ -357,7 +365,11 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
 
               // Tombol Reset / Re-center
               IconButton(
-                icon: const Icon(Icons.refresh, color: LevMaxTheme.primaryContainer, size: 22),
+                icon: const Icon(
+                  Icons.refresh,
+                  color: LevMaxTheme.primaryContainer,
+                  size: 22,
+                ),
                 onPressed: _startGame,
                 tooltip: 'Restart',
               ),
@@ -403,7 +415,10 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
                   children: [
                     Text(
                       'CORE STABILITY THRESHOLD',
-                      style: LevMaxTheme.mono(fontSize: 9, color: LevMaxTheme.outline),
+                      style: LevMaxTheme.mono(
+                        fontSize: 9,
+                        color: LevMaxTheme.outline,
+                      ),
                     ),
                     Text(
                       '${(stabilityRatio * 100).toInt()}%',
@@ -521,11 +536,7 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
-            colors: [
-              Colors.white,
-              ballColor,
-              ballColor.withValues(alpha: 0.8),
-            ],
+            colors: [Colors.white, ballColor, ballColor.withValues(alpha: 0.8)],
             stops: const [0.1, 0.6, 1.0],
           ),
           boxShadow: [
@@ -560,13 +571,15 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
           children: [
             _buildReadoutColumn(
               label: 'PITCH (X-TILT)',
-              value: '${_rawSensorX >= 0 ? "+" : ""}${_rawSensorX.toStringAsFixed(2)}',
+              value:
+                  '${_rawSensorX >= 0 ? "+" : ""}${_rawSensorX.toStringAsFixed(2)}',
               color: LevMaxTheme.primaryContainer,
             ),
             Container(width: 1, height: 26, color: const Color(0xFF262A35)),
             _buildReadoutColumn(
               label: 'ROLL (Y-TILT)',
-              value: '${_rawSensorY >= 0 ? "+" : ""}${_rawSensorY.toStringAsFixed(2)}',
+              value:
+                  '${_rawSensorY >= 0 ? "+" : ""}${_rawSensorY.toStringAsFixed(2)}',
               color: LevMaxTheme.primaryContainer,
             ),
             Container(width: 1, height: 26, color: const Color(0xFF262A35)),
@@ -638,7 +651,11 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
                 shape: BoxShape.circle,
                 color: LevMaxTheme.hpRed.withValues(alpha: 0.15),
               ),
-              child: const Icon(Icons.warning_amber_rounded, color: LevMaxTheme.hpRed, size: 42),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: LevMaxTheme.hpRed,
+                size: 42,
+              ),
             ),
             const SizedBox(height: 14),
             Text(
@@ -654,7 +671,10 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
             Text(
               'Mana Core keluar dari batas radius penahanan. Kestabilan energi dimensi terputus!',
               textAlign: TextAlign.center,
-              style: LevMaxTheme.mono(fontSize: 11, color: LevMaxTheme.onSurfaceVariant),
+              style: LevMaxTheme.mono(
+                fontSize: 11,
+                color: LevMaxTheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 16),
             Container(
@@ -679,7 +699,10 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
                       side: const BorderSide(color: Color(0xFF313540)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    child: Text('EXIT TO HUB', style: LevMaxTheme.mono(fontSize: 11)),
+                    child: Text(
+                      'EXIT TO HUB',
+                      style: LevMaxTheme.mono(fontSize: 11),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -693,7 +716,10 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
                     ),
                     child: Text(
                       'TRY AGAIN',
-                      style: LevMaxTheme.headline(fontSize: 12, fontWeight: FontWeight.bold),
+                      style: LevMaxTheme.headline(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -737,9 +763,16 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: LevMaxTheme.tertiaryContainer.withValues(alpha: 0.15),
-                  border: Border.all(color: LevMaxTheme.tertiaryContainer, width: 1.5),
+                  border: Border.all(
+                    color: LevMaxTheme.tertiaryContainer,
+                    width: 1.5,
+                  ),
                 ),
-                child: const Icon(Icons.verified, color: LevMaxTheme.tertiaryContainer, size: 46),
+                child: const Icon(
+                  Icons.verified,
+                  color: LevMaxTheme.tertiaryContainer,
+                  size: 46,
+                ),
               ),
             ),
             const SizedBox(height: 14),
@@ -756,7 +789,10 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
             Text(
               'Sinkronisasi 100% Sempurna! Anda berhasil menahan energi Mana Core selama 15 detik penuh.',
               textAlign: TextAlign.center,
-              style: LevMaxTheme.mono(fontSize: 11, color: LevMaxTheme.onSurfaceVariant),
+              style: LevMaxTheme.mono(
+                fontSize: 11,
+                color: LevMaxTheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -772,7 +808,11 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.monetization_on, color: LevMaxTheme.amberGold, size: 24),
+                    const Icon(
+                      Icons.monetization_on,
+                      color: LevMaxTheme.amberGold,
+                      size: 24,
+                    ),
                     const SizedBox(width: 10),
                     Text(
                       '+50 GOLD GAINED!',
@@ -789,7 +829,10 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
               const SizedBox(height: 6),
               Text(
                 'Tercatat resmi di Blockchain Ledger & Saldo Vault Anda.',
-                style: LevMaxTheme.mono(fontSize: 9.5, color: LevMaxTheme.outline),
+                style: LevMaxTheme.mono(
+                  fontSize: 9.5,
+                  color: LevMaxTheme.outline,
+                ),
               ),
             ] else ...[
               Container(
@@ -801,7 +844,11 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline, color: LevMaxTheme.outline, size: 20),
+                    const Icon(
+                      Icons.info_outline,
+                      color: LevMaxTheme.outline,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -829,7 +876,10 @@ class _GyroBalanceGamePageState extends State<GyroBalanceGamePage>
                       side: const BorderSide(color: Color(0xFF313540)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    child: Text('RETURN TO HUB', style: LevMaxTheme.mono(fontSize: 11)),
+                    child: Text(
+                      'RETURN TO HUB',
+                      style: LevMaxTheme.mono(fontSize: 11),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),

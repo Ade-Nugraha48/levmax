@@ -21,11 +21,7 @@ class MiniGamesPage extends StatefulWidget {
   final UserModel? player;
   final VoidCallback? onPlayerUpdated;
 
-  const MiniGamesPage({
-    super.key,
-    this.player,
-    this.onPlayerUpdated,
-  });
+  const MiniGamesPage({super.key, this.player, this.onPlayerUpdated});
 
   @override
   State<MiniGamesPage> createState() => _MiniGamesPageState();
@@ -41,7 +37,8 @@ class _MiniGamesPageState extends State<MiniGamesPage>
   @override
   void initState() {
     super.initState();
-    _player = widget.player ??
+    _player =
+        widget.player ??
         SupabaseApiService.getPlayerCache() ??
         UserModel.initial(id: 1, username: 'Hunter', email: '');
 
@@ -95,7 +92,11 @@ class _MiniGamesPageState extends State<MiniGamesPage>
         backgroundColor: const Color(0xFF0F131D),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: LevMaxTheme.onSurfaceVariant, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: LevMaxTheme.onSurfaceVariant,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -109,7 +110,11 @@ class _MiniGamesPageState extends State<MiniGamesPage>
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: LevMaxTheme.primaryContainer, size: 20),
+            icon: const Icon(
+              Icons.refresh,
+              color: LevMaxTheme.primaryContainer,
+              size: 20,
+            ),
             onPressed: _refreshPlayerData,
             tooltip: 'Refresh Status',
           ),
@@ -231,10 +236,7 @@ class _MiniGamesPageState extends State<MiniGamesPage>
         const SizedBox(height: 4),
         Text(
           'Latih refleks dan kestabilan sensorik Hunter untuk meraup reward koin emas harian.',
-          style: LevMaxTheme.mono(
-            fontSize: 11,
-            color: const Color(0xFFB9CACB),
-          ),
+          style: LevMaxTheme.mono(fontSize: 11, color: const Color(0xFFB9CACB)),
         ),
       ],
     );
@@ -277,10 +279,17 @@ class _MiniGamesPageState extends State<MiniGamesPage>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: const Color(0xFF0F131D),
-                  border: Border.all(color: const Color(0xFFFBBF24), width: 1.2),
+                  border: Border.all(
+                    color: const Color(0xFFFBBF24),
+                    width: 1.2,
+                  ),
                 ),
                 child: const Center(
-                  child: Icon(Icons.monetization_on, color: Color(0xFFFBBF24), size: 20),
+                  child: Icon(
+                    Icons.monetization_on,
+                    color: Color(0xFFFBBF24),
+                    size: 20,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -289,7 +298,10 @@ class _MiniGamesPageState extends State<MiniGamesPage>
                 children: [
                   Text(
                     'CURRENT BALANCE',
-                    style: LevMaxTheme.mono(fontSize: 9, color: LevMaxTheme.outline),
+                    style: LevMaxTheme.mono(
+                      fontSize: 9,
+                      color: LevMaxTheme.outline,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -314,24 +326,34 @@ class _MiniGamesPageState extends State<MiniGamesPage>
                   : const Color(0xFF65F2B5).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(6),
               border: Border.all(
-                color: _isClaimedToday ? const Color(0xFFEF4444) : const Color(0xFF65F2B5),
+                color: _isClaimedToday
+                    ? const Color(0xFFEF4444)
+                    : const Color(0xFF65F2B5),
                 width: 1.0,
               ),
             ),
             child: Row(
               children: [
                 Icon(
-                  _isClaimedToday ? Icons.lock_clock : Icons.check_circle_outline,
+                  _isClaimedToday
+                      ? Icons.lock_clock
+                      : Icons.check_circle_outline,
                   size: 13,
-                  color: _isClaimedToday ? const Color(0xFFEF4444) : const Color(0xFF65F2B5),
+                  color: _isClaimedToday
+                      ? const Color(0xFFEF4444)
+                      : const Color(0xFF65F2B5),
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  _isClaimedToday ? 'DAILY REWARD: 1/1 CLAIMED' : 'DAILY REWARD: 0/1 CLAIMED',
+                  _isClaimedToday
+                      ? 'DAILY REWARD: 1/1 CLAIMED'
+                      : 'DAILY REWARD: 0/1 CLAIMED',
                   style: LevMaxTheme.mono(
                     fontSize: 9.5,
                     fontWeight: FontWeight.bold,
-                    color: _isClaimedToday ? const Color(0xFFEF4444) : const Color(0xFF65F2B5),
+                    color: _isClaimedToday
+                        ? const Color(0xFFEF4444)
+                        : const Color(0xFF65F2B5),
                   ),
                 ),
               ],
@@ -350,14 +372,14 @@ class _MiniGamesPageState extends State<MiniGamesPage>
       decoration: BoxDecoration(
         color: const Color(0xFF171B26),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF00F0FF).withValues(alpha: 0.4), width: 1.5),
+        border: Border.all(
+          color: const Color(0xFF00F0FF).withValues(alpha: 0.4),
+          width: 1.5,
+        ),
         gradient: const RadialGradient(
           center: Alignment(-0.6, -0.6),
           radius: 1.2,
-          colors: [
-            Color(0x1A00F0FF),
-            Color(0xFF171B26),
-          ],
+          colors: [Color(0x1A00F0FF), Color(0xFF171B26)],
         ),
         boxShadow: const [
           BoxShadow(
@@ -381,7 +403,10 @@ class _MiniGamesPageState extends State<MiniGamesPage>
                 decoration: BoxDecoration(
                   color: const Color(0xFF0F131D),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF00F0FF), width: 1.5),
+                  border: Border.all(
+                    color: const Color(0xFF00F0FF),
+                    width: 1.5,
+                  ),
                   boxShadow: const [
                     BoxShadow(
                       color: Color(0x4D00F0FF),
@@ -409,7 +434,10 @@ class _MiniGamesPageState extends State<MiniGamesPage>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0x2600F0FF),
                             borderRadius: BorderRadius.circular(4),
@@ -466,7 +494,9 @@ class _MiniGamesPageState extends State<MiniGamesPage>
             decoration: BoxDecoration(
               color: const Color(0xFF0F131D),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFFBBF24).withValues(alpha: 0.5)),
+              border: Border.all(
+                color: const Color(0xFFFBBF24).withValues(alpha: 0.5),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -489,7 +519,9 @@ class _MiniGamesPageState extends State<MiniGamesPage>
                   _isClaimedToday ? '(TRAINING MODE)' : '(DAILY DROP READY)',
                   style: LevMaxTheme.mono(
                     fontSize: 9,
-                    color: _isClaimedToday ? LevMaxTheme.outline : LevMaxTheme.tertiaryContainer,
+                    color: _isClaimedToday
+                        ? LevMaxTheme.outline
+                        : LevMaxTheme.tertiaryContainer,
                   ),
                 ),
               ],
@@ -544,10 +576,7 @@ class _MiniGamesPageState extends State<MiniGamesPage>
         gradient: const RadialGradient(
           center: Alignment(-0.6, -0.6),
           radius: 1.2,
-          colors: [
-            Color(0x1A7C3AED),
-            Color(0xFF171B26),
-          ],
+          colors: [Color(0x1A7C3AED), Color(0xFF171B26)],
         ),
       ),
       padding: const EdgeInsets.all(18),
@@ -565,7 +594,11 @@ class _MiniGamesPageState extends State<MiniGamesPage>
                   border: Border.all(color: const Color(0xFF6B21A8)),
                 ),
                 child: const Center(
-                  child: Icon(Icons.flash_on, color: Color(0xFFC084FC), size: 24),
+                  child: Icon(
+                    Icons.flash_on,
+                    color: Color(0xFFC084FC),
+                    size: 24,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -574,7 +607,10 @@ class _MiniGamesPageState extends State<MiniGamesPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0x266B21A8),
                         borderRadius: BorderRadius.circular(4),
@@ -615,7 +651,9 @@ class _MiniGamesPageState extends State<MiniGamesPage>
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Color(0xFF262A35)),
               minimumSize: const Size(double.infinity, 42),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             child: Text(
               'LOCKED // COMING SOON',
@@ -643,7 +681,11 @@ class _MiniGamesPageState extends State<MiniGamesPage>
         children: [
           Row(
             children: [
-              const Icon(Icons.info_outline, color: LevMaxTheme.primaryContainer, size: 18),
+              const Icon(
+                Icons.info_outline,
+                color: LevMaxTheme.primaryContainer,
+                size: 18,
+              ),
               const SizedBox(width: 8),
               Text(
                 'ARCADE TRAINING PROTOCOL RULES',
@@ -656,11 +698,20 @@ class _MiniGamesPageState extends State<MiniGamesPage>
             ],
           ),
           const SizedBox(height: 10),
-          _buildRuleBullet('1. Daily Gold Cap:', 'Pemain berhak memperoleh +50 Gold satu kali (1x) dalam setiap 24 jam kalender.'),
+          _buildRuleBullet(
+            '1. Daily Gold Cap:',
+            'Pemain berhak memperoleh +50 Gold satu kali (1x) dalam setiap 24 jam kalender.',
+          ),
           const SizedBox(height: 6),
-          _buildRuleBullet('2. Training Mode:', 'Setelah reward harian diklaim, mini-game tetap dapat dimainkan tanpa batas kuota untuk melatih reflek Hunter.'),
+          _buildRuleBullet(
+            '2. Training Mode:',
+            'Setelah reward harian diklaim, mini-game tetap dapat dimainkan tanpa batas kuota untuk melatih reflek Hunter.',
+          ),
           const SizedBox(height: 6),
-          _buildRuleBullet('3. Ledger Notarization:', 'Setiap perolehan Gold resmi dicatat dan divalidasi ke dalam Blockchain Ledger lokal.'),
+          _buildRuleBullet(
+            '3. Ledger Notarization:',
+            'Setiap perolehan Gold resmi dicatat dan divalidasi ke dalam Blockchain Ledger lokal.',
+          ),
         ],
       ),
     );
@@ -670,15 +721,27 @@ class _MiniGamesPageState extends State<MiniGamesPage>
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('• ', style: LevMaxTheme.mono(fontSize: 10, color: LevMaxTheme.primaryContainer)),
+        Text(
+          '• ',
+          style: LevMaxTheme.mono(
+            fontSize: 10,
+            color: LevMaxTheme.primaryContainer,
+          ),
+        ),
         Expanded(
           child: RichText(
             text: TextSpan(
-              style: LevMaxTheme.mono(fontSize: 9.5, color: LevMaxTheme.onSurfaceVariant),
+              style: LevMaxTheme.mono(
+                fontSize: 9.5,
+                color: LevMaxTheme.onSurfaceVariant,
+              ),
               children: [
                 TextSpan(
                   text: '$boldPrefix ',
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
                 TextSpan(text: text),
               ],

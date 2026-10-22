@@ -6,6 +6,7 @@
 // ==============================================================================
 
 import 'package:flutter/material.dart';
+
 import '../../helpers/user_info.dart';
 import '../../services/auth_service.dart';
 import '../../services/supabase_api_service.dart';
@@ -141,8 +142,13 @@ class _BiometricGatePageState extends State<BiometricGatePage>
 
     if (scanSuccess == true) {
       final bioUserId = await UserInfo.getBiometricUserId();
-      if (bioUserId != null && bioUserId.toString().isNotEmpty && bioUserId.toString() != '0') {
-        final res = await AuthService.finalizeBiometricSession(bioUserId, 'Fingerprint');
+      if (bioUserId != null &&
+          bioUserId.toString().isNotEmpty &&
+          bioUserId.toString() != '0') {
+        final res = await AuthService.finalizeBiometricSession(
+          bioUserId,
+          'Fingerprint',
+        );
         if (!mounted) return;
         _handleGateResult(res);
       } else {
@@ -240,7 +246,10 @@ class _BiometricGatePageState extends State<BiometricGatePage>
               // Badge Otorisasi Sistem Solo Leveling
               Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF7B1FA2).withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(20),
@@ -278,19 +287,23 @@ class _BiometricGatePageState extends State<BiometricGatePage>
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF00E5FF).withValues(alpha: 0.35),
+                              color: const Color(0xFF00E5FF)
+                                  .withValues(alpha: 0.35),
                               blurRadius: 30,
                               spreadRadius: 6,
                             ),
                             BoxShadow(
-                              color: const Color(0xFF7B1FA2).withValues(alpha: 0.25),
+                              color: const Color(0xFF7B1FA2)
+                                  .withValues(alpha: 0.25),
                               blurRadius: 40,
                               spreadRadius: 10,
                             ),
                           ],
                         ),
                         child: Icon(
-                          _faceEnabled ? Icons.face_unlock_outlined : Icons.fingerprint,
+                          _faceEnabled
+                              ? Icons.face_unlock_outlined
+                              : Icons.fingerprint,
                           size: 64,
                           color: const Color(0xFF00E5FF),
                         ),
@@ -327,7 +340,10 @@ class _BiometricGatePageState extends State<BiometricGatePage>
               // Pesan Status Sistem
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF131B2E),
                   borderRadius: BorderRadius.circular(10),
@@ -339,7 +355,9 @@ class _BiometricGatePageState extends State<BiometricGatePage>
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: _statusMessage.contains('gagal') || _statusMessage.contains('batal')
+                    color:
+                        _statusMessage.contains('gagal') ||
+                            _statusMessage.contains('batal')
                         ? const Color(0xFFFF1744)
                         : const Color(0xFF00E5FF),
                   ),
@@ -355,13 +373,25 @@ class _BiometricGatePageState extends State<BiometricGatePage>
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: _isScanning ? null : _executeFaceScan,
-                        icon: const Icon(Icons.face_unlock_outlined, color: Colors.black, size: 20),
-                        label: const Text('PINDAI WAJAH', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        icon: const Icon(
+                          Icons.face_unlock_outlined,
+                          color: Colors.black,
+                          size: 20,
+                        ),
+                        label: const Text(
+                          'PINDAI WAJAH',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF00E5FF),
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
@@ -369,13 +399,25 @@ class _BiometricGatePageState extends State<BiometricGatePage>
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: _isScanning ? null : _executeFingerprintScan,
-                        icon: const Icon(Icons.fingerprint, color: Colors.black, size: 20),
-                        label: const Text('PINDAI SIDIK JARI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        icon: const Icon(
+                          Icons.fingerprint,
+                          color: Colors.black,
+                          size: 20,
+                        ),
+                        label: const Text(
+                          'PINDAI SIDIK JARI',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF00E5FF),
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
@@ -384,16 +426,24 @@ class _BiometricGatePageState extends State<BiometricGatePage>
               ] else if (_faceEnabled) ...[
                 ElevatedButton.icon(
                   onPressed: _isScanning ? null : _executeFaceScan,
-                  icon: const Icon(Icons.face_unlock_outlined, color: Colors.black),
+                  icon: const Icon(
+                    Icons.face_unlock_outlined,
+                    color: Colors.black,
+                  ),
                   label: Text(
                     _isScanning ? 'MEMINDAI...' : 'PINDAI FACE ID',
-                    style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00E5FF),
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ] else if (_fingerprintEnabled) ...[
@@ -402,13 +452,18 @@ class _BiometricGatePageState extends State<BiometricGatePage>
                   icon: const Icon(Icons.fingerprint, color: Colors.black),
                   label: Text(
                     _isScanning ? 'MEMINDAI...' : 'PINDAI SIDIK JARI',
-                    style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00E5FF),
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ] else ...[
@@ -417,13 +472,18 @@ class _BiometricGatePageState extends State<BiometricGatePage>
                   icon: const Icon(Icons.security, color: Colors.black),
                   label: Text(
                     _isScanning ? 'MEMINDAI...' : 'PINDAI BIOMETRIK',
-                    style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00E5FF),
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ],
@@ -432,7 +492,11 @@ class _BiometricGatePageState extends State<BiometricGatePage>
               // Tombol Fallback ke Password
               OutlinedButton.icon(
                 onPressed: _fallbackToPassword,
-                icon: const Icon(Icons.lock_outline, color: Colors.grey, size: 20),
+                icon: const Icon(
+                  Icons.lock_outline,
+                  color: Colors.grey,
+                  size: 20,
+                ),
                 label: const Text(
                   'GUNAKAN PASSWORD',
                   style: TextStyle(
@@ -443,7 +507,9 @@ class _BiometricGatePageState extends State<BiometricGatePage>
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Color(0xFF1E293B)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),

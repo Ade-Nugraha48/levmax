@@ -34,7 +34,8 @@ class ProfileTab extends StatefulWidget {
   State<ProfileTab> createState() => _ProfileTabState();
 }
 
-class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateMixin {
+class _ProfileTabState extends State<ProfileTab>
+    with SingleTickerProviderStateMixin {
   // Token Warna Eksak Tema LevMax & Solo Leveling HUD
   static const Color surface = Color(0xFF0F131D);
   static const Color surfaceContainerLowest = Color(0xFF0A0E18);
@@ -53,7 +54,9 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
   late UserModel _player;
 
   // Controllers untuk Evaluasi Mata Kuliah
-  final TextEditingController _nimController = TextEditingController(text: '123220000');
+  final TextEditingController _nimController = TextEditingController(
+    text: '123220000',
+  );
   final TextEditingController _kesanController = TextEditingController();
   final TextEditingController _saranController = TextEditingController();
   bool _isSubmittingEvaluation = false;
@@ -127,7 +130,9 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
   Future<void> _handleSubmitEvaluation() async {
     final kesan = _kesanController.text.trim();
     final saran = _saranController.text.trim();
-    final nim = _nimController.text.trim().isEmpty ? '123220000' : _nimController.text.trim();
+    final nim = _nimController.text.trim().isEmpty
+        ? '123220000'
+        : _nimController.text.trim();
 
     if (kesan.isEmpty || saran.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -140,7 +145,11 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
           ),
           content: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: errorCrimson, size: 20),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: errorCrimson,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -187,9 +196,7 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
       }
 
       // 3. Tambahkan Reward +450 EXP ke Player
-      final updatedPlayer = _player.copyWith(
-        exp: _player.exp + 450,
-      );
+      final updatedPlayer = _player.copyWith(exp: _player.exp + 450);
       await SupabaseApiService.updateUser(updatedPlayer);
 
       // 4. Catat ke Blockchain Ledger
@@ -239,7 +246,10 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: surfaceContainer,
-            content: Text('Submission notice: $e', style: LevMaxTheme.mono(color: Colors.white)),
+            content: Text(
+              'Submission notice: $e',
+              style: LevMaxTheme.mono(color: Colors.white),
+            ),
           ),
         );
       }
@@ -377,10 +387,7 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                   shape: BoxShape.circle,
                   color: primaryCyan,
                   boxShadow: [
-                    BoxShadow(
-                      color: Color(0x8800F0FF),
-                      blurRadius: 6,
-                    ),
+                    BoxShadow(color: Color(0x8800F0FF), blurRadius: 6),
                   ],
                 ),
               ),
@@ -414,7 +421,9 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
   // ============================================================================
   Widget _buildHeroIdentityCard() {
     final rankColor = _getRankColor(_player.rank);
-    final shortUserId = _player.id.length > 6 ? _player.id.substring(0, 6) : _player.id;
+    final shortUserId = _player.id.length > 6
+        ? _player.id.substring(0, 6)
+        : _player.id;
 
     // Hitung persentase EXP ke level berikutnya (Level Cap tiap 1000 EXP)
     final int expProgress = _player.exp % 1000;
@@ -488,7 +497,9 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                               color: rankColor.withValues(alpha: 0.35),
                             ),
                             Text(
-                              _player.username.isNotEmpty ? _player.username[0].toUpperCase() : 'H',
+                              _player.username.isNotEmpty
+                                  ? _player.username[0].toUpperCase()
+                                  : 'H',
                               style: LevMaxTheme.headline(
                                 fontSize: 32,
                                 fontWeight: FontWeight.w900,
@@ -504,7 +515,10 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
 
                   // Badge Tebal RANK Dinamis
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: rankColor.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
@@ -552,9 +566,17 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                     ),
                     const SizedBox(height: 8),
 
-                    _buildInfoBadgeRow(Icons.shield, 'Class: Shadow Monarch', secondaryPurple),
+                    _buildInfoBadgeRow(
+                      Icons.shield,
+                      'Class: Shadow Monarch',
+                      secondaryPurple,
+                    ),
                     const SizedBox(height: 4),
-                    _buildInfoBadgeRow(Icons.fort, 'Guild: Citadel Apex', goldAmber),
+                    _buildInfoBadgeRow(
+                      Icons.fort,
+                      'Guild: Citadel Apex',
+                      goldAmber,
+                    ),
                     const SizedBox(height: 4),
                     _buildInfoBadgeRow(
                       Icons.favorite,
@@ -704,7 +726,8 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
             _buildStatCard(
               icon: Icons.monitor_weight,
               label: 'BMI SCORE',
-              value: '${_player.bmiScore.toStringAsFixed(1)} (${_player.bmiCategory})',
+              value:
+                  '${_player.bmiScore.toStringAsFixed(1)} (${_player.bmiCategory})',
               color: goldAmber,
             ),
           ],
@@ -806,7 +829,10 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
             children: [
               Text(
                 'Submit your impressions and directives for Mobile App Programming Course.',
-                style: LevMaxTheme.mono(fontSize: 10.5, color: onSurfaceVariant),
+                style: LevMaxTheme.mono(
+                  fontSize: 10.5,
+                  color: onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 14),
 
@@ -819,13 +845,22 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                       label: 'Student NIM',
                       child: TextField(
                         controller: _nimController,
-                        style: LevMaxTheme.mono(fontSize: 11, color: Colors.white),
+                        style: LevMaxTheme.mono(
+                          fontSize: 11,
+                          color: Colors.white,
+                        ),
                         decoration: InputDecoration(
                           isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 10,
+                          ),
                           border: InputBorder.none,
                           hintText: 'NIM...',
-                          hintStyle: LevMaxTheme.mono(fontSize: 11, color: outline),
+                          hintStyle: LevMaxTheme.mono(
+                            fontSize: 11,
+                            color: outline,
+                          ),
                         ),
                       ),
                     ),
@@ -836,10 +871,17 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                     child: _buildInputWrapper(
                       label: 'Student Name',
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 10,
+                        ),
                         child: Text(
                           _player.username,
-                          style: LevMaxTheme.mono(fontSize: 11, fontWeight: FontWeight.bold, color: goldAmber),
+                          style: LevMaxTheme.mono(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: goldAmber,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -886,7 +928,9 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
 
               // Tombol Submit: Tinggi 48px, Latar Cyan, Teks Bold Hitam
               ElevatedButton(
-                onPressed: _isSubmittingEvaluation ? null : _handleSubmitEvaluation,
+                onPressed: _isSubmittingEvaluation
+                    ? null
+                    : _handleSubmitEvaluation,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryCyan,
                   foregroundColor: const Color(0xFF002022),
@@ -900,12 +944,19 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2.5),
+                        child: CircularProgressIndicator(
+                          color: Colors.black,
+                          strokeWidth: 2.5,
+                        ),
                       )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.send, size: 16, color: Color(0xFF002022)),
+                          const Icon(
+                            Icons.send,
+                            size: 16,
+                            color: Color(0xFF002022),
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'SUBMIT EVALUATION TO GUILD',
@@ -985,12 +1036,19 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
             decoration: BoxDecoration(
               color: dangerDark.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: errorCrimson.withValues(alpha: 0.4), width: 1.0),
+              border: Border.all(
+                color: errorCrimson.withValues(alpha: 0.4),
+                width: 1.0,
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.power_settings_new, color: Color(0xFFFFB4AB), size: 18),
+                const Icon(
+                  Icons.power_settings_new,
+                  color: Color(0xFFFFB4AB),
+                  size: 18,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'TERMINATE SESSION [LOGOUT]',

@@ -26,11 +26,7 @@ class FeedbackTab extends StatefulWidget {
   final UserModel player;
   final VoidCallback? onPlayerUpdated;
 
-  const FeedbackTab({
-    super.key,
-    required this.player,
-    this.onPlayerUpdated,
-  });
+  const FeedbackTab({super.key, required this.player, this.onPlayerUpdated});
 
   @override
   State<FeedbackTab> createState() => _FeedbackTabState();
@@ -47,7 +43,9 @@ class _FeedbackTabState extends State<FeedbackTab>
   static const Color surfaceContainer = Color(0xFF1C1F2A);
   static const Color surfaceContainerHigh = Color(0xFF262A35);
   static const Color primaryCyan = Color(0xFF00F0FF); // Electric Cyan
-  static const Color mintAccent = Color(0xFF65F2B5); // Mint Green (EXP Yield & Rank S)
+  static const Color mintAccent = Color(
+    0xFF65F2B5,
+  ); // Mint Green (EXP Yield & Rank S)
   static const Color outline = Color(0xFF849495);
   static const Color onSurface = Color(0xFFDFE2F1);
   static const Color onSurfaceVariant = Color(0xFFB9CACB);
@@ -114,8 +112,7 @@ class _FeedbackTabState extends State<FeedbackTab>
           userId: widget.player.id,
           namaMahasiswa: 'Semester 4 - Algoritma & Struktur Data',
           nim: 'RATING:5|RANK:S|SECTOR:Semester 4 - Algoritma & Struktur Data',
-          kesan:
-              'Fondasi logika dan kompleksitas waktu O(n) terasah dengan intensif melalui coding sprint.',
+          kesan: 'Fondasi logika dan kompleksitas waktu O(n) terasah dengan intensif melalui coding sprint.',
           saran:
               'Perbanyak studi kasus visualisasi tree & dynamic programming.',
           createdAt: 'JUN 24, 2024',
@@ -124,20 +121,16 @@ class _FeedbackTabState extends State<FeedbackTab>
           userId: widget.player.id,
           namaMahasiswa: 'Semester 4 - Basis Data Terdistribusi',
           nim: 'RATING:4|RANK:A|SECTOR:Semester 4 - Basis Data Terdistribusi',
-          kesan:
-              'Pemahaman replikasi multi-node dan sharding sangat relevan dengan kebutuhan backend game modern.',
-          saran:
-              'Integrasi benchmark cluster langsung dengan containerized pods (Kubernetes) pada lab praktik berikutnya.',
+          kesan: 'Pemahaman replikasi multi-node dan sharding sangat relevan dengan kebutuhan backend game modern.',
+          saran: 'Integrasi benchmark cluster langsung dengan containerized pods (Kubernetes) pada lab praktik berikutnya.',
           createdAt: 'MAY 18, 2024',
         ),
         FeedbackModel(
           userId: widget.player.id,
           namaMahasiswa: 'Semester 3 - Rekayasa Perangkat Lunak',
           nim: 'RATING:5|RANK:S|SECTOR:Semester 3 - Rekayasa Perangkat Lunak',
-          kesan:
-              'Metodologi Scrum and sprint planning nyata membantu menyelaraskan kolaborasi lintas divisi guild.',
-          saran:
-              'Fokuskan simulasi automasi CI/CD pipeline & arsitektur testing production.',
+          kesan: 'Metodologi Scrum and sprint planning nyata membantu menyelaraskan kolaborasi lintas divisi guild.',
+          saran: 'Fokuskan simulasi automasi CI/CD pipeline & arsitektur testing production.',
           createdAt: 'DEC 12, 2023',
         ),
       ];
@@ -195,7 +188,9 @@ class _FeedbackTabState extends State<FeedbackTab>
     HapticFeedback.mediumImpact();
 
     try {
-      final rankStr = _currentRating >= 5 ? 'S' : (_currentRating >= 4 ? 'A' : 'B');
+      final rankStr = _currentRating >= 5
+          ? 'S'
+          : (_currentRating >= 4 ? 'A' : 'B');
       final nowFormatted = _formatCurrentDate();
 
       final newFeedback = FeedbackModel(
@@ -279,8 +274,18 @@ class _FeedbackTabState extends State<FeedbackTab>
   String _formatCurrentDate() {
     final now = DateTime.now();
     const months = [
-      'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-      'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
     ];
     return '${months[now.month - 1]} ${now.day.toString().padLeft(2, '0')}, ${now.year}';
   }
@@ -320,7 +325,8 @@ class _FeedbackTabState extends State<FeedbackTab>
                           boxShadow: [
                             BoxShadow(
                               color: primaryCyan.withValues(
-                                  alpha: 0.4 + 0.6 * _pulseAnimation.value),
+                                alpha: 0.4 + 0.6 * _pulseAnimation.value,
+                              ),
                               blurRadius: 6,
                               spreadRadius: 1,
                             ),
@@ -430,7 +436,8 @@ class _FeedbackTabState extends State<FeedbackTab>
                           boxShadow: [
                             BoxShadow(
                               color: primaryCyan.withValues(
-                                  alpha: 0.4 + 0.6 * _pulseAnimation.value),
+                                alpha: 0.4 + 0.6 * _pulseAnimation.value,
+                              ),
                               blurRadius: 4,
                             ),
                           ],
@@ -583,7 +590,9 @@ class _FeedbackTabState extends State<FeedbackTab>
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 5, vertical: 2),
+                            horizontal: 5,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF152C28),
                             borderRadius: BorderRadius.circular(4),
@@ -803,7 +812,9 @@ class _FeedbackTabState extends State<FeedbackTab>
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 3),
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: surfaceContainerLowest,
                           borderRadius: BorderRadius.circular(4),
@@ -865,11 +876,7 @@ class _FeedbackTabState extends State<FeedbackTab>
                       Expanded(
                         child: Row(
                           children: [
-                            Container(
-                              width: 4,
-                              height: 4,
-                              color: primaryCyan,
-                            ),
+                            Container(width: 4, height: 4, color: primaryCyan),
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
@@ -898,8 +905,7 @@ class _FeedbackTabState extends State<FeedbackTab>
                   const SizedBox(height: 6),
                   _buildCustomTextArea(
                     controller: _kesanController,
-                    hintText:
-                        'Materi Mobile Programming sangat aplikatif. Integrasi sensor hardware (akselerometer & giroskop) langsung membuka wawasan arsitektur sistem responsif...',
+                    hintText: 'Materi Mobile Programming sangat aplikatif. Integrasi sensor hardware (akselerometer & giroskop) langsung membuka wawasan arsitektur sistem responsif...',
                   ),
                   const SizedBox(height: 16),
 
@@ -910,11 +916,7 @@ class _FeedbackTabState extends State<FeedbackTab>
                       Expanded(
                         child: Row(
                           children: [
-                            Container(
-                              width: 4,
-                              height: 4,
-                              color: mintAccent,
-                            ),
+                            Container(width: 4, height: 4, color: mintAccent),
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
@@ -943,8 +945,7 @@ class _FeedbackTabState extends State<FeedbackTab>
                   const SizedBox(height: 6),
                   _buildCustomTextArea(
                     controller: _saranController,
-                    hintText:
-                        'Saran untuk kurikulum semester mendatang: Tambahkan sesi hands-on optimasi performa memory profiling dan arsitektur offline-first state machine...',
+                    hintText: 'Saran untuk kurikulum semester mendatang: Tambahkan sesi hands-on optimasi performa memory profiling dan arsitektur offline-first state machine...',
                   ),
                   const SizedBox(height: 18),
 
@@ -976,11 +977,7 @@ class _FeedbackTabState extends State<FeedbackTab>
         ),
         child: Row(
           children: [
-            const Icon(
-              Icons.view_in_ar,
-              size: 18,
-              color: primaryCyan,
-            ),
+            const Icon(Icons.view_in_ar, size: 18, color: primaryCyan),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -995,11 +992,7 @@ class _FeedbackTabState extends State<FeedbackTab>
                 ),
               ),
             ),
-            const Icon(
-              Icons.expand_more,
-              size: 20,
-              color: outline,
-            ),
+            const Icon(Icons.expand_more, size: 20, color: outline),
           ],
         ),
       ),
@@ -1053,7 +1046,9 @@ class _FeedbackTabState extends State<FeedbackTab>
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 10),
+                        vertical: 12,
+                        horizontal: 10,
+                      ),
                       margin: const EdgeInsets.only(bottom: 6),
                       decoration: BoxDecoration(
                         color: isSelected
@@ -1088,7 +1083,11 @@ class _FeedbackTabState extends State<FeedbackTab>
                             ),
                           ),
                           if (isSelected)
-                            const Icon(Icons.check, size: 18, color: primaryCyan),
+                            const Icon(
+                              Icons.check,
+                              size: 18,
+                              color: primaryCyan,
+                            ),
                         ],
                       ),
                     ),
@@ -1244,11 +1243,12 @@ class _FeedbackTabState extends State<FeedbackTab>
         controller: controller,
         maxLines: 3,
         maxLength: 500,
-        buildCounter: (context,
-                {required currentLength,
-                required isFocused,
-                required maxLength}) =>
-            null,
+        buildCounter: (
+          context, {
+          required currentLength,
+          required isFocused,
+          required maxLength,
+        }) => null,
         style: GoogleFonts.jetBrainsMono(
           fontSize: 11.5,
           color: onSurface,
@@ -1278,9 +1278,7 @@ class _FeedbackTabState extends State<FeedbackTab>
         elevation: 0,
         shadowColor: Colors.transparent,
         minimumSize: const Size.fromHeight(48),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       child: _isLoading
           ? const SizedBox(
@@ -1294,11 +1292,7 @@ class _FeedbackTabState extends State<FeedbackTab>
           : Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.send,
-                  size: 17,
-                  color: Color(0xFF002022),
-                ),
+                const Icon(Icons.send, size: 17, color: Color(0xFF002022)),
                 const SizedBox(width: 8),
                 Text(
                   'SUBMIT TESTIMONIAL TO GUILD [SAVE]',
@@ -1333,11 +1327,7 @@ class _FeedbackTabState extends State<FeedbackTab>
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons.history_edu,
-                      size: 18,
-                      color: onSurface,
-                    ),
+                    const Icon(Icons.history_edu, size: 18, color: onSurface),
                     const SizedBox(width: 8),
                     Text(
                       '[IMMUTABLE ARCHIVE LOG: PAST SUBMISSIONS]',
@@ -1351,8 +1341,10 @@ class _FeedbackTabState extends State<FeedbackTab>
                   ],
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(4),
@@ -1409,7 +1401,9 @@ class _FeedbackTabState extends State<FeedbackTab>
     final isRankS = rank == 'S';
     final rankColor = isRankS ? mintAccent : primaryCyan;
     final rankBg = isRankS ? const Color(0xFF152C28) : const Color(0xFF152C33);
-    final ratingDesc = rating >= 5 ? 'APEX' : (rating >= 4 ? 'SUPERIOR' : 'COMPETENT');
+    final ratingDesc = rating >= 5
+        ? 'APEX'
+        : (rating >= 4 ? 'SUPERIOR' : 'COMPETENT');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -1450,7 +1444,10 @@ class _FeedbackTabState extends State<FeedbackTab>
               ),
               const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 7,
+                  vertical: 2.5,
+                ),
                 decoration: BoxDecoration(
                   color: rankBg,
                   borderRadius: BorderRadius.circular(4),
@@ -1675,7 +1672,9 @@ class _FeedbackTabState extends State<FeedbackTab>
                   decoration: BoxDecoration(
                     color: surfaceContainerLowest,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1691,12 +1690,18 @@ class _FeedbackTabState extends State<FeedbackTab>
                       const SizedBox(height: 6),
                       Text(
                         'CRYPTOGRAPHIC HASH: 994E-F29A-${item.hashCode.toRadixString(16).toUpperCase()}',
-                        style: GoogleFonts.jetBrainsMono(fontSize: 10, color: outline),
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 10,
+                          color: outline,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'ARCHIVED TIMESTAMP: ${item.createdAt}',
-                        style: GoogleFonts.jetBrainsMono(fontSize: 10, color: outline),
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 10,
+                          color: outline,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -1778,7 +1783,9 @@ class _FeedbackTabState extends State<FeedbackTab>
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0, vertical: 14.0),
+                  horizontal: 16.0,
+                  vertical: 14.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [

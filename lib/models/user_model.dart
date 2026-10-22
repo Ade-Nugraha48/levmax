@@ -74,10 +74,10 @@ class UserModel {
     this.isPenaltyActive = false,
     this.lastActiveDate = '',
     this.createdAt = '',
-  })  : id = id?.toString() ?? '',
-        height = height ?? (tbCm != null ? tbCm.toInt() : 170),
-        weight = weight ?? (bbKg ?? 65.0),
-        bmiScore = bmiScore ?? (bmi ?? 22.49);
+  }) : id = id?.toString() ?? '',
+       height = height ?? (tbCm != null ? tbCm.toInt() : 170),
+       weight = weight ?? (bbKg ?? 65.0),
+       bmiScore = bmiScore ?? (bmi ?? 22.49);
 
   // ============================================================================
   // GETTERS UNTUK KOMPATIBILITAS KODE LAMA (BACKWARD COMPATIBILITY)
@@ -314,7 +314,9 @@ class UserModel {
     };
 
     // Sertakan id HANYA jika berupa format valid UUID RFC 4122 (36 karakter)
-    final uuidRegex = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
     if (id.isNotEmpty && uuidRegex.hasMatch(id)) {
       map['id'] = id;
     }
@@ -331,7 +333,8 @@ class UserModel {
   }
 
   Map<String, dynamic> toMap() => toJson();
-  factory UserModel.fromMap(Map<String, dynamic> map) => UserModel.fromJson(map);
+  factory UserModel.fromMap(Map<String, dynamic> map) =>
+      UserModel.fromJson(map);
 
   UserModel copyWith({
     dynamic id,

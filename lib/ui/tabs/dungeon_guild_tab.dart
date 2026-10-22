@@ -7,6 +7,7 @@
 // ==============================================================================
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -31,7 +32,8 @@ class DungeonGuildTab extends StatefulWidget {
   State<DungeonGuildTab> createState() => _DungeonGuildTabState();
 }
 
-class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProviderStateMixin {
+class _DungeonGuildTabState extends State<DungeonGuildTab>
+    with SingleTickerProviderStateMixin {
   // Sub-Tab Aktif: 'map' | 'guild' | 'audit'
   String _activeSubView = 'map';
 
@@ -47,7 +49,9 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _goldInputController = TextEditingController(text: widget.player.gold.toString());
+    _goldInputController = TextEditingController(
+      text: widget.player.gold.toString(),
+    );
     _selectedGoldAmount = widget.player.gold;
 
     _pulseController = AnimationController(
@@ -72,8 +76,6 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
     _goldInputController.dispose();
     super.dispose();
   }
-
-
 
   // ============================================================================
   // TRANSAKSI GUILD CASHOUT & BLOCKCHAIN NOTARISASI
@@ -109,22 +111,33 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
             const SizedBox(width: 8),
             Text(
               'KONFIRMASI CASHOUT',
-              style: LevMaxTheme.headline(fontSize: 14, color: LevMaxTheme.amberGold),
+              style: LevMaxTheme.headline(
+                fontSize: 14,
+                color: LevMaxTheme.amberGold,
+              ),
             ),
           ],
         ),
         content: Text(
           'Cairkan $amount Gold menjadi Rp ${NumberFormat('#,###', 'id_ID').format(idrValue)} via Instant QRIS System?\n\nTransaksi akan dicatat permanen ke Blockchain Ledger.',
-          style: LevMaxTheme.mono(fontSize: 11, color: LevMaxTheme.onSurfaceVariant),
+          style: LevMaxTheme.mono(
+            fontSize: 11,
+            color: LevMaxTheme.onSurfaceVariant,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('BATAL', style: LevMaxTheme.mono(color: LevMaxTheme.outline)),
+            child: Text(
+              'BATAL',
+              style: LevMaxTheme.mono(color: LevMaxTheme.outline),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: LevMaxTheme.amberGold),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: LevMaxTheme.amberGold,
+            ),
             child: Text(
               'EKSEKUSI CASHOUT',
               style: LevMaxTheme.mono(
@@ -162,12 +175,19 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
             behavior: SnackBarBehavior.floating,
             content: Row(
               children: [
-                const Icon(Icons.check_circle, color: LevMaxTheme.tertiaryContainer, size: 20),
+                const Icon(
+                  Icons.check_circle,
+                  color: LevMaxTheme.tertiaryContainer,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'CASHOUT BERHASIL: RP ${NumberFormat('#,###', 'id_ID').format(idrValue)} TERNOTARISASI DI LEDGER',
-                    style: LevMaxTheme.mono(fontSize: 10.5, color: LevMaxTheme.tertiaryContainer),
+                    style: LevMaxTheme.mono(
+                      fontSize: 10.5,
+                      color: LevMaxTheme.tertiaryContainer,
+                    ),
                   ),
                 ),
               ],
@@ -177,8 +197,6 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
       }
     }
   }
-
-
 
   // ============================================================================
   // KOMPONEN 1: STICKY TACTICAL HEADER BAR (IDENTIK DENGAN TAB 1)
@@ -201,7 +219,9 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
               decoration: BoxDecoration(
                 color: LevMaxTheme.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: LevMaxTheme.primaryContainer.withValues(alpha: 0.6)),
+                border: Border.all(
+                  color: LevMaxTheme.primaryContainer.withValues(alpha: 0.6),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: LevMaxTheme.primaryContainer.withValues(alpha: 0.2),
@@ -210,7 +230,11 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                 ],
               ),
               child: const Center(
-                child: Icon(Icons.shield, color: LevMaxTheme.primaryContainer, size: 20),
+                child: Icon(
+                  Icons.shield,
+                  color: LevMaxTheme.primaryContainer,
+                  size: 20,
+                ),
               ),
             ),
             const SizedBox(width: 10),
@@ -308,10 +332,16 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: LevMaxTheme.surfaceContainerLowest,
-                border: Border.all(color: LevMaxTheme.primaryContainer.withValues(alpha: 0.6)),
+                border: Border.all(
+                  color: LevMaxTheme.primaryContainer.withValues(alpha: 0.6),
+                ),
               ),
               child: const Center(
-                child: Icon(Icons.person, color: LevMaxTheme.primaryContainer, size: 18),
+                child: Icon(
+                  Icons.person,
+                  color: LevMaxTheme.primaryContainer,
+                  size: 18,
+                ),
               ),
             ),
           ],
@@ -373,15 +403,21 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? LevMaxTheme.surfaceContainerHigh : Colors.transparent,
+            color: isSelected
+                ? LevMaxTheme.surfaceContainerHigh
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
             border: isSelected
-                ? Border.all(color: LevMaxTheme.primaryContainer.withValues(alpha: 0.4))
+                ? Border.all(
+                    color: LevMaxTheme.primaryContainer.withValues(alpha: 0.4),
+                  )
                 : null,
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: LevMaxTheme.primaryContainer.withValues(alpha: 0.15),
+                      color: LevMaxTheme.primaryContainer.withValues(
+                        alpha: 0.15,
+                      ),
                       blurRadius: 8,
                     ),
                   ]
@@ -393,7 +429,9 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
               Icon(
                 icon,
                 size: 14,
-                color: isSelected ? LevMaxTheme.primaryContainer : LevMaxTheme.outline,
+                color: isSelected
+                    ? LevMaxTheme.primaryContainer
+                    : LevMaxTheme.outline,
               ),
               const SizedBox(width: 6),
               FittedBox(
@@ -403,7 +441,9 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                   style: LevMaxTheme.mono(
                     fontSize: 10,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    color: isSelected ? LevMaxTheme.primaryContainer : LevMaxTheme.outline,
+                    color: isSelected
+                        ? LevMaxTheme.primaryContainer
+                        : LevMaxTheme.outline,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -444,13 +484,12 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF262A35),
-                Color(0xFF171B26),
-              ],
+              colors: [Color(0xFF262A35), Color(0xFF171B26)],
             ),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: LevMaxTheme.amberGold.withValues(alpha: 0.6)),
+            border: Border.all(
+              color: LevMaxTheme.amberGold.withValues(alpha: 0.6),
+            ),
             boxShadow: [
               BoxShadow(
                 color: LevMaxTheme.amberGold.withValues(alpha: 0.15),
@@ -473,7 +512,10 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                           shape: BoxShape.circle,
                           color: LevMaxTheme.amberGold,
                           boxShadow: [
-                            BoxShadow(color: LevMaxTheme.amberGold, blurRadius: 6),
+                            BoxShadow(
+                              color: LevMaxTheme.amberGold,
+                              blurRadius: 6,
+                            ),
                           ],
                         ),
                       ),
@@ -489,7 +531,11 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                       ),
                     ],
                   ),
-                  const Icon(Icons.account_balance_wallet, color: LevMaxTheme.amberGold, size: 18),
+                  const Icon(
+                    Icons.account_balance_wallet,
+                    color: LevMaxTheme.amberGold,
+                    size: 18,
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -498,7 +544,11 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
-                  const Icon(Icons.monetization_on, color: LevMaxTheme.amberGold, size: 28),
+                  const Icon(
+                    Icons.monetization_on,
+                    color: LevMaxTheme.amberGold,
+                    size: 28,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     NumberFormat('#,###', 'id_ID').format(widget.player.gold),
@@ -566,15 +616,25 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                   filled: true,
                   fillColor: LevMaxTheme.surfaceContainerLowest,
                   labelText: 'JUMLAH GOLD DICAIRKAN',
-                  labelStyle: LevMaxTheme.mono(fontSize: 10, color: LevMaxTheme.outline),
-                  prefixIcon: const Icon(Icons.toll, color: LevMaxTheme.amberGold, size: 18),
+                  labelStyle: LevMaxTheme.mono(
+                    fontSize: 10,
+                    color: LevMaxTheme.outline,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.toll,
+                    color: LevMaxTheme.amberGold,
+                    size: 18,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: const BorderSide(color: Color(0xFF1E293B)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: LevMaxTheme.amberGold, width: 1.5),
+                    borderSide: const BorderSide(
+                      color: LevMaxTheme.amberGold,
+                      width: 1.5,
+                    ),
                   ),
                 ),
                 onChanged: (val) {
@@ -606,7 +666,8 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                   Expanded(
                     child: _buildCurrencyMatrixCard(
                       label: 'IDR (LOCAL)',
-                      value: 'Rp ${NumberFormat('#,###', 'id_ID').format(idrValue)}',
+                      value:
+                          'Rp ${NumberFormat('#,###', 'id_ID').format(idrValue)}',
                       sublabel: 'Instant QRIS',
                       color: LevMaxTheme.tertiaryContainer,
                     ),
@@ -652,7 +713,11 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.payments, size: 18, color: Color(0xFF002022)),
+                      const Icon(
+                        Icons.payments,
+                        size: 18,
+                        color: Color(0xFF002022),
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'REQUEST GUILD CASHOUT',
@@ -685,7 +750,13 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
 
         Row(
           children: [
-            Expanded(child: _buildTimezoneClockCard('WIB (JAKARTA)', 7, isActive: true)),
+            Expanded(
+              child: _buildTimezoneClockCard(
+                'WIB (JAKARTA)',
+                7,
+                isActive: true,
+              ),
+            ),
             const SizedBox(width: 8),
             Expanded(child: _buildTimezoneClockCard('WITA (BALI)', 8)),
           ],
@@ -776,14 +847,22 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
     );
   }
 
-  Widget _buildTimezoneClockCard(String zoneName, int utcOffset, {bool isActive = false}) {
+  Widget _buildTimezoneClockCard(
+    String zoneName,
+    int utcOffset, {
+    bool isActive = false,
+  }) {
     // Hitung jam di zona waktu yang bersangkutan
     final utc = _currentTime.toUtc();
     final zoneTime = utc.add(Duration(hours: utcOffset));
     final timeStr = DateFormat('HH:mm:ss').format(zoneTime);
 
     // Hitung sisa waktu hingga 00:00 hari berikutnya di zona itu
-    final midnight = DateTime.utc(zoneTime.year, zoneTime.month, zoneTime.day + 1);
+    final midnight = DateTime.utc(
+      zoneTime.year,
+      zoneTime.month,
+      zoneTime.day + 1,
+    );
     final remaining = midnight.difference(zoneTime);
     final remainingStr =
         '${remaining.inHours.toString().padLeft(2, '0')}h ${(remaining.inMinutes % 60).toString().padLeft(2, '0')}m ${(remaining.inSeconds % 60).toString().padLeft(2, '0')}s';
@@ -794,7 +873,9 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
         color: LevMaxTheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isActive ? LevMaxTheme.primaryContainer : const Color(0xFF1E293B),
+          color: isActive
+              ? LevMaxTheme.primaryContainer
+              : const Color(0xFF1E293B),
         ),
       ),
       child: Column(
@@ -808,7 +889,9 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                 style: LevMaxTheme.mono(
                   fontSize: 9,
                   fontWeight: FontWeight.bold,
-                  color: isActive ? LevMaxTheme.primaryContainer : LevMaxTheme.onSurfaceVariant,
+                  color: isActive
+                      ? LevMaxTheme.primaryContainer
+                      : LevMaxTheme.onSurfaceVariant,
                 ),
               ),
               if (isActive)
@@ -878,7 +961,9 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                 decoration: BoxDecoration(
                   color: LevMaxTheme.secondaryContainer.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: LevMaxTheme.secondary.withValues(alpha: 0.4)),
+                  border: Border.all(
+                    color: LevMaxTheme.secondary.withValues(alpha: 0.4),
+                  ),
                 ),
                 child: Text(
                   'SHA-256 ZERO-KNOWLEDGE PROOF',
@@ -913,7 +998,10 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
 
               // 3-Column Telemetry Strip
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: LevMaxTheme.surfaceContainerLowest,
                   borderRadius: BorderRadius.circular(6),
@@ -926,7 +1014,10 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                         alignment: Alignment.centerLeft,
                         child: Text(
                           'Blocks: ${blocks.length}',
-                          style: LevMaxTheme.mono(fontSize: 9.5, color: LevMaxTheme.primaryContainer),
+                          style: LevMaxTheme.mono(
+                            fontSize: 9.5,
+                            color: LevMaxTheme.primaryContainer,
+                          ),
                         ),
                       ),
                     ),
@@ -937,7 +1028,10 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                         alignment: Alignment.center,
                         child: Text(
                           'Validator: Solana VM',
-                          style: LevMaxTheme.mono(fontSize: 9.5, color: LevMaxTheme.tertiaryFixedDim),
+                          style: LevMaxTheme.mono(
+                            fontSize: 9.5,
+                            color: LevMaxTheme.tertiaryFixedDim,
+                          ),
                         ),
                       ),
                     ),
@@ -948,7 +1042,10 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                         alignment: Alignment.centerRight,
                         child: Text(
                           'Gas Fee: 0 G (FREE)',
-                          style: LevMaxTheme.mono(fontSize: 9.5, color: LevMaxTheme.outline),
+                          style: LevMaxTheme.mono(
+                            fontSize: 9.5,
+                            color: LevMaxTheme.outline,
+                          ),
                         ),
                       ),
                     ),
@@ -969,14 +1066,18 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                 : LevMaxTheme.hpRed.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
-              color: isChainValid ? LevMaxTheme.tertiaryContainer : LevMaxTheme.hpRed,
+              color: isChainValid
+                  ? LevMaxTheme.tertiaryContainer
+                  : LevMaxTheme.hpRed,
             ),
           ),
           child: Row(
             children: [
               Icon(
                 isChainValid ? Icons.verified_user : Icons.warning_amber,
-                color: isChainValid ? LevMaxTheme.tertiaryContainer : LevMaxTheme.hpRed,
+                color: isChainValid
+                    ? LevMaxTheme.tertiaryContainer
+                    : LevMaxTheme.hpRed,
                 size: 16,
               ),
               const SizedBox(width: 8),
@@ -988,7 +1089,9 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                   style: LevMaxTheme.mono(
                     fontSize: 9.5,
                     fontWeight: FontWeight.bold,
-                    color: isChainValid ? LevMaxTheme.tertiaryContainer : LevMaxTheme.hpRed,
+                    color: isChainValid
+                        ? LevMaxTheme.tertiaryContainer
+                        : LevMaxTheme.hpRed,
                   ),
                 ),
               ),
@@ -1004,7 +1107,10 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
             child: Center(
               child: Text(
                 'Belum ada transaksi blok tercatat.',
-                style: LevMaxTheme.mono(fontSize: 11, color: LevMaxTheme.outline),
+                style: LevMaxTheme.mono(
+                  fontSize: 11,
+                  color: LevMaxTheme.outline,
+                ),
               ),
             ),
           )
@@ -1027,16 +1133,26 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                 backgroundColor: LevMaxTheme.surfaceContainer,
                 title: Text(
                   'ONCHAIN VERIFIER',
-                  style: LevMaxTheme.headline(color: LevMaxTheme.primaryContainer),
+                  style: LevMaxTheme.headline(
+                    color: LevMaxTheme.primaryContainer,
+                  ),
                 ),
                 content: Text(
                   'Genesis & Sensor Proof Payload disinkronkan secara kontinu ke Lapisan 3 Cloud Database Supabase & Solscan Virtual Machine Node.',
-                  style: LevMaxTheme.mono(fontSize: 11, color: LevMaxTheme.onSurfaceVariant),
+                  style: LevMaxTheme.mono(
+                    fontSize: 11,
+                    color: LevMaxTheme.onSurfaceVariant,
+                  ),
                 ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: Text('TUTUP', style: LevMaxTheme.mono(color: LevMaxTheme.primaryContainer)),
+                    child: Text(
+                      'TUTUP',
+                      style: LevMaxTheme.mono(
+                        color: LevMaxTheme.primaryContainer,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -1052,7 +1168,11 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.open_in_new, size: 16, color: LevMaxTheme.primaryContainer),
+                const Icon(
+                  Icons.open_in_new,
+                  size: 16,
+                  color: LevMaxTheme.primaryContainer,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'VERIFY BLOCK ONCHAIN (SOLSCAN / ETHERSCAN)',
@@ -1070,7 +1190,10 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
     );
   }
 
-  Widget _buildBlockNodeItem({required BlockModel block, required bool isLatest}) {
+  Widget _buildBlockNodeItem({
+    required BlockModel block,
+    required bool isLatest,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1082,9 +1205,13 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
               height: 14,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isLatest ? LevMaxTheme.primaryContainer : LevMaxTheme.surfaceContainerHighest,
+                color: isLatest
+                    ? LevMaxTheme.primaryContainer
+                    : LevMaxTheme.surfaceContainerHighest,
                 border: Border.all(
-                  color: isLatest ? LevMaxTheme.primaryContainer : LevMaxTheme.outline,
+                  color: isLatest
+                      ? LevMaxTheme.primaryContainer
+                      : LevMaxTheme.outline,
                   width: 2,
                 ),
                 boxShadow: isLatest
@@ -1106,7 +1233,9 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    isLatest ? LevMaxTheme.primaryContainer : LevMaxTheme.outline,
+                    isLatest
+                        ? LevMaxTheme.primaryContainer
+                        : LevMaxTheme.outline,
                     LevMaxTheme.secondary,
                   ],
                 ),
@@ -1122,10 +1251,14 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isLatest ? LevMaxTheme.surfaceContainerHigh : LevMaxTheme.surfaceContainerLow,
+              color: isLatest
+                  ? LevMaxTheme.surfaceContainerHigh
+                  : LevMaxTheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isLatest ? LevMaxTheme.primaryContainer.withValues(alpha: 0.5) : const Color(0xFF1E293B),
+                color: isLatest
+                    ? LevMaxTheme.primaryContainer.withValues(alpha: 0.5)
+                    : const Color(0xFF1E293B),
               ),
             ),
             child: Column(
@@ -1139,12 +1272,18 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                       style: LevMaxTheme.mono(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
-                        color: isLatest ? LevMaxTheme.primaryContainer : LevMaxTheme.onSurface,
+                        color: isLatest
+                            ? LevMaxTheme.primaryContainer
+                            : LevMaxTheme.onSurface,
                       ),
                     ),
                     Row(
                       children: [
-                        const Icon(Icons.check_circle, color: LevMaxTheme.tertiaryFixed, size: 12),
+                        const Icon(
+                          Icons.check_circle,
+                          color: LevMaxTheme.tertiaryFixed,
+                          size: 12,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           'MINED',
@@ -1161,7 +1300,10 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                 const SizedBox(height: 4),
                 Text(
                   '${block.timestamp.length >= 19 ? block.timestamp.substring(0, 19).replaceAll('T', ' ') : block.timestamp} • RepProof-V3',
-                  style: LevMaxTheme.mono(fontSize: 8.5, color: LevMaxTheme.outline),
+                  style: LevMaxTheme.mono(
+                    fontSize: 8.5,
+                    color: LevMaxTheme.outline,
+                  ),
                 ),
                 const SizedBox(height: 8),
 
@@ -1189,7 +1331,10 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
                         'PREV: ${block.prevHash}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: LevMaxTheme.mono(fontSize: 8.5, color: LevMaxTheme.outline),
+                        style: LevMaxTheme.mono(
+                          fontSize: 8.5,
+                          color: LevMaxTheme.outline,
+                        ),
                       ),
                     ],
                   ),
@@ -1255,4 +1400,3 @@ class _DungeonGuildTabState extends State<DungeonGuildTab> with SingleTickerProv
     );
   }
 }
-

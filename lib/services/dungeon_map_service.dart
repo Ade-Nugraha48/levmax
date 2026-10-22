@@ -10,6 +10,7 @@
 
 import 'dart:convert';
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hive/hive.dart';
@@ -21,13 +22,7 @@ import 'blockchain_service.dart';
 import 'supabase_api_service.dart';
 
 /// Enum Jenis Loot yang Dihasilkan dari Gate
-enum LootType {
-  zonk,
-  gold,
-  consumable,
-  collectible,
-  quest,
-}
+enum LootType { zonk, gold, consumable, collectible, quest }
 
 /// Model Data Hasil Drop Loot RNG
 class LootResult {
@@ -74,12 +69,16 @@ class MysteryGateModel {
 
   factory MysteryGateModel.fromJson(Map<String, dynamic> json) {
     return MysteryGateModel(
-      id: json['id'] as String? ?? 'gate_${DateTime.now().millisecondsSinceEpoch}',
+      id:
+          json['id'] as String? ??
+          'gate_${DateTime.now().millisecondsSinceEpoch}',
       name: json['name'] as String? ?? 'MYSTERY GATE',
       latitude: (json['latitude'] as num?)?.toDouble() ?? -6.2088,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 106.8456,
       rank: json['rank'] as String? ?? 'E',
-      description: json['description'] as String? ?? 'Dungeon gate rift terdeteksi radar LBS',
+      description:
+          json['description'] as String? ??
+          'Dungeon gate rift terdeteksi radar LBS',
       isClaimed: json['is_claimed'] as bool? ?? false,
       claimedAt: json['claimed_at'] as String?,
       lootReward: json['loot_reward'] as String?,
@@ -155,9 +154,15 @@ class DungeonMapService {
     // 1. Jika data minggu ini sudah ada, gunakan cache lokal
     if (savedWeekId == currentWeekId && rawData != null) {
       try {
-        final List decoded = (rawData is String) ? jsonDecode(rawData) : rawData;
+        final List decoded = (rawData is String)
+            ? jsonDecode(rawData)
+            : rawData;
         final list = decoded
-            .map((item) => MysteryGateModel.fromJson(Map<String, dynamic>.from(item as Map)))
+            .map(
+              (item) => MysteryGateModel.fromJson(
+                Map<String, dynamic>.from(item as Map),
+              ),
+            )
             .toList();
         if (list.isNotEmpty) {
           return list;
@@ -168,14 +173,19 @@ class DungeonMapService {
     }
 
     // 2. Jika berganti minggu atau data kosong: Generate 7 titik koordinat acak baru
-    final newGates = _generateSevenRandomGates(centerLat: userLat, centerLng: userLng);
+    final newGates = _generateSevenRandomGates(
+      centerLat: userLat,
+      centerLng: userLng,
+    );
 
     // Simpan ke Hive questCacheBox
     final jsonString = jsonEncode(newGates.map((g) => g.toJson()).toList());
     await box.put(keyMysteryGatesWeek, currentWeekId);
     await box.put(keyMysteryGatesData, jsonString);
 
-    debugPrint('[DungeonMapService] Generated 7 new Mystery Gates for $currentWeekId');
+    debugPrint(
+      '[DungeonMapService] Generated 7 new Mystery Gates for $currentWeekId',
+    );
     return newGates;
   }
 
@@ -188,13 +198,41 @@ class DungeonMapService {
     final List<MysteryGateModel> gates = [];
 
     final gateTemplates = [
-      {'name': 'GATE 01: AZURE CITADEL RIFT', 'rank': 'E', 'desc': 'Portal biru beresonansi rendah terdeteksi sensor'},
-      {'name': 'GATE 02: CRIMSON BOSS GATE', 'rank': 'D', 'desc': 'Aura magis merah darah terdeteksi di koordinat ini'},
-      {'name': 'GATE 03: SHADOW ABYSS PORTAL', 'rank': 'C', 'desc': 'Kepadatan mana tinggi menyerupai monster bayangan'},
-      {'name': 'GATE 04: SANCTUARY OF HEALING', 'rank': 'E', 'desc': 'Mata air penyembuhan energi pelindung barier'},
-      {'name': 'GATE 05: TITAN IRON CAVERN', 'rank': 'D', 'desc': 'Kandungan mineral langka dan monster bebatuan'},
-      {'name': 'GATE 06: PHANTOM MONARCH LAIR', 'rank': 'B', 'desc': 'Anomali dimensi terdistorsi di perimeter kota'},
-      {'name': 'GATE 07: CELESTIAL VAULT RIFT', 'rank': 'A', 'desc': 'Portal kuno bermuatan energi kosmik tak terduga'},
+      {
+        'name': 'GATE 01: AZURE CITADEL RIFT',
+        'rank': 'E',
+        'desc': 'Portal biru beresonansi rendah terdeteksi sensor',
+      },
+      {
+        'name': 'GATE 02: CRIMSON BOSS GATE',
+        'rank': 'D',
+        'desc': 'Aura magis merah darah terdeteksi di koordinat ini',
+      },
+      {
+        'name': 'GATE 03: SHADOW ABYSS PORTAL',
+        'rank': 'C',
+        'desc': 'Kepadatan mana tinggi menyerupai monster bayangan',
+      },
+      {
+        'name': 'GATE 04: SANCTUARY OF HEALING',
+        'rank': 'E',
+        'desc': 'Mata air penyembuhan energi pelindung barier',
+      },
+      {
+        'name': 'GATE 05: TITAN IRON CAVERN',
+        'rank': 'D',
+        'desc': 'Kandungan mineral langka dan monster bebatuan',
+      },
+      {
+        'name': 'GATE 06: PHANTOM MONARCH LAIR',
+        'rank': 'B',
+        'desc': 'Anomali dimensi terdistorsi di perimeter kota',
+      },
+      {
+        'name': 'GATE 07: CELESTIAL VAULT RIFT',
+        'rank': 'A',
+        'desc': 'Portal kuno bermuatan energi kosmik tak terduga',
+      },
     ];
 
     const double earthRadius = 6371000.0; // Radius bumi dalam meter
@@ -216,7 +254,8 @@ class DungeonMapService {
             math.cos(latRad) * math.sin(angularDistance) * math.cos(bearing),
       );
 
-      final double newLngRad = lngRad +
+      final double newLngRad =
+          lngRad +
           math.atan2(
             math.sin(bearing) * math.sin(angularDistance) * math.cos(latRad),
             math.cos(angularDistance) - math.sin(latRad) * math.sin(newLatRad),
@@ -282,7 +321,9 @@ class DungeonMapService {
     );
 
     if (distance > 50.0) {
-      throw Exception('Target terlalu jauh: ${distance.toInt()}m. Dekati gate dalam radius 50 meter!');
+      throw Exception(
+        'Target terlalu jauh: ${distance.toInt()}m. Dekati gate dalam radius 50 meter!',
+      );
     }
 
     if (gate.isClaimed) {
@@ -337,10 +378,22 @@ class DungeonMapService {
     } else if (roll < 90) {
       // 4. COLLECTIBLE PRIDE ITEM (15%): Rare Artifact + Blockchain Notarization
       final rareItems = [
-        {'name': "Kasaka's Venom Fang", 'desc': 'Belati taring berbisa dari bos dungeon rawa beracun.'},
-        {'name': "Demon Monarch's Dagger", 'desc': 'Senjata legendaris berdaya serang tinggi milik Raja Iblis.'},
-        {'name': 'Orb of Avarice', 'desc': 'Artefak permata api yang menggandakan kekuatan sihir seratus persen.'},
-        {'name': "Knight Commander's Helm", 'desc': 'Pelindung kepala prajurit bayangan berkehormatan tinggi.'},
+        {
+          'name': "Kasaka's Venom Fang",
+          'desc': 'Belati taring berbisa dari bos dungeon rawa beracun.',
+        },
+        {
+          'name': "Demon Monarch's Dagger",
+          'desc': 'Senjata legendaris berdaya serang tinggi milik Raja Iblis.',
+        },
+        {
+          'name': 'Orb of Avarice',
+          'desc': 'Artefak permata api yang menggandakan kekuatan sihir seratus persen.',
+        },
+        {
+          'name': "Knight Commander's Helm",
+          'desc': 'Pelindung kepala prajurit bayangan berkehormatan tinggi.',
+        },
       ];
       final pickedItem = rareItems[random.nextInt(rareItems.length)];
       final itemName = pickedItem['name']!;
@@ -361,7 +414,8 @@ class DungeonMapService {
       result = LootResult(
         type: LootType.collectible,
         title: 'COLLECTIBLE PRIDE ARTIFACT',
-        description: '${pickedItem['desc']} Tercatat resmi pada Blockchain Ledger!',
+        description:
+            '${pickedItem['desc']} Tercatat resmi pada Blockchain Ledger!',
         itemName: itemName,
       );
     } else {
@@ -384,7 +438,10 @@ class DungeonMapService {
       );
 
       await questBox.add(mysteryQuest);
-      await SupabaseApiService.syncQuest(quest: mysteryQuest, userId: player.id);
+      await SupabaseApiService.syncQuest(
+        quest: mysteryQuest,
+        userId: player.id,
+      );
 
       result = LootResult(
         type: LootType.quest,

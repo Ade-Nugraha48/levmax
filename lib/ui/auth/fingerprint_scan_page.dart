@@ -7,6 +7,7 @@
 // ==============================================================================
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../helpers/user_info.dart';
@@ -20,13 +21,7 @@ enum FingerprintScanMode {
   enroll, // Setor sidik jari patokan sekuritas
 }
 
-enum FingerprintFeedback {
-  neutral,
-  scanning,
-  warning,
-  error,
-  success,
-}
+enum FingerprintFeedback { neutral, scanning, warning, error, success }
 
 class FingerprintScanPage extends StatefulWidget {
   final FingerprintScanMode mode;
@@ -53,7 +48,8 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
   // Status Pemindaian & Sampel
   bool _isScanning = false;
   int _currentSample = 0;
-  static const int _targetSamples = 3; // 3 kali konfirmasi sentuhan untuk setor patokan
+  static const int _targetSamples =
+      3; // 3 kali konfirmasi sentuhan untuk setor patokan
 
   double _scanProgress = 0.0;
   String _statusText = 'MEMPERSIAPKAN SENSOR SIDIK JARI...';
@@ -139,7 +135,8 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
       _isScanning = true;
       _feedback = FingerprintFeedback.scanning;
       if (_currentMode == FingerprintScanMode.enroll) {
-        _statusText = 'TEMPELKAN JARI ANDA KE SENSOR (${_currentSample + 1}/$_targetSamples)...';
+        _statusText =
+            'TEMPELKAN JARI ANDA KE SENSOR (${_currentSample + 1}/$_targetSamples)...';
       } else {
         _statusText = 'TEMPELKAN JARI ANDA PADA SENSOR HP SAMSUNG...';
       }
@@ -149,7 +146,9 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
         ? 'Tempelkan sidik jari Anda untuk merekam sampel patokan (${_currentSample + 1}/$_targetSamples)'
         : 'Tempelkan sidik jari Anda pada sensor untuk verifikasi Hunter LevMax';
 
-    final result = await BiometricService.authenticateFingerprint(reason: reason);
+    final result = await BiometricService.authenticateFingerprint(
+      reason: reason,
+    );
 
     if (!mounted) return;
 
@@ -162,7 +161,8 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
     } else {
       setState(() {
         _feedback = FingerprintFeedback.error;
-        _statusText = result.errorMessage ?? 'Pemindaian sidik jari dibatalkan.';
+        _statusText =
+            result.errorMessage ?? 'Pemindaian sidik jari dibatalkan.';
       });
     }
   }
@@ -181,7 +181,8 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
 
       if (_currentSample < _targetSamples) {
         setState(() {
-          _statusText = 'SAMPEL $_currentSample BERHASIL! ANGKAT & TEMPELKAN KEMBALI JARI ANDA...';
+          _statusText =
+              'SAMPEL $_currentSample BERHASIL! ANGKAT & TEMPELKAN KEMBALI JARI ANDA...';
         });
 
         // Beri jeda singkat agar user mengangkat jari lalu minta sentuhan berikutnya
@@ -197,7 +198,8 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
 
         setState(() {
           _scanProgress = 1.0;
-          _statusText = 'PATOKAN SIDIK JARI BERHASIL DISIMPAN KE SISTEM LEVMAX!';
+          _statusText =
+              'PATOKAN SIDIK JARI BERHASIL DISIMPAN KE SISTEM LEVMAX!';
         });
 
         await Future.delayed(const Duration(milliseconds: 800));
@@ -266,11 +268,17 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF00E5FF)),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Color(0xFF00E5FF),
+                    ),
                     onPressed: () => Navigator.pop(context, false),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF131B2E).withValues(alpha: 0.85),
                       borderRadius: BorderRadius.circular(20),
@@ -342,7 +350,10 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
                   decoration: BoxDecoration(
                     color: const Color(0xFF131B2E).withValues(alpha: 0.95),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFFFB300), width: 1.8),
+                    border: Border.all(
+                      color: const Color(0xFFFFB300),
+                      width: 1.8,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFFFFB300).withValues(alpha: 0.3),
@@ -356,7 +367,11 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.warning_amber_rounded, color: Color(0xFFFFB300), size: 28),
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: Color(0xFFFFB300),
+                            size: 28,
+                          ),
                           SizedBox(width: 12),
                           Expanded(
                             child: Text(
@@ -374,18 +389,30 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
                       const SizedBox(height: 12),
                       const Text(
                         'Sistem keamanan LevMax mewajibkan Anda untuk menyetor sidik jari patokan terlebih dahulu agar sensor dapat digunakan untuk otorisasi.',
-                        style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
                         onPressed: _switchToEnrollmentMode,
-                        icon: const Icon(Icons.fingerprint, color: Colors.black),
-                        label: const Text('SETOR SIDIK JARI SEKARANG', style: TextStyle(fontWeight: FontWeight.bold)),
+                        icon: const Icon(
+                          Icons.fingerprint,
+                          color: Colors.black,
+                        ),
+                        label: const Text(
+                          'SETOR SIDIK JARI SEKARANG',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF00E5FF),
                           foregroundColor: Colors.black,
                           minimumSize: const Size.fromHeight(46),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ],
@@ -408,7 +435,8 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
                               height: 220,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: const Color(0xFF131B2E).withValues(alpha: 0.6),
+                                color: const Color(0xFF131B2E)
+                                    .withValues(alpha: 0.6),
                                 border: Border.all(
                                   color: scannerColor.withValues(alpha: 0.4),
                                   width: 2.0,
@@ -420,7 +448,8 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
                                     spreadRadius: 6,
                                   ),
                                   BoxShadow(
-                                    color: const Color(0xFF7B1FA2).withValues(alpha: 0.25),
+                                    color: const Color(0xFF7B1FA2)
+                                        .withValues(alpha: 0.25),
                                     blurRadius: 40,
                                     spreadRadius: 10,
                                   ),
@@ -438,10 +467,7 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: const Color(0xFF0A0E1A),
-                          border: Border.all(
-                            color: scannerColor,
-                            width: 2.5,
-                          ),
+                          border: Border.all(color: scannerColor, width: 2.5),
                         ),
                         child: Center(
                           child: Icon(
@@ -466,7 +492,9 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
                                   color: scannerColor,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: scannerColor.withValues(alpha: 0.9),
+                                      color: scannerColor.withValues(
+                                        alpha: 0.9,
+                                      ),
                                       blurRadius: 12,
                                       spreadRadius: 2,
                                     ),
@@ -484,7 +512,10 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
 
               // BOTTOM HUD PANEL STATUS
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF131B2E).withValues(alpha: 0.92),
                   borderRadius: BorderRadius.circular(20),
@@ -517,8 +548,8 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
                               _isScanComplete
                                   ? 'SELESAI DISAHKAN'
                                   : _currentMode == FingerprintScanMode.enroll
-                                      ? 'PROGRES SETOR PATOKAN'
-                                      : 'STATUS SENSOR',
+                                  ? 'PROGRES SETOR PATOKAN'
+                                  : 'STATUS SENSOR',
                               style: TextStyle(
                                 color: scannerColor,
                                 fontWeight: FontWeight.bold,
@@ -564,7 +595,10 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
               const SizedBox(height: 14),
 
               // Tombol Pemicu Ulang jika sensor tertutup/batal
-              if (!_isScanning && !_isScanComplete && (_hasEnrolledBaseline || _currentMode == FingerprintScanMode.enroll))
+              if (!_isScanning &&
+                  !_isScanComplete &&
+                  (_hasEnrolledBaseline ||
+                      _currentMode == FingerprintScanMode.enroll))
                 ElevatedButton.icon(
                   onPressed: _triggerSensorAuthentication,
                   icon: const Icon(Icons.fingerprint, color: Colors.black),
@@ -578,7 +612,9 @@ class _FingerprintScanPageState extends State<FingerprintScanPage>
                     backgroundColor: const Color(0xFF00E5FF),
                     foregroundColor: Colors.black,
                     minimumSize: const Size.fromHeight(46),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
             ],

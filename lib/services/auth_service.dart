@@ -7,8 +7,10 @@
 // ==============================================================================
 
 import 'dart:convert';
+
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+
 import '../helpers/user_info.dart';
 import '../models/user_model.dart';
 import 'biometric_service.dart';
@@ -29,7 +31,8 @@ class AuthService {
 
   /// Menghasilkan Token Sesi Kriptografis Unik menggunakan salt waktu mikrodetik dan SHA-256.
   static String generateSessionToken(String identifier) {
-    final salt = '${DateTime.now().microsecondsSinceEpoch}_${identifier}_levmax_auth_token';
+    final salt =
+        '${DateTime.now().microsecondsSinceEpoch}_${identifier}_levmax_auth_token';
     final bytes = utf8.encode(salt);
     return sha256.convert(bytes).toString();
   }
@@ -52,10 +55,7 @@ class AuthService {
 
     // 1. Validasi form dasar
     if (trimmedUsername.isEmpty || trimmedEmail.isEmpty || password.isEmpty) {
-      return {
-        'success': false,
-        'message': 'Semua kolom input wajib diisi.',
-      };
+      return {'success': false, 'message': 'Semua kolom input wajib diisi.'};
     }
 
     if (trimmedUsername.length < 3) {
@@ -67,10 +67,7 @@ class AuthService {
 
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(trimmedEmail)) {
-      return {
-        'success': false,
-        'message': 'Format alamat email tidak valid.',
-      };
+      return {'success': false, 'message': 'Format alamat email tidak valid.'};
     }
 
     if (password.length < 8) {
@@ -81,11 +78,14 @@ class AuthService {
     }
 
     // 2. Pemeriksaan duplikasi akun di Supabase
-    final existingUser = await SupabaseApiService.getUserByUsername(trimmedUsername);
+    final existingUser = await SupabaseApiService.getUserByUsername(
+      trimmedUsername,
+    );
     if (existingUser != null) {
       return {
         'success': false,
-        'message': 'Username "$trimmedUsername" sudah digunakan Hunter lain. Silakan pilih nama lain.',
+        'message':
+            'Username "$trimmedUsername" sudah digunakan Hunter lain. Silakan pilih nama lain.',
       };
     }
 
@@ -93,7 +93,8 @@ class AuthService {
     if (existingEmail != null) {
       return {
         'success': false,
-        'message': 'Email "$trimmedEmail" sudah terdaftar di Sistem. Silakan masuk atau gunakan email lain.',
+        'message':
+            'Email "$trimmedEmail" sudah terdaftar di Sistem. Silakan masuk atau gunakan email lain.',
       };
     }
 
@@ -156,7 +157,8 @@ class AuthService {
     return {
       'success': true,
       'user': createdUser,
-      'message': 'Registrasi Hunter berhasil! Bangkitkan kekuatan Anda sekarang.',
+      'message':
+          'Registrasi Hunter berhasil! Bangkitkan kekuatan Anda sekarang.',
     };
   }
 
@@ -250,13 +252,14 @@ class AuthService {
   // ============================================================================
 
   /// Melakukan login instan khusus menggunakan Face ID / Face Recognition
-  static Future<Map<String, dynamic>> loginFaceId({
-    String? reason,
-  }) async {
+  static Future<Map<String, dynamic>> loginFaceId({String? reason}) async {
     final isFaceConfigured = await UserInfo.getFaceIdEnabled();
     final biometricUserId = await UserInfo.getBiometricUserId();
 
-    if (!isFaceConfigured || biometricUserId == null || biometricUserId.isEmpty || biometricUserId == '0') {
+    if (!isFaceConfigured ||
+        biometricUserId == null ||
+        biometricUserId.isEmpty ||
+        biometricUserId == '0') {
       return {
         'success': false,
         'notConfigured': true,
@@ -265,7 +268,9 @@ class AuthService {
     }
 
     final authResult = await BiometricService.authenticateFace(
-      reason: reason ?? 'Arahkan wajah Anda ke kamera depan untuk otorisasi Face ID LevMax',
+      reason:
+          reason ??
+          'Arahkan wajah Anda ke kamera depan untuk otorisasi Face ID LevMax',
     );
 
     if (!authResult.success) {
@@ -280,13 +285,14 @@ class AuthService {
   }
 
   /// Melakukan login instan khusus menggunakan Sensor Sidik Jari (Fingerprint)
-  static Future<Map<String, dynamic>> loginFingerprint({
-    String? reason,
-  }) async {
+  static Future<Map<String, dynamic>> loginFingerprint({String? reason}) async {
     final isFpConfigured = await UserInfo.getFingerprintEnabled();
     final biometricUserId = await UserInfo.getBiometricUserId();
 
-    if (!isFpConfigured || biometricUserId == null || biometricUserId.isEmpty || biometricUserId == '0') {
+    if (!isFpConfigured ||
+        biometricUserId == null ||
+        biometricUserId.isEmpty ||
+        biometricUserId == '0') {
       return {
         'success': false,
         'notConfigured': true,
@@ -301,7 +307,8 @@ class AuthService {
     if (!authResult.success) {
       return {
         'success': false,
-        'message': authResult.errorMessage ?? 'Autentikasi Sidik Jari dibatalkan.',
+        'message':
+            authResult.errorMessage ?? 'Autentikasi Sidik Jari dibatalkan.',
         'isLockedOut': authResult.isLockedOut,
       };
     }
@@ -312,7 +319,9 @@ class AuthService {
   /// Melakukan login instan setelah pemindaian kamera wajah (Face Scan Kamera) berhasil
   static Future<Map<String, dynamic>> finalizeFaceScanLogin() async {
     final biometricUserId = await UserInfo.getBiometricUserId();
-    if (biometricUserId == null || biometricUserId.isEmpty || biometricUserId == '0') {
+    if (biometricUserId == null ||
+        biometricUserId.isEmpty ||
+        biometricUserId == '0') {
       return {
         'success': false,
         'message': 'Akun Hunter belum terdaftar untuk pemindaian wajah.',
@@ -324,7 +333,9 @@ class AuthService {
   /// Melakukan login instan setelah pemindaian sidik jari (Fingerprint Scan) berhasil
   static Future<Map<String, dynamic>> finalizeFingerprintLogin() async {
     final biometricUserId = await UserInfo.getBiometricUserId();
-    if (biometricUserId == null || biometricUserId.isEmpty || biometricUserId == '0') {
+    if (biometricUserId == null ||
+        biometricUserId.isEmpty ||
+        biometricUserId == '0') {
       return {
         'success': false,
         'message': 'Akun Hunter belum terdaftar untuk sensor sidik jari.',
@@ -388,13 +399,20 @@ class AuthService {
   }
 
   /// Helper untuk memfinalisasi sesi token setelah autentikasi biometrik berhasil
-  static Future<Map<String, dynamic>> _finalizeBiometricSession(dynamic biometricUserId, String methodLabel) =>
-      finalizeBiometricSession(biometricUserId, methodLabel);
+  static Future<Map<String, dynamic>> _finalizeBiometricSession(
+    dynamic biometricUserId,
+    String methodLabel,
+  ) => finalizeBiometricSession(biometricUserId, methodLabel);
 
-  static Future<Map<String, dynamic>> finalizeBiometricSession(dynamic biometricUserId, String methodLabel) async {
+  static Future<Map<String, dynamic>> finalizeBiometricSession(
+    dynamic biometricUserId,
+    String methodLabel,
+  ) async {
     UserModel? user;
     final cached = SupabaseApiService.getPlayerCache();
-    if (cached != null && (cached.id == biometricUserId.toString() || cached.id == biometricUserId)) {
+    if (cached != null &&
+        (cached.id == biometricUserId.toString() ||
+            cached.id == biometricUserId)) {
       user = cached;
     } else {
       user = await SupabaseApiService.getUserById(biometricUserId);
@@ -431,23 +449,27 @@ class AuthService {
       expiresAt: expiresAt,
     );
 
-    await SupabaseApiService.savePlayerCache(user.copyWith(biometricEnabled: true));
+    await SupabaseApiService.savePlayerCache(
+      user.copyWith(biometricEnabled: true),
+    );
 
     return {
       'success': true,
       'user': user,
-      'message': 'Otorisasi $methodLabel berhasil. Selamat datang, Hunter ${user.username}!',
+      'message':
+          'Otorisasi $methodLabel berhasil. Selamat datang, Hunter ${user.username}!',
     };
   }
 
   /// Melakukan login instan menggunakan Face ID atau Fingerprint (Umum)
-  static Future<Map<String, dynamic>> loginBiometric({
-    String? reason,
-  }) async {
+  static Future<Map<String, dynamic>> loginBiometric({String? reason}) async {
     final isBiometricConfigured = await UserInfo.getBiometricEnabled();
     final biometricUserId = await UserInfo.getBiometricUserId();
 
-    if (!isBiometricConfigured || biometricUserId == null || biometricUserId.isEmpty || biometricUserId == '0') {
+    if (!isBiometricConfigured ||
+        biometricUserId == null ||
+        biometricUserId.isEmpty ||
+        biometricUserId == '0') {
       return {
         'success': false,
         'notConfigured': true,
@@ -456,13 +478,16 @@ class AuthService {
     }
 
     final authResult = await BiometricService.authenticate(
-      localizedReason: reason ?? 'Pindai Face ID atau Sidik Jari untuk otorisasi Hunter LevMax',
+      localizedReason:
+          reason ??
+          'Pindai Face ID atau Sidik Jari untuk otorisasi Hunter LevMax',
     );
 
     if (!authResult.success) {
       return {
         'success': false,
-        'message': authResult.errorMessage ?? 'Autentikasi biometrik dibatalkan.',
+        'message':
+            authResult.errorMessage ?? 'Autentikasi biometrik dibatalkan.',
         'isLockedOut': authResult.isLockedOut,
       };
     }
@@ -481,9 +506,11 @@ class AuthService {
     String? localizedReason,
   }) async {
     final authResult = await BiometricService.authenticateFace(
-      reason: localizedReason ?? (enable
-          ? 'Pindai Face ID untuk mengaktifkan akses cepat biometrik wajah'
-          : 'Konfirmasi Face ID untuk menonaktifkan fitur ini'),
+      reason:
+          localizedReason ??
+          (enable
+              ? 'Pindai Face ID untuk mengaktifkan akses cepat biometrik wajah'
+              : 'Konfirmasi Face ID untuk menonaktifkan fitur ini'),
     );
 
     if (!authResult.success) {
@@ -522,15 +549,18 @@ class AuthService {
     String? localizedReason,
   }) async {
     final authResult = await BiometricService.authenticateFingerprint(
-      reason: localizedReason ?? (enable
-          ? 'Tempelkan sidik jari Anda untuk mengaktifkan akses cepat Fingerprint'
-          : 'Konfirmasi sidik jari Anda untuk menonaktifkan fitur ini'),
+      reason:
+          localizedReason ??
+          (enable
+              ? 'Tempelkan sidik jari Anda untuk mengaktifkan akses cepat Fingerprint'
+              : 'Konfirmasi sidik jari Anda untuk menonaktifkan fitur ini'),
     );
 
     if (!authResult.success) {
       return {
         'success': false,
-        'message': authResult.errorMessage ?? 'Verifikasi sidik jari dibatalkan.',
+        'message':
+            authResult.errorMessage ?? 'Verifikasi sidik jari dibatalkan.',
       };
     }
 
@@ -561,7 +591,9 @@ class AuthService {
     final isAnyActive = await UserInfo.getBiometricEnabled();
 
     UserModel? user;
-    if (userId != null && userId.toString().isNotEmpty && userId.toString() != '0') {
+    if (userId != null &&
+        userId.toString().isNotEmpty &&
+        userId.toString() != '0') {
       user = await SupabaseApiService.getUserById(userId);
     }
     user ??= SupabaseApiService.getPlayerCache();
@@ -583,15 +615,18 @@ class AuthService {
     String? localizedReason,
   }) async {
     final authResult = await BiometricService.authenticate(
-      localizedReason: localizedReason ?? (enable
-          ? 'Pindai Face ID atau Sidik Jari untuk mengaktifkan login instan Hunter'
-          : 'Konfirmasi biometrik Anda untuk menonaktifkan fitur ini'),
+      localizedReason:
+          localizedReason ??
+          (enable
+              ? 'Pindai Face ID atau Sidik Jari untuk mengaktifkan login instan Hunter'
+              : 'Konfirmasi biometrik Anda untuk menonaktifkan fitur ini'),
     );
 
     if (!authResult.success) {
       return {
         'success': false,
-        'message': authResult.errorMessage ?? 'Verifikasi biometrik dibatalkan.',
+        'message':
+            authResult.errorMessage ?? 'Verifikasi biometrik dibatalkan.',
       };
     }
 
@@ -630,7 +665,10 @@ class AuthService {
       final token = await UserInfo.getToken();
 
       if (userId != null && token != null) {
-        await SupabaseApiService.deleteUserToken(userId: userId, authKey: token);
+        await SupabaseApiService.deleteUserToken(
+          userId: userId,
+          authKey: token,
+        );
       }
     } catch (e) {
       debugPrint('Logout delete token error: $e');
@@ -659,9 +697,6 @@ class AuthService {
     required String username,
     required String password,
   }) async {
-    return loginUser(
-      email: username,
-      password: password,
-    );
+    return loginUser(email: username, password: password);
   }
 }

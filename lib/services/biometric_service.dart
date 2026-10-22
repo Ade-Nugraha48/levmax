@@ -124,10 +124,14 @@ class BiometricService {
 
     try {
       final types = await _localAuth.getAvailableBiometrics();
-      
+
       // Face Recognition di Samsung Galaxy M31 masuk ke tipe .face atau .weak
-      final hasFace = types.contains(BiometricType.face) || types.contains(BiometricType.weak);
-      final hasFingerprint = types.contains(BiometricType.fingerprint) || types.contains(BiometricType.strong);
+      final hasFace =
+          types.contains(BiometricType.face) ||
+          types.contains(BiometricType.weak);
+      final hasFingerprint =
+          types.contains(BiometricType.fingerprint) ||
+          types.contains(BiometricType.strong);
 
       return BiometricCapability(
         hasBiometrics: types.isNotEmpty || supported,
@@ -153,14 +157,20 @@ class BiometricService {
   /// Menjalankan pemindaian khusus Face ID / Face Recognition
   static Future<BiometricAuthResult> authenticateFace({String? reason}) async {
     return authenticate(
-      localizedReason: reason ?? 'Arahkan wajah Anda ke kamera depan untuk Face Recognition LevMax',
+      localizedReason:
+          reason ??
+          'Arahkan wajah Anda ke kamera depan untuk Face Recognition LevMax',
     );
   }
 
   /// Menjalankan pemindaian khusus Fingerprint / Sensor Sidik Jari
-  static Future<BiometricAuthResult> authenticateFingerprint({String? reason}) async {
+  static Future<BiometricAuthResult> authenticateFingerprint({
+    String? reason,
+  }) async {
     return authenticate(
-      localizedReason: reason ?? 'Tempelkan sidik jari Anda pada sensor untuk otorisasi Hunter LevMax',
+      localizedReason:
+          reason ??
+          'Tempelkan sidik jari Anda pada sensor untuk otorisasi Hunter LevMax',
     );
   }
 
@@ -183,8 +193,9 @@ class BiometricService {
           // KRUSIAL untuk Samsung M31:
           // biometricOnly di-set false agar BiometricPrompt mengizinkan sensor Class 2 / Weak (Face Unlock 2D)
           biometricOnly: false,
-          stickyAuth: true,       // Mencegah interupsi saat aplikasi kehilangan fokus sejenak
-          useErrorDialogs: true,  // Memunculkan dialog sistem bawaan Android jika sensor gagal
+          stickyAuth:
+              true, // Mencegah interupsi saat aplikasi kehilangan fokus sejenak
+          useErrorDialogs: true, // Memunculkan dialog sistem bawaan Android jika sensor gagal
         ),
       );
 
@@ -197,7 +208,9 @@ class BiometricService {
         );
       }
     } on PlatformException catch (e) {
-      debugPrint('Biometric PlatformException caught: code=${e.code}, msg=${e.message}');
+      debugPrint(
+        'Biometric PlatformException caught: code=${e.code}, msg=${e.message}',
+      );
 
       switch (e.code) {
         case auth_error.notAvailable:
@@ -250,7 +263,9 @@ class BiometricService {
       }
     } catch (e) {
       debugPrint('Biometric unknown error: $e');
-      return BiometricAuthResult.error('Gagal memverifikasi biometrik. Silakan gunakan password.');
+      return BiometricAuthResult.error(
+        'Gagal memverifikasi biometrik. Silakan gunakan password.',
+      );
     }
   }
 }

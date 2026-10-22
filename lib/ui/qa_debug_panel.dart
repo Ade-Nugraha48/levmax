@@ -7,6 +7,7 @@
 // ==============================================================================
 
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -27,11 +28,7 @@ class QaDebugPanel extends StatefulWidget {
   final UserModel? player;
   final VoidCallback? onUpdated;
 
-  const QaDebugPanel({
-    super.key,
-    this.player,
-    this.onUpdated,
-  });
+  const QaDebugPanel({super.key, this.player, this.onUpdated});
 
   @override
   State<QaDebugPanel> createState() => _QaDebugPanelState();
@@ -58,8 +55,12 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
     super.initState();
     _loadInitialPlayer();
     _addLog('SYS_INIT: Monarch QA God Mode Console initialized.');
-    _addLog('SECURITY: Operator credentials verified (Ade Nugraha - UAS Demo).');
-    _addLog('TARGET_TIME: System time is ${DateFormat('HH:mm:ss').format(DateTime.now())}.');
+    _addLog(
+      'SECURITY: Operator credentials verified (Ade Nugraha - UAS Demo).',
+    );
+    _addLog(
+      'TARGET_TIME: System time is ${DateFormat('HH:mm:ss').format(DateTime.now())}.',
+    );
   }
 
   @override
@@ -72,8 +73,13 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
     if (widget.player != null) {
       _player = widget.player!;
     } else {
-      _player = SupabaseApiService.getPlayerCache() ??
-          UserModel.initial(id: 'qa_monarch_01', username: 'Sung Jin-Woo', email: 'monarch@shadow.realm');
+      _player =
+          SupabaseApiService.getPlayerCache() ??
+          UserModel.initial(
+            id: 'qa_monarch_01',
+            username: 'Sung Jin-Woo',
+            email: 'monarch@shadow.realm',
+          );
     }
   }
 
@@ -122,7 +128,9 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
       });
       widget.onUpdated?.call();
 
-      _addLog('SUCCESS: +10,000 Gold injected! New Gold Balance: $newGold Gold.');
+      _addLog(
+        'SUCCESS: +10,000 Gold injected! New Gold Balance: $newGold Gold.',
+      );
       _showSnackbar('SUKSES: +10,000 Gold berhasil diinjeksikan!', hazardGreen);
     } catch (err) {
       _addLog('ERROR: Inject gold failed: $err');
@@ -158,7 +166,9 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
       });
       widget.onUpdated?.call();
 
-      _addLog('ALERT: Penalty Zone activated! Redirecting to Penalty Mini-Game...');
+      _addLog(
+        'ALERT: Penalty Zone activated! Redirecting to Penalty Mini-Game...',
+      );
       _showSnackbar('PENALTY DIAKTIFKAN! Membuka Penalty Zone...', hazardRed);
 
       await Future.delayed(const Duration(milliseconds: 600));
@@ -190,10 +200,18 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
 
     if (DebugConfig.forceHour21) {
       _addLog('TIME_BYPASS: ON. System time mocked to >= 21:00 Server Time.');
-      _showSnackbar('BYPASS WAKTU AKTIF: Jam sistem dipaksa 21:00!', hazardYellow);
+      _showSnackbar(
+        'BYPASS WAKTU AKTIF: Jam sistem dipaksa 21:00!',
+        hazardYellow,
+      );
     } else {
-      _addLog('TIME_BYPASS: OFF. Restored to actual device time (${DateTime.now().hour}:00).');
-      _showSnackbar('BYPASS WAKTU NONAKTIF: Mengikuti jam asli perangkat.', hazardCyan);
+      _addLog(
+        'TIME_BYPASS: OFF. Restored to actual device time (${DateTime.now().hour}:00).',
+      );
+      _showSnackbar(
+        'BYPASS WAKTU NONAKTIF: Mengikuti jam asli perangkat.',
+        hazardCyan,
+      );
     }
   }
 
@@ -203,7 +221,9 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
   Future<void> _resetDailyLimits() async {
     setState(() => _isLoading = true);
     HapticFeedback.mediumImpact();
-    _addLog('OVERRIDE_EXEC: Resetting daily mini-game reward and quest states...');
+    _addLog(
+      'OVERRIDE_EXEC: Resetting daily mini-game reward and quest states...',
+    );
 
     try {
       // 1. Reset flag daily reward mini-game di Hive playerBox
@@ -211,7 +231,9 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
         final box = Hive.box(HiveBoxes.playerBox);
         await box.put(MinigameService.keyDailyRewardClaimed, false);
         await box.put(MinigameService.keyDailyRewardDate, '');
-        _addLog('RESET_HIVE: Cleared minigame_gyro_reward_claimed in playerBox.');
+        _addLog(
+          'RESET_HIVE: Cleared minigame_gyro_reward_claimed in playerBox.',
+        );
       } catch (e) {
         _addLog('RESET_WARN: Hive playerBox reset note: $e');
       }
@@ -223,20 +245,22 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
         for (int i = 0; i < questBox.length; i++) {
           final q = questBox.getAt(i);
           if (q != null && (q.isCompleted || q.currentValue > 0)) {
-            final resetQuest = q.copyWith(
-              isCompleted: false,
-              currentValue: 0,
-            );
+            final resetQuest = q.copyWith(isCompleted: false, currentValue: 0);
             await questBox.putAt(i, resetQuest);
             resetCount++;
           }
         }
-        _addLog('RESET_QUESTS: Restored $resetCount daily quests to pending state.');
+        _addLog(
+          'RESET_QUESTS: Restored $resetCount daily quests to pending state.',
+        );
       } catch (e) {
         _addLog('RESET_WARN: Hive questBox reset note: $e');
       }
 
-      _showSnackbar('SUKSES: Limit harian mini-game dan quest direset!', hazardGreen);
+      _showSnackbar(
+        'SUKSES: Limit harian mini-game dan quest direset!',
+        hazardGreen,
+      );
     } catch (err) {
       _addLog('ERROR: Reset daily limits failed: $err');
       _showSnackbar('Gagal reset daily limits: $err', hazardRed);
@@ -256,7 +280,9 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
     try {
       final currentRank = _player.rank.toUpperCase();
       final rankCfg = RankConfig.getConfig(currentRank);
-      final nextRank = rankCfg.targetRank.split(' ').first; // e.g. "D", "C", "B", "A", "S"
+      final nextRank = rankCfg.targetRank
+          .split(' ')
+          .first; // e.g. "D", "C", "B", "A", "S"
 
       final newLevel = _player.level + 1;
       final newRank = (rankCfg.targetRank != 'S (Uncapped)') ? nextRank : 'S';
@@ -288,7 +314,9 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
       });
       widget.onUpdated?.call();
 
-      _addLog('PROMOTION: Hunter successfully promoted to Rank $newRank (Level $newLevel)!');
+      _addLog(
+        'PROMOTION: Hunter successfully promoted to Rank $newRank (Level $newLevel)!',
+      );
       _showLevelUpDialog(newRank, newLevel);
     } catch (err) {
       _addLog('ERROR: Force level up failed: $err');
@@ -319,7 +347,11 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
             Expanded(
               child: Text(
                 text,
-                style: LevMaxTheme.mono(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+                style: LevMaxTheme.mono(
+                  fontSize: 12,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -374,24 +406,63 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('LEVEL:', style: LevMaxTheme.mono(fontSize: 12, color: Colors.white60)),
-                      Text('$newLevel', style: LevMaxTheme.mono(fontSize: 14, fontWeight: FontWeight.w900, color: hazardCyan)),
+                      Text(
+                        'LEVEL:',
+                        style: LevMaxTheme.mono(
+                          fontSize: 12,
+                          color: Colors.white60,
+                        ),
+                      ),
+                      Text(
+                        '$newLevel',
+                        style: LevMaxTheme.mono(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: hazardCyan,
+                        ),
+                      ),
                     ],
                   ),
                   const Divider(color: hazardBorder, height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('NEW RANK:', style: LevMaxTheme.mono(fontSize: 12, color: Colors.white60)),
-                      Text('RANK $newRank', style: LevMaxTheme.mono(fontSize: 16, fontWeight: FontWeight.w900, color: hazardYellow)),
+                      Text(
+                        'NEW RANK:',
+                        style: LevMaxTheme.mono(
+                          fontSize: 12,
+                          color: Colors.white60,
+                        ),
+                      ),
+                      Text(
+                        'RANK $newRank',
+                        style: LevMaxTheme.mono(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: hazardYellow,
+                        ),
+                      ),
                     ],
                   ),
                   const Divider(color: hazardBorder, height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('ALL STATS:', style: LevMaxTheme.mono(fontSize: 12, color: Colors.white60)),
-                      Text('+5 POINTS', style: LevMaxTheme.mono(fontSize: 12, fontWeight: FontWeight.bold, color: hazardGreen)),
+                      Text(
+                        'ALL STATS:',
+                        style: LevMaxTheme.mono(
+                          fontSize: 12,
+                          color: Colors.white60,
+                        ),
+                      ),
+                      Text(
+                        '+5 POINTS',
+                        style: LevMaxTheme.mono(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: hazardGreen,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -404,7 +475,11 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
             onPressed: () => Navigator.pop(ctx),
             child: Text(
               'ACKNOWLEDGE',
-              style: LevMaxTheme.mono(fontSize: 13, fontWeight: FontWeight.w900, color: hazardYellow),
+              style: LevMaxTheme.mono(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: hazardYellow,
+              ),
             ),
           ),
         ],
@@ -540,9 +615,13 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
                           : 'BYPASS TIME: FORCE 21:00',
                       subtitle: 'Buka paksa submit Skincare Appearance Quest di siang hari',
                       icon: Icons.access_time_filled,
-                      accentColor: DebugConfig.forceHour21 ? hazardGreen : hazardCyan,
+                      accentColor: DebugConfig.forceHour21
+                          ? hazardGreen
+                          : hazardCyan,
                       badgeText: DebugConfig.forceHour21 ? 'FORCED ON' : 'OFF',
-                      badgeColor: DebugConfig.forceHour21 ? hazardGreen : Colors.white38,
+                      badgeColor: DebugConfig.forceHour21
+                          ? hazardGreen
+                          : Colors.white38,
                       isLoading: false,
                       onPressed: _toggleTimeBypass,
                     ),
@@ -615,10 +694,7 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
                 Text(
                   'Menu ini disediakan eksklusif untuk demonstrasi di hadapan Dosen Penguji. '
                   'Perubahan state akan merefleksikan Hive lokal, Supabase Cloud, dan Blockchain Ledger secara simultan.',
-                  style: LevMaxTheme.mono(
-                    fontSize: 10,
-                    color: Colors.white70,
-                  ),
+                  style: LevMaxTheme.mono(fontSize: 10, color: Colors.white70),
                 ),
               ],
             ),
@@ -673,7 +749,11 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
                     const SizedBox(width: 4),
                     Text(
                       'ONLINE',
-                      style: LevMaxTheme.mono(fontSize: 9, color: hazardGreen, fontWeight: FontWeight.bold),
+                      style: LevMaxTheme.mono(
+                        fontSize: 9,
+                        color: hazardGreen,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -685,10 +765,18 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
           Row(
             children: [
               Expanded(
-                child: _buildTelemetryItem('HUNTER', _player.username, hazardCyan),
+                child: _buildTelemetryItem(
+                  'HUNTER',
+                  _player.username,
+                  hazardCyan,
+                ),
               ),
               Expanded(
-                child: _buildTelemetryItem('RANK / LVL', 'Rank ${_player.rank} (Lv ${_player.level})', hazardYellow),
+                child: _buildTelemetryItem(
+                  'RANK / LVL',
+                  'Rank ${_player.rank} (Lv ${_player.level})',
+                  hazardYellow,
+                ),
               ),
             ],
           ),
@@ -696,10 +784,18 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
           Row(
             children: [
               Expanded(
-                child: _buildTelemetryItem('GOLD TREASURY', '${_player.gold} G', hazardYellow),
+                child: _buildTelemetryItem(
+                  'GOLD TREASURY',
+                  '${_player.gold} G',
+                  hazardYellow,
+                ),
               ),
               Expanded(
-                child: _buildTelemetryItem('HP / ATTRIBUTES', '${_player.hp}% HP (STR:${_player.str} AGI:${_player.agi})', hazardRed),
+                child: _buildTelemetryItem(
+                  'HP / ATTRIBUTES',
+                  '${_player.hp}% HP (STR:${_player.str} AGI:${_player.agi})',
+                  hazardRed,
+                ),
               ),
             ],
           ),
@@ -751,7 +847,11 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
         const SizedBox(height: 2),
         Text(
           value,
-          style: LevMaxTheme.mono(fontSize: 12, fontWeight: FontWeight.bold, color: valueColor),
+          style: LevMaxTheme.mono(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: valueColor,
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -824,7 +924,9 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
                   decoration: BoxDecoration(
                     color: accentColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: accentColor.withValues(alpha: 0.4)),
+                    border: Border.all(
+                      color: accentColor.withValues(alpha: 0.4),
+                    ),
                   ),
                   child: isLoading
                       ? SizedBox(
@@ -859,11 +961,18 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
                           if (badgeText != null) ...[
                             const SizedBox(width: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: (badgeColor ?? accentColor).withValues(alpha: 0.2),
+                                color: (badgeColor ?? accentColor).withValues(
+                                  alpha: 0.2,
+                                ),
                                 borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: badgeColor ?? accentColor),
+                                border: Border.all(
+                                  color: badgeColor ?? accentColor,
+                                ),
                               ),
                               child: Text(
                                 badgeText,
@@ -881,12 +990,19 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
                       const SizedBox(height: 3),
                       Text(
                         subtitle,
-                        style: LevMaxTheme.mono(fontSize: 10, color: Colors.white60),
+                        style: LevMaxTheme.mono(
+                          fontSize: 10,
+                          color: Colors.white60,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: Colors.white30, size: 20),
+                const Icon(
+                  Icons.chevron_right,
+                  color: Colors.white30,
+                  size: 20,
+                ),
               ],
             ),
           ),
@@ -904,9 +1020,7 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
       width: double.infinity,
       decoration: const BoxDecoration(
         color: Color(0xFF070A10),
-        border: Border(
-          top: BorderSide(color: hazardBorder, width: 1.5),
-        ),
+        border: Border(top: BorderSide(color: hazardBorder, width: 1.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -959,9 +1073,13 @@ class _QaDebugPanelState extends State<QaDebugPanel> {
               itemBuilder: (context, index) {
                 final log = _consoleLogs[index];
                 Color logColor = hazardGreen;
-                if (log.contains('ERROR:')) logColor = hazardRed;
-                if (log.contains('ALERT:') || log.contains('OVERRIDE_EXEC:')) logColor = hazardYellow;
-                if (log.contains('TIME_BYPASS:')) logColor = hazardCyan;
+                if (log.contains('ERROR:')) {
+                  logColor = hazardRed;
+                } else if (log.contains('ALERT:') || log.contains('OVERRIDE_EXEC:')) {
+                  logColor = hazardYellow;
+                } else if (log.contains('TIME_BYPASS:')) {
+                  logColor = hazardCyan;
+                }
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 3),

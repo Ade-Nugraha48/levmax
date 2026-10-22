@@ -9,6 +9,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
@@ -37,7 +38,8 @@ class SensorStudyPage extends StatefulWidget {
   State<SensorStudyPage> createState() => _SensorStudyPageState();
 }
 
-class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProviderStateMixin {
+class _SensorStudyPageState extends State<SensorStudyPage>
+    with SingleTickerProviderStateMixin {
   // Sensor Stream & Filter
   StreamSubscription<AccelerometerEvent>? _sensorSubscription;
   double _rawPitch = 12.5;
@@ -91,7 +93,8 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
 
           // Hitung Pitch Kemiringan Maju/Mundur:
           // Sumbu Y = vertikal smartphone, Sumbu Z = kedalaman layar
-          final double calculatedPitch = (atan2(event.z.abs(), event.y.abs()) * 180 / pi);
+          final double calculatedPitch =
+              (atan2(event.z.abs(), event.y.abs()) * 180 / pi);
 
           // Normalisasi kemiringan ke rentang realistis 5° - 45°
           final double clampedPitch = calculatedPitch.clamp(5.0, 45.0);
@@ -182,7 +185,11 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
               Expanded(
                 child: Text(
                   '[SLOUCH PENALTY EXECUTED] Posture failed! -10 HP / -50 Mana.',
-                  style: LevMaxTheme.mono(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: LevMaxTheme.mono(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
@@ -248,7 +255,13 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('RESUME', style: LevMaxTheme.mono(fontSize: 12, color: const Color(0xFF849495))),
+            child: Text(
+              'RESUME',
+              style: LevMaxTheme.mono(
+                fontSize: 12,
+                color: const Color(0xFF849495),
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -256,7 +269,14 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
               backgroundColor: const Color(0xFF00F0FF),
               foregroundColor: const Color(0xFF002022),
             ),
-            child: Text('CLAIM & EXIT', style: LevMaxTheme.mono(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF002022))),
+            child: Text(
+              'CLAIM & EXIT',
+              style: LevMaxTheme.mono(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF002022),
+              ),
+            ),
           ),
         ],
       ),
@@ -269,7 +289,10 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
         widget.quest!.currentValue = widget.quest!.targetValue;
         await widget.quest!.save();
         if (widget.player != null) {
-          await SupabaseApiService.syncQuest(quest: widget.quest!, userId: widget.player!.id);
+          await SupabaseApiService.syncQuest(
+            quest: widget.quest!,
+            userId: widget.player!.id,
+          );
         }
       } else {
         // Cari quest study di Hive jika dibuka via tab
@@ -307,7 +330,11 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFFDFE2F1), size: 20),
+            icon: const Icon(
+              Icons.arrow_back,
+              color: Color(0xFFDFE2F1),
+              size: 20,
+            ),
             onPressed: () => Navigator.pop(context),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -357,9 +384,7 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               color: Color(0xFFDBFCFF),
-              boxShadow: [
-                BoxShadow(color: Color(0x3300F0FF), blurRadius: 8),
-              ],
+              boxShadow: [BoxShadow(color: Color(0x3300F0FF), blurRadius: 8)],
             ),
             child: const Center(
               child: Icon(Icons.person, color: Color(0xFF00363A), size: 18),
@@ -399,7 +424,11 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
                           color: Color(0xFF00F0FF),
                           shape: BoxShape.circle,
                           boxShadow: [
-                            BoxShadow(color: Color(0xFF00F0FF), blurRadius: 6, spreadRadius: 1),
+                            BoxShadow(
+                              color: Color(0xFF00F0FF),
+                              blurRadius: 6,
+                              spreadRadius: 1,
+                            ),
                           ],
                         ),
                       ),
@@ -504,7 +533,9 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
         color: const Color(0xFF171B26),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isSlouching ? const Color(0x66EF4444) : const Color(0x1400F0FF),
+          color: isSlouching
+              ? const Color(0x66EF4444)
+              : const Color(0x1400F0FF),
           width: 1,
         ),
       ),
@@ -517,18 +548,27 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
             children: [
               Row(
                 children: [
-                  const Icon(Icons.screen_rotation, size: 16, color: Color(0xFF00F0FF)),
+                  const Icon(
+                    Icons.screen_rotation,
+                    size: 16,
+                    color: Color(0xFF00F0FF),
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'GYRO PITCH: ',
-                    style: LevMaxTheme.mono(fontSize: 11, color: const Color(0xFFB9CACB)),
+                    style: LevMaxTheme.mono(
+                      fontSize: 11,
+                      color: const Color(0xFFB9CACB),
+                    ),
                   ),
                   Text(
                     '${_filteredPitch.toStringAsFixed(1)}°',
                     style: LevMaxTheme.mono(
                       fontSize: 12,
                       fontWeight: FontWeight.w900,
-                      color: isSlouching ? const Color(0xFFEF4444) : const Color(0xFF00F0FF),
+                      color: isSlouching
+                          ? const Color(0xFFEF4444)
+                          : const Color(0xFF00F0FF),
                     ),
                   ),
                 ],
@@ -573,11 +613,16 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
                   bottom: 6,
                   right: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF0A0E18).withValues(alpha: 0.85),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                      border: Border.all(
+                        color: statusColor.withValues(alpha: 0.4),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -694,7 +739,10 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
                   color: fillColor,
                   borderRadius: BorderRadius.circular(4),
                   boxShadow: [
-                    BoxShadow(color: fillColor.withValues(alpha: 0.6), blurRadius: 6),
+                    BoxShadow(
+                      color: fillColor.withValues(alpha: 0.6),
+                      blurRadius: 6,
+                    ),
                   ],
                 ),
               ),
@@ -729,7 +777,11 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
             children: [
               Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFFCD34D)),
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    size: 18,
+                    color: Color(0xFFFCD34D),
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'WARNING: NERD-NECK DETECTED!',
@@ -777,11 +829,18 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
   Widget _buildCountdownHeroClock() {
     final minutes = _remainingSeconds ~/ 60;
     final seconds = _remainingSeconds % 60;
-    final timeStr = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    final timeStr =
+        '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 
-    final completedPercent = (((_totalDurationSeconds - _remainingSeconds) / _totalDurationSeconds) * 100).toInt();
-    final elapsedMins = ((_totalDurationSeconds - _remainingSeconds) / 60.0).toStringAsFixed(1);
-    final progressRatio = ((_totalDurationSeconds - _remainingSeconds) / _totalDurationSeconds).clamp(0.0, 1.0);
+    final completedPercent =
+        (((_totalDurationSeconds - _remainingSeconds) / _totalDurationSeconds) *
+                100)
+            .toInt();
+    final elapsedMins = ((_totalDurationSeconds - _remainingSeconds) / 60.0)
+        .toStringAsFixed(1);
+    final progressRatio =
+        ((_totalDurationSeconds - _remainingSeconds) / _totalDurationSeconds)
+            .clamp(0.0, 1.0);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -879,7 +938,11 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
               Expanded(
                 child: Row(
                   children: [
-                    const Icon(Icons.auto_stories, size: 16, color: Color(0xFFD2BBFF)),
+                    const Icon(
+                      Icons.auto_stories,
+                      size: 16,
+                      color: Color(0xFFD2BBFF),
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -931,7 +994,9 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
               children: [
                 // Render asset gambar lokal hasil generate
                 Image.file(
-                  File(r'C:\Users\Adi\.gemini\antigravity-ide\brain\5f8ad352-2d94-4c53-ba93-021150af1020\scholar_sanctuary_1792431629553.jpg'),
+                  File(
+                    r'C:\Users\Adi\.gemini\antigravity-ide\brain\5f8ad352-2d94-4c53-ba93-021150af1020\scholar_sanctuary_1792431629553.jpg',
+                  ),
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Image.asset(
                     'assets/images/scholar_sanctuary.jpg',
@@ -939,7 +1004,11 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
                     errorBuilder: (_, __, ___) => Container(
                       color: const Color(0xFF0F131D),
                       child: const Center(
-                        child: Icon(Icons.computer, size: 48, color: Color(0xFF00F0FF)),
+                        child: Icon(
+                          Icons.computer,
+                          size: 48,
+                          color: Color(0xFF00F0FF),
+                        ),
                       ),
                     ),
                   ),
@@ -961,7 +1030,10 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
                   bottom: 8,
                   left: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xCC0A0E18),
                       borderRadius: BorderRadius.circular(10),
@@ -995,7 +1067,10 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
                   bottom: 8,
                   right: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xCC0A0E18),
                       borderRadius: BorderRadius.circular(10),
@@ -1070,7 +1145,9 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
                 const Icon(Icons.coffee, size: 18, color: Color(0xFF00F0FF)),
                 const SizedBox(width: 8),
                 Text(
-                  _isPaused ? 'RESUME FOCUS SESSION' : 'PAUSE SESSION [TAKE 5M BREAK]',
+                  _isPaused
+                      ? 'RESUME FOCUS SESSION'
+                      : 'PAUSE SESSION [TAKE 5M BREAK]',
                   style: LevMaxTheme.mono(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -1097,7 +1174,11 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.stop_circle_outlined, size: 18, color: Color(0xFFEF4444)),
+                const Icon(
+                  Icons.stop_circle_outlined,
+                  size: 18,
+                  color: Color(0xFFEF4444),
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'CONCLUDE STUDY PROTOCOL',
@@ -1130,7 +1211,10 @@ class _SensorStudyPageState extends State<SensorStudyPage> with SingleTickerProv
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -1174,10 +1258,7 @@ class _CyberSpinePainter extends CustomPainter {
   final double pitchAngle; // Dalam derajat
   final bool isNerdNeck;
 
-  _CyberSpinePainter({
-    required this.pitchAngle,
-    required this.isNerdNeck,
-  });
+  _CyberSpinePainter({required this.pitchAngle, required this.isNerdNeck});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1193,8 +1274,16 @@ class _CyberSpinePainter extends CustomPainter {
     canvas.drawCircle(center, 70, radarPaint);
 
     // Garis Crosshair Sumbu Tengah
-    canvas.drawLine(Offset(center.dx - 12, center.dy), Offset(center.dx + 12, center.dy), radarPaint);
-    canvas.drawLine(Offset(center.dx, center.dy - 12), Offset(center.dx, center.dy + 12), radarPaint);
+    canvas.drawLine(
+      Offset(center.dx - 12, center.dy),
+      Offset(center.dx + 12, center.dy),
+      radarPaint,
+    );
+    canvas.drawLine(
+      Offset(center.dx, center.dy - 12),
+      Offset(center.dx, center.dy + 12),
+      radarPaint,
+    );
 
     // 2. Datum Vertikal Ideal (Garis Putus-Putus)
     final datumPaint = Paint()
@@ -1204,7 +1293,11 @@ class _CyberSpinePainter extends CustomPainter {
     const dashSpace = 4.0;
     double startY = 20;
     while (startY < size.height - 20) {
-      canvas.drawLine(Offset(center.dx, startY), Offset(center.dx, startY + dashHeight), datumPaint);
+      canvas.drawLine(
+        Offset(center.dx, startY),
+        Offset(center.dx, startY + dashHeight),
+        datumPaint,
+      );
       startY += dashHeight + dashSpace;
     }
 
@@ -1215,26 +1308,39 @@ class _CyberSpinePainter extends CustomPainter {
       height: 8,
     );
     final anchorPaint = Paint()..color = const Color(0xFF00F0FF);
-    canvas.drawRRect(RRect.fromRectAndRadius(baseRect, const Radius.circular(2)), anchorPaint);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(baseRect, const Radius.circular(2)),
+      anchorPaint,
+    );
 
     // 4. Kalkulasi Defleksi Tulang Belakang Dinamis berdasarkan Pitch
     // Pitch 0°-15° = deviasi halus; > 25° = kurva condong tajam ke kanan
     final double tiltRatio = (pitchAngle / 45.0).clamp(0.0, 1.0);
-    final double maxHeadShiftX = 42.0 * tiltRatio; // pergeseran kepala ke arah kanan
+    final double maxHeadShiftX =
+        42.0 * tiltRatio; // pergeseran kepala ke arah kanan
 
     final spineStart = Offset(center.dx, size.height - 28);
     final spineEnd = Offset(center.dx + maxHeadShiftX, 48);
 
     // Titik Kontrol Lengkung Tulang Belakang
-    final controlPoint = Offset(center.dx + (maxHeadShiftX * 0.4), (spineStart.dy + spineEnd.dy) / 2);
+    final controlPoint = Offset(
+      center.dx + (maxHeadShiftX * 0.4),
+      (spineStart.dy + spineEnd.dy) / 2,
+    );
 
     final spinePath = Path()
       ..moveTo(spineStart.dx, spineStart.dy)
-      ..quadraticBezierTo(controlPoint.dx, controlPoint.dy, spineEnd.dx, spineEnd.dy);
+      ..quadraticBezierTo(
+        controlPoint.dx,
+        controlPoint.dy,
+        spineEnd.dx,
+        spineEnd.dy,
+      );
 
     // Glow Effect Tulang Belakang
     final spineGlowPaint = Paint()
-      ..color = (isNerdNeck ? const Color(0xFFEF4444) : const Color(0xFF00F0FF)).withValues(alpha: 0.5)
+      ..color = (isNerdNeck ? const Color(0xFFEF4444) : const Color(0xFF00F0FF))
+          .withValues(alpha: 0.5)
       ..strokeWidth = 6.0
       ..style = PaintingStyle.stroke
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
@@ -1252,8 +1358,14 @@ class _CyberSpinePainter extends CustomPainter {
     final nodePaint = Paint()..color = const Color(0xFFDBFCFF);
     for (double t = 0.2; t <= 0.8; t += 0.2) {
       // Rumus kuadratik bezier: B(t) = (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
-      final double nx = (1 - t) * (1 - t) * spineStart.dx + 2 * (1 - t) * t * controlPoint.dx + t * t * spineEnd.dx;
-      final double ny = (1 - t) * (1 - t) * spineStart.dy + 2 * (1 - t) * t * controlPoint.dy + t * t * spineEnd.dy;
+      final double nx =
+          (1 - t) * (1 - t) * spineStart.dx +
+          2 * (1 - t) * t * controlPoint.dx +
+          t * t * spineEnd.dx;
+      final double ny =
+          (1 - t) * (1 - t) * spineStart.dy +
+          2 * (1 - t) * t * controlPoint.dy +
+          t * t * spineEnd.dy;
       canvas.drawCircle(Offset(nx, ny), 3, nodePaint);
     }
 
@@ -1274,7 +1386,11 @@ class _CyberSpinePainter extends CustomPainter {
     final visorPaint = Paint()..color = const Color(0xFF00F0FF);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(headCenter.dx + 2, headCenter.dy), width: 10, height: 3),
+        Rect.fromCenter(
+          center: Offset(headCenter.dx + 2, headCenter.dy),
+          width: 10,
+          height: 3,
+        ),
         const Radius.circular(1),
       ),
       visorPaint,
@@ -1306,11 +1422,18 @@ class _CyberSpinePainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final arcRect = Rect.fromCircle(center: center, radius: 76);
-    canvas.drawArc(arcRect, -pi / 2 - 0.2, 0.45 * tiltRatio + 0.15, false, arcPaint);
+    canvas.drawArc(
+      arcRect,
+      -pi / 2 - 0.2,
+      0.45 * tiltRatio + 0.15,
+      false,
+      arcPaint,
+    );
 
     // Teks Label Derajat "12° OPTIMAL"
     final textSpan = TextSpan(
-      text: '${pitchAngle.toStringAsFixed(0)}° ${isNerdNeck ? 'NERD-NECK' : 'OPTIMAL'}',
+      text:
+          '${pitchAngle.toStringAsFixed(0)}° ${isNerdNeck ? 'NERD-NECK' : 'OPTIMAL'}',
       style: TextStyle(
         fontFamily: 'monospace',
         fontSize: 10,
@@ -1328,6 +1451,7 @@ class _CyberSpinePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CyberSpinePainter oldDelegate) {
-    return oldDelegate.pitchAngle != pitchAngle || oldDelegate.isNerdNeck != isNerdNeck;
+    return oldDelegate.pitchAngle != pitchAngle ||
+        oldDelegate.isNerdNeck != isNerdNeck;
   }
 }

@@ -10,6 +10,7 @@
 // ==============================================================================
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -138,25 +139,26 @@ class _DungeonMapViewState extends State<DungeonMapView>
   }
 
   void _startPositionStream() {
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 3, // Update setiap perpindahan 3 meter
-      ),
-    ).listen(
-      (Position position) {
-        if (!mounted) return;
-        setState(() {
-          _currentLat = position.latitude;
-          _currentLng = position.longitude;
-          _gpsAccuracy = position.accuracy;
-          _isGpsActive = true;
-        });
-      },
-      onError: (e) {
-        debugPrint('[DungeonMap] Position stream error: $e');
-      },
-    );
+    _positionStream =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 3, // Update setiap perpindahan 3 meter
+          ),
+        ).listen(
+          (Position position) {
+            if (!mounted) return;
+            setState(() {
+              _currentLat = position.latitude;
+              _currentLng = position.longitude;
+              _gpsAccuracy = position.accuracy;
+              _isGpsActive = true;
+            });
+          },
+          onError: (e) {
+            debugPrint('[DungeonMap] Position stream error: $e');
+          },
+        );
   }
 
   void _recenterMapOnPlayer() {
@@ -304,7 +306,10 @@ class _DungeonMapViewState extends State<DungeonMapView>
                   children: [
                     Text(
                       'GOLD ACQUIRED',
-                      style: LevMaxTheme.mono(fontSize: 10, color: LevMaxTheme.onSurfaceVariant),
+                      style: LevMaxTheme.mono(
+                        fontSize: 10,
+                        color: LevMaxTheme.onSurfaceVariant,
+                      ),
                     ),
                     Text(
                       '+${result.goldAmount} GOLD',
@@ -359,7 +364,9 @@ class _DungeonMapViewState extends State<DungeonMapView>
               style: LevMaxTheme.mono(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: result.type == LootType.collectible ? Colors.white : Colors.black,
+                color: result.type == LootType.collectible
+                    ? Colors.white
+                    : Colors.black,
               ),
             ),
           ),
@@ -382,7 +389,10 @@ class _DungeonMapViewState extends State<DungeonMapView>
           children: [
             CircularProgressIndicator(color: LevMaxTheme.primaryContainer),
             SizedBox(height: 16),
-            Text('SCANNING DIMENSIONAL RIFTS VIA GPS...', style: TextStyle(color: Colors.white70)),
+            Text(
+              'SCANNING DIMENSIONAL RIFTS VIA GPS...',
+              style: TextStyle(color: Colors.white70),
+            ),
           ],
         ),
       );
@@ -431,7 +441,9 @@ class _DungeonMapViewState extends State<DungeonMapView>
             children: [
               Icon(
                 Icons.satellite_alt,
-                color: _isGpsActive ? LevMaxTheme.primaryContainer : Colors.amber,
+                color: _isGpsActive
+                    ? LevMaxTheme.primaryContainer
+                    : Colors.amber,
                 size: 15,
               ),
               const SizedBox(width: 8),
@@ -440,7 +452,9 @@ class _DungeonMapViewState extends State<DungeonMapView>
                 style: LevMaxTheme.mono(
                   fontSize: 9.5,
                   fontWeight: FontWeight.bold,
-                  color: _isGpsActive ? LevMaxTheme.primaryContainer : Colors.amber,
+                  color: _isGpsActive
+                      ? LevMaxTheme.primaryContainer
+                      : Colors.amber,
                   letterSpacing: 0.8,
                 ),
               ),
@@ -463,11 +477,7 @@ class _DungeonMapViewState extends State<DungeonMapView>
   // 2. FILTER CHIPS
   // ============================================================================
   Widget _buildFilterChipsRow() {
-    final filters = [
-      'All Gates',
-      'Unclaimed',
-      'Claimed',
-    ];
+    final filters = ['All Gates', 'Unclaimed', 'Claimed'];
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -488,7 +498,9 @@ class _DungeonMapViewState extends State<DungeonMapView>
               backgroundColor: const Color(0xFF131826),
               selectedColor: LevMaxTheme.primaryContainer,
               side: BorderSide(
-                color: isSelected ? LevMaxTheme.primaryContainer : const Color(0xFF1E2638),
+                color: isSelected
+                    ? LevMaxTheme.primaryContainer
+                    : const Color(0xFF1E2638),
               ),
               onSelected: (_) {
                 setState(() {
@@ -579,7 +591,10 @@ class _DungeonMapViewState extends State<DungeonMapView>
                             _selectedGate = gate;
                           });
                         },
-                        child: _buildGateMarkerWidget(gate, isSelected: isSelected),
+                        child: _buildGateMarkerWidget(
+                          gate,
+                          isSelected: isSelected,
+                        ),
                       ),
                     );
                   }),
@@ -604,11 +619,17 @@ class _DungeonMapViewState extends State<DungeonMapView>
                 children: [
                   Text(
                     'LAT: ${_currentLat.toStringAsFixed(5)}',
-                    style: LevMaxTheme.mono(fontSize: 9, color: LevMaxTheme.primaryContainer),
+                    style: LevMaxTheme.mono(
+                      fontSize: 9,
+                      color: LevMaxTheme.primaryContainer,
+                    ),
                   ),
                   Text(
                     'LNG: ${_currentLng.toStringAsFixed(5)}',
-                    style: LevMaxTheme.mono(fontSize: 9, color: LevMaxTheme.primaryContainer),
+                    style: LevMaxTheme.mono(
+                      fontSize: 9,
+                      color: LevMaxTheme.primaryContainer,
+                    ),
                   ),
                 ],
               ),
@@ -624,7 +645,9 @@ class _DungeonMapViewState extends State<DungeonMapView>
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.75),
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: LevMaxTheme.tertiaryFixed.withValues(alpha: 0.4)),
+                border: Border.all(
+                  color: LevMaxTheme.tertiaryFixed.withValues(alpha: 0.4),
+                ),
               ),
               child: Row(
                 children: [
@@ -659,7 +682,11 @@ class _DungeonMapViewState extends State<DungeonMapView>
               backgroundColor: const Color(0xFF131826),
               onPressed: _recenterMapOnPlayer,
               tooltip: 'Center on Hunter',
-              child: const Icon(Icons.my_location, color: LevMaxTheme.primaryContainer, size: 20),
+              child: const Icon(
+                Icons.my_location,
+                color: LevMaxTheme.primaryContainer,
+                size: 20,
+              ),
             ),
           ),
         ],
@@ -719,7 +746,10 @@ class _DungeonMapViewState extends State<DungeonMapView>
   }
 
   // Widget Marker Gate di Peta
-  Widget _buildGateMarkerWidget(MysteryGateModel gate, {required bool isSelected}) {
+  Widget _buildGateMarkerWidget(
+    MysteryGateModel gate, {
+    required bool isSelected,
+  }) {
     Color accentColor;
     IconData icon;
 
@@ -787,7 +817,9 @@ class _DungeonMapViewState extends State<DungeonMapView>
         border: Border.all(
           color: gate.isClaimed
               ? const Color(0xFF262A35)
-              : (isWithinRange ? LevMaxTheme.primaryContainer : const Color(0xFF1E293B)),
+              : (isWithinRange
+                    ? LevMaxTheme.primaryContainer
+                    : const Color(0xFF1E293B)),
           width: isWithinRange ? 1.5 : 1.0,
         ),
         boxShadow: [
@@ -808,11 +840,16 @@ class _DungeonMapViewState extends State<DungeonMapView>
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: statusColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: statusColor.withValues(alpha: 0.5)),
+                      border: Border.all(
+                        color: statusColor.withValues(alpha: 0.5),
+                      ),
                     ),
                     child: Text(
                       '[${gate.rank}-RANK GATE]',
@@ -834,7 +871,9 @@ class _DungeonMapViewState extends State<DungeonMapView>
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    gate.isClaimed ? 'CLEARED' : (isWithinRange ? 'TARGET IN RANGE' : 'OUT OF RANGE'),
+                    gate.isClaimed
+                        ? 'CLEARED'
+                        : (isWithinRange ? 'TARGET IN RANGE' : 'OUT OF RANGE'),
                     style: LevMaxTheme.mono(
                       fontSize: 9.5,
                       fontWeight: FontWeight.bold,
@@ -848,7 +887,9 @@ class _DungeonMapViewState extends State<DungeonMapView>
                 style: LevMaxTheme.mono(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: isWithinRange ? LevMaxTheme.tertiaryFixed : Colors.white70,
+                  color: isWithinRange
+                      ? LevMaxTheme.tertiaryFixed
+                      : Colors.white70,
                 ),
               ),
             ],
@@ -936,7 +977,10 @@ class _DungeonMapViewState extends State<DungeonMapView>
               Text(
                 'Dekati lokasi dalam radius 50m dari posisi Hunter Anda untuk membuka gate ini.',
                 textAlign: TextAlign.center,
-                style: LevMaxTheme.mono(fontSize: 9.5, color: const Color(0xFFFFB4AB)),
+                style: LevMaxTheme.mono(
+                  fontSize: 9.5,
+                  color: const Color(0xFFFFB4AB),
+                ),
               ),
             ],
           ],
@@ -990,7 +1034,9 @@ class _DungeonMapViewState extends State<DungeonMapView>
 
           final color = gate.isClaimed
               ? const Color(0xFF313540)
-              : (distance <= 50.0 ? LevMaxTheme.primaryContainer : LevMaxTheme.amberGold);
+              : (distance <= 50.0
+                    ? LevMaxTheme.primaryContainer
+                    : LevMaxTheme.amberGold);
 
           return GestureDetector(
             onTap: () => _recenterMapOnGate(gate),
@@ -1001,7 +1047,9 @@ class _DungeonMapViewState extends State<DungeonMapView>
                 color: const Color(0xFF131826),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: isSelected ? LevMaxTheme.primaryContainer : const Color(0xFF1E2638),
+                  color: isSelected
+                      ? LevMaxTheme.primaryContainer
+                      : const Color(0xFF1E2638),
                   width: isSelected ? 1.5 : 1.0,
                 ),
               ),
@@ -1044,7 +1092,10 @@ class _DungeonMapViewState extends State<DungeonMapView>
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? LevMaxTheme.primaryContainer

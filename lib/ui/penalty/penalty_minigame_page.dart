@@ -7,6 +7,7 @@
 export '../gamification/penalty_game_page.dart';
 
 import 'package:flutter/material.dart';
+
 import '../gamification/penalty_game_page.dart';
 
 class PenaltyMiniGamePage extends StatelessWidget {

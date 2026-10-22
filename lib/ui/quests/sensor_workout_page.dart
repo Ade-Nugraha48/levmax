@@ -8,6 +8,7 @@
 
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
@@ -36,7 +37,8 @@ class SensorWorkoutPage extends StatefulWidget {
   State<SensorWorkoutPage> createState() => _SensorWorkoutPageState();
 }
 
-class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProviderStateMixin {
+class _SensorWorkoutPageState extends State<SensorWorkoutPage>
+    with TickerProviderStateMixin {
   // Sensor Stream & Logic
   StreamSubscription<UserAccelerometerEvent>? _sensorSubscription;
   double _currentZ = 0.98;
@@ -141,7 +143,10 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
           setState(() {
             _currentZ = (accelSignal / 9.81).clamp(-3.0, 3.0);
             _wavePhase += (accelSignal.abs() * 0.04).clamp(0.02, 0.12);
-            _calculatedForce = (380 + (accelSignal.abs() * 14)).toInt().clamp(350, 560);
+            _calculatedForce = (380 + (accelSignal.abs() * 14)).toInt().clamp(
+              350,
+              560,
+            );
           });
 
           // Algoritma Push-Up Peak Detection:
@@ -212,7 +217,8 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
   }
 
   double get _caloriesBurned => _repCount * 3.84; // ~142 kcal pada 37 rep
-  double get _averagePace => _repCount > 0 ? (_elapsedSeconds / _repCount) : 1.4;
+  double get _averagePace =>
+      _repCount > 0 ? (_elapsedSeconds / _repCount) : 1.4;
 
   // ==========================================================================
   // AKSI: CONCLUDE WORKOUT PROTOCOL & REWARDS SYNC
@@ -243,7 +249,13 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('RESUME', style: LevMaxTheme.mono(fontSize: 12, color: const Color(0xFF849495))),
+            child: Text(
+              'RESUME',
+              style: LevMaxTheme.mono(
+                fontSize: 12,
+                color: const Color(0xFF849495),
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -251,7 +263,14 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
               backgroundColor: const Color(0xFF00F0FF),
               foregroundColor: const Color(0xFF002022),
             ),
-            child: Text('CLAIM & EXIT', style: LevMaxTheme.mono(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF002022))),
+            child: Text(
+              'CLAIM & EXIT',
+              style: LevMaxTheme.mono(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF002022),
+              ),
+            ),
           ),
         ],
       ),
@@ -263,7 +282,10 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
         widget.quest!.currentValue = _repCount;
         await widget.quest!.save();
         if (widget.player != null) {
-          await SupabaseApiService.syncQuest(quest: widget.quest!, userId: widget.player!.id);
+          await SupabaseApiService.syncQuest(
+            quest: widget.quest!,
+            userId: widget.player!.id,
+          );
         }
       } else {
         final box = Hive.box<QuestModel>(HiveBoxes.questBox);
@@ -303,7 +325,10 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
             const SizedBox(width: 8),
             Text(
               'ABORT ACTIVE QUEST?',
-              style: LevMaxTheme.headline(fontSize: 15, color: const Color(0xFFEF4444)),
+              style: LevMaxTheme.headline(
+                fontSize: 15,
+                color: const Color(0xFFEF4444),
+              ),
             ),
           ],
         ),
@@ -314,7 +339,13 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('CANCEL', style: LevMaxTheme.mono(fontSize: 12, color: const Color(0xFF849495))),
+            child: Text(
+              'CANCEL',
+              style: LevMaxTheme.mono(
+                fontSize: 12,
+                color: const Color(0xFF849495),
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -322,7 +353,14 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
               backgroundColor: const Color(0xFF93000A),
               foregroundColor: Colors.white,
             ),
-            child: Text('CONFIRM ABORT', style: LevMaxTheme.mono(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+            child: Text(
+              'CONFIRM ABORT',
+              style: LevMaxTheme.mono(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
       ),
@@ -357,7 +395,11 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: Color(0xFFDFE2F1), size: 20),
+            icon: const Icon(
+              Icons.arrow_back,
+              color: Color(0xFFDFE2F1),
+              size: 20,
+            ),
             onPressed: () => Navigator.pop(context),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -407,9 +449,7 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               color: Color(0xFFDBFCFF),
-              boxShadow: [
-                BoxShadow(color: Color(0x3300F0FF), blurRadius: 8),
-              ],
+              boxShadow: [BoxShadow(color: Color(0x3300F0FF), blurRadius: 8)],
             ),
             child: const Center(
               child: Icon(Icons.person, color: Color(0xFF00363A), size: 18),
@@ -449,7 +489,11 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
                           color: Color(0xFF00F0FF),
                           shape: BoxShape.circle,
                           boxShadow: [
-                            BoxShadow(color: Color(0xFF00F0FF), blurRadius: 6, spreadRadius: 1),
+                            BoxShadow(
+                              color: Color(0xFF00F0FF),
+                              blurRadius: 6,
+                              spreadRadius: 1,
+                            ),
                           ],
                         ),
                       ),
@@ -460,7 +504,9 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _isSensorAvailable ? 'ACCELEROMETER LIVE // 120Hz' : 'ACCELEROMETER SIMULATOR',
+                            _isSensorAvailable
+                                ? 'ACCELEROMETER LIVE // 120Hz'
+                                : 'ACCELEROMETER SIMULATOR',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: LevMaxTheme.mono(
@@ -680,7 +726,10 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
                       height: 140,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF00F0FF), width: 2.5),
+                        border: Border.all(
+                          color: const Color(0xFF00F0FF),
+                          width: 2.5,
+                        ),
                         boxShadow: const [
                           BoxShadow(
                             color: Color(0x6600F0FF),
@@ -714,29 +763,36 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
                       const SizedBox(height: 2),
                       Text(
                         '$_repCount',
-                        style: LevMaxTheme.headline(
-                          fontSize: 84,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFF00F0FF),
-                          letterSpacing: 1.0,
-                        ).copyWith(
-                          shadows: const [
-                            Shadow(
-                              color: Color(0x9900F0FF),
-                              blurRadius: 24,
+                        style:
+                            LevMaxTheme.headline(
+                              fontSize: 84,
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFF00F0FF),
+                              letterSpacing: 1.0,
+                            ).copyWith(
+                              shadows: const [
+                                Shadow(
+                                  color: Color(0x9900F0FF),
+                                  blurRadius: 24,
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
                       ),
                       const SizedBox(height: 2),
 
                       // Pill Target Kapsul Bawah
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF1C1F2A),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0x22FFFFFF), width: 1),
+                          border: Border.all(
+                            color: const Color(0x22FFFFFF),
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -752,7 +808,10 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
                             ),
                             const SizedBox(width: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 1,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFF313540),
                                 borderRadius: BorderRadius.circular(3),
@@ -839,7 +898,11 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
             children: [
               Row(
                 children: [
-                  const Icon(Icons.verified, size: 16, color: Color(0xFF65F2B5)),
+                  const Icon(
+                    Icons.verified,
+                    size: 16,
+                    color: Color(0xFF65F2B5),
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'FORM CALIBRATION',
@@ -892,7 +955,11 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
           // Bawah: Depth Compliance
           Row(
             children: [
-              const Icon(Icons.arrow_downward, size: 14, color: Color(0xFFDFE2F1)),
+              const Icon(
+                Icons.arrow_downward,
+                size: 14,
+                color: Color(0xFFDFE2F1),
+              ),
               const SizedBox(width: 6),
               Text(
                 'DEPTH COMPLIANCE: ',
@@ -953,9 +1020,17 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Container(width: 4, height: 4, color: const Color(0xFF00F0FF)),
+                            Container(
+                              width: 4,
+                              height: 4,
+                              color: const Color(0xFF00F0FF),
+                            ),
                             const SizedBox(width: 6),
-                            Container(width: 4, height: 4, color: const Color(0xFF00F0FF)),
+                            Container(
+                              width: 4,
+                              height: 4,
+                              color: const Color(0xFF00F0FF),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 3),
@@ -963,11 +1038,23 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Container(width: 7, height: 5, color: const Color(0xFF313540)),
+                            Container(
+                              width: 7,
+                              height: 5,
+                              color: const Color(0xFF313540),
+                            ),
                             const SizedBox(width: 2),
-                            Container(width: 10, height: 5, color: const Color(0xFF171B26)),
+                            Container(
+                              width: 10,
+                              height: 5,
+                              color: const Color(0xFF171B26),
+                            ),
                             const SizedBox(width: 2),
-                            Container(width: 7, height: 5, color: const Color(0xFF313540)),
+                            Container(
+                              width: 7,
+                              height: 5,
+                              color: const Color(0xFF313540),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 2),
@@ -985,9 +1072,17 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Container(width: 6, height: 8, color: const Color(0xFF313540)),
+                            Container(
+                              width: 6,
+                              height: 8,
+                              color: const Color(0xFF313540),
+                            ),
                             const SizedBox(width: 4),
-                            Container(width: 6, height: 8, color: const Color(0xFF313540)),
+                            Container(
+                              width: 6,
+                              height: 8,
+                              color: const Color(0xFF313540),
+                            ),
                           ],
                         ),
                       ],
@@ -998,14 +1093,20 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
                   right: 4,
                   bottom: 3,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 3,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF0A0E18),
                       borderRadius: BorderRadius.circular(2),
                     ),
                     child: Text(
                       '2D',
-                      style: LevMaxTheme.mono(fontSize: 8, color: const Color(0xFFB9CACB)),
+                      style: LevMaxTheme.mono(
+                        fontSize: 8,
+                        color: const Color(0xFFB9CACB),
+                      ),
                     ),
                   ),
                 ),
@@ -1031,11 +1132,17 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF2E1065),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: const Color(0x66D2BBFF), width: 1),
+                        border: Border.all(
+                          color: const Color(0x66D2BBFF),
+                          width: 1,
+                        ),
                       ),
                       child: Text(
                         'LVL 1',
@@ -1076,7 +1183,10 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
                               color: const Color(0xFFD2BBFF),
                               borderRadius: BorderRadius.circular(3),
                               boxShadow: const [
-                                BoxShadow(color: Color(0x66D2BBFF), blurRadius: 6),
+                                BoxShadow(
+                                  color: Color(0x66D2BBFF),
+                                  blurRadius: 6,
+                                ),
                               ],
                             ),
                           ),
@@ -1122,22 +1232,37 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.local_fire_department, size: 14, color: Color(0xFFEF4444)),
+                    const Icon(
+                      Icons.local_fire_department,
+                      size: 14,
+                      color: Color(0xFFEF4444),
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'BURN',
-                      style: LevMaxTheme.mono(fontSize: 10, color: const Color(0xFF849495), fontWeight: FontWeight.bold),
+                      style: LevMaxTheme.mono(
+                        fontSize: 10,
+                        color: const Color(0xFF849495),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${_caloriesBurned.toInt()}',
-                  style: LevMaxTheme.headline(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFFDFE2F1)),
+                  style: LevMaxTheme.headline(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFFDFE2F1),
+                  ),
                 ),
                 Text(
                   'KCAL',
-                  style: LevMaxTheme.mono(fontSize: 9, color: const Color(0xFF849495)),
+                  style: LevMaxTheme.mono(
+                    fontSize: 9,
+                    color: const Color(0xFF849495),
+                  ),
                 ),
               ],
             ),
@@ -1163,18 +1288,29 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
                     const SizedBox(width: 4),
                     Text(
                       'PACE',
-                      style: LevMaxTheme.mono(fontSize: 10, color: const Color(0xFF849495), fontWeight: FontWeight.bold),
+                      style: LevMaxTheme.mono(
+                        fontSize: 10,
+                        color: const Color(0xFF849495),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${_averagePace.toStringAsFixed(1)}s',
-                  style: LevMaxTheme.headline(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFFDFE2F1)),
+                  style: LevMaxTheme.headline(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFFDFE2F1),
+                  ),
                 ),
                 Text(
                   '/ REP',
-                  style: LevMaxTheme.mono(fontSize: 9, color: const Color(0xFF849495)),
+                  style: LevMaxTheme.mono(
+                    fontSize: 9,
+                    color: const Color(0xFF849495),
+                  ),
                 ),
               ],
             ),
@@ -1196,22 +1332,37 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.timer_outlined, size: 14, color: Color(0xFF65F2B5)),
+                    const Icon(
+                      Icons.timer_outlined,
+                      size: 14,
+                      color: Color(0xFF65F2B5),
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'TIME',
-                      style: LevMaxTheme.mono(fontSize: 10, color: const Color(0xFF849495), fontWeight: FontWeight.bold),
+                      style: LevMaxTheme.mono(
+                        fontSize: 10,
+                        color: const Color(0xFF849495),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _formatElapsedTime(),
-                  style: LevMaxTheme.headline(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFFDFE2F1)),
+                  style: LevMaxTheme.headline(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFFDFE2F1),
+                  ),
                 ),
                 Text(
                   'ELAPSED',
-                  style: LevMaxTheme.mono(fontSize: 9, color: const Color(0xFF849495)),
+                  style: LevMaxTheme.mono(
+                    fontSize: 9,
+                    color: const Color(0xFF849495),
+                  ),
                 ),
               ],
             ),
@@ -1236,22 +1387,27 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
             decoration: BoxDecoration(
               color: const Color(0xFF93000A),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.6), width: 1),
+              border: Border.all(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.6),
+                width: 1,
+              ),
             ),
             child: Stack(
               children: [
                 // Diagonal Hazard Stripes Painter
                 Positioned.fill(
-                  child: CustomPaint(
-                    painter: _HazardStripePainter(),
-                  ),
+                  child: CustomPaint(painter: _HazardStripePainter()),
                 ),
                 // Teks Tombol
                 Center(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFEF4444)),
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        size: 18,
+                        color: Color(0xFFEF4444),
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'ABORT QUEST (PENALTY WARNING)',
@@ -1275,7 +1431,11 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.warning_amber_rounded, size: 14, color: Color(0xFFEF4444)),
+            const Icon(
+              Icons.warning_amber_rounded,
+              size: 14,
+              color: Color(0xFFEF4444),
+            ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
@@ -1306,7 +1466,10 @@ class _SensorWorkoutPageState extends State<SensorWorkoutPage> with TickerProvid
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -1426,20 +1589,52 @@ class _CrosshairTicksPainter extends CustomPainter {
     const double tWidth = 8;
 
     // Atas
-    canvas.drawLine(Offset(center.dx, center.dy - rInner), Offset(center.dx, center.dy - rOuter), paint);
-    canvas.drawLine(Offset(center.dx - tWidth / 2, center.dy - rOuter), Offset(center.dx + tWidth / 2, center.dy - rOuter), paint);
+    canvas.drawLine(
+      Offset(center.dx, center.dy - rInner),
+      Offset(center.dx, center.dy - rOuter),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(center.dx - tWidth / 2, center.dy - rOuter),
+      Offset(center.dx + tWidth / 2, center.dy - rOuter),
+      paint,
+    );
 
     // Bawah
-    canvas.drawLine(Offset(center.dx, center.dy + rInner), Offset(center.dx, center.dy + rOuter), paint);
-    canvas.drawLine(Offset(center.dx - tWidth / 2, center.dy + rOuter), Offset(center.dx + tWidth / 2, center.dy + rOuter), paint);
+    canvas.drawLine(
+      Offset(center.dx, center.dy + rInner),
+      Offset(center.dx, center.dy + rOuter),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(center.dx - tWidth / 2, center.dy + rOuter),
+      Offset(center.dx + tWidth / 2, center.dy + rOuter),
+      paint,
+    );
 
     // Kiri
-    canvas.drawLine(Offset(center.dx - rInner, center.dy), Offset(center.dx - rOuter, center.dy), paint);
-    canvas.drawLine(Offset(center.dx - rOuter, center.dy - tWidth / 2), Offset(center.dx - rOuter, center.dy + tWidth / 2), paint);
+    canvas.drawLine(
+      Offset(center.dx - rInner, center.dy),
+      Offset(center.dx - rOuter, center.dy),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(center.dx - rOuter, center.dy - tWidth / 2),
+      Offset(center.dx - rOuter, center.dy + tWidth / 2),
+      paint,
+    );
 
     // Kanan
-    canvas.drawLine(Offset(center.dx + rInner, center.dy), Offset(center.dx + rOuter, center.dy), paint);
-    canvas.drawLine(Offset(center.dx + rOuter, center.dy - tWidth / 2), Offset(center.dx + rOuter, center.dy + tWidth / 2), paint);
+    canvas.drawLine(
+      Offset(center.dx + rInner, center.dy),
+      Offset(center.dx + rOuter, center.dy),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(center.dx + rOuter, center.dy - tWidth / 2),
+      Offset(center.dx + rOuter, center.dy + tWidth / 2),
+      paint,
+    );
   }
 
   @override
@@ -1499,13 +1694,25 @@ class _SineWavePainter extends CustomPainter {
       ..color = waveColor
       ..strokeWidth = 2.0;
 
-    canvas.drawLine(Offset(scrubX, 4), Offset(scrubX, size.height - 4), scrubPaint);
-    canvas.drawCircle(Offset(scrubX, midY + sin((scrubX / wavelength) * 2 * pi + wavePhase) * amplitude), 3, Paint()..color = Colors.white);
+    canvas.drawLine(
+      Offset(scrubX, 4),
+      Offset(scrubX, size.height - 4),
+      scrubPaint,
+    );
+    canvas.drawCircle(
+      Offset(
+        scrubX,
+        midY + sin((scrubX / wavelength) * 2 * pi + wavePhase) * amplitude,
+      ),
+      3,
+      Paint()..color = Colors.white,
+    );
   }
 
   @override
   bool shouldRepaint(covariant _SineWavePainter oldDelegate) {
-    return oldDelegate.wavePhase != wavePhase || oldDelegate.scrubberPosition != scrubberPosition;
+    return oldDelegate.wavePhase != wavePhase ||
+        oldDelegate.scrubberPosition != scrubberPosition;
   }
 }
 

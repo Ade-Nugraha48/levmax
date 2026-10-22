@@ -9,6 +9,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -38,10 +39,7 @@ class SystemChatMessage {
 class SystemAiChatModal extends StatefulWidget {
   final UserModel? player;
 
-  const SystemAiChatModal({
-    super.key,
-    this.player,
-  });
+  const SystemAiChatModal({super.key, this.player});
 
   /// Helper statis untuk menampilkan modal bottom sheet bertema transparan
   static Future<void> show(BuildContext context, {UserModel? player}) {
@@ -58,7 +56,8 @@ class SystemAiChatModal extends StatefulWidget {
   State<SystemAiChatModal> createState() => _SystemAiChatModalState();
 }
 
-class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProviderStateMixin {
+class _SystemAiChatModalState extends State<SystemAiChatModal>
+    with TickerProviderStateMixin {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -175,7 +174,10 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
 
     try {
       // 3. Panggil Stream dari AiSystemService
-      final stream = AiSystemService().sendQuery(trimmed, player: widget.player);
+      final stream = AiSystemService().sendQuery(
+        trimmed,
+        player: widget.player,
+      );
 
       stream.listen(
         (chunk) {
@@ -191,8 +193,7 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
           setState(() {
             currentAiMsg.isStreaming = false;
             currentAiMsg.isError = true;
-            currentAiMsg.text =
-                'SYSTEM ERROR: Mana connection severed. Provide valid API Key to restore telepathic link.';
+            currentAiMsg.text = 'SYSTEM ERROR: Mana connection severed. Provide valid API Key to restore telepathic link.';
             _isSending = false;
           });
           _scrollToBottom();
@@ -216,8 +217,7 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
       setState(() {
         currentAiMsg.isStreaming = false;
         currentAiMsg.isError = true;
-        currentAiMsg.text =
-            'SYSTEM ERROR: Mana connection severed. Provide valid API Key to restore telepathic link.';
+        currentAiMsg.text = 'SYSTEM ERROR: Mana connection severed. Provide valid API Key to restore telepathic link.';
         _isSending = false;
       });
       _scrollToBottom();
@@ -303,7 +303,11 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                               color: Color(0xFF00F0FF),
                               shape: BoxShape.circle,
                               boxShadow: [
-                                BoxShadow(color: Color(0xFF00F0FF), blurRadius: 6, spreadRadius: 1),
+                                BoxShadow(
+                                  color: Color(0xFF00F0FF),
+                                  blurRadius: 6,
+                                  spreadRadius: 1,
+                                ),
                               ],
                             ),
                           ),
@@ -409,7 +413,8 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
   // KOMPONEN 3: SYSTEM DIALOG WINDOW (PESAN SYSTEM DENGAN CORNER TICKS)
   // ==========================================================================
   Widget _buildAiSystemDirectiveCard(SystemChatMessage msg) {
-    final isWarning = msg.isError ||
+    final isWarning =
+        msg.isError ||
         msg.directive.contains('FATIGUE') ||
         msg.directive.contains('WARNING') ||
         msg.directive.contains('PENALTY') ||
@@ -422,7 +427,9 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
         color: const Color(0xFF262A35).withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: msg.isError ? const Color(0x66EF4444) : const Color(0x1A00F0FF),
+          color: msg.isError
+              ? const Color(0x66EF4444)
+              : const Color(0x1A00F0FF),
           width: 1,
         ),
       ),
@@ -432,7 +439,9 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
           Positioned.fill(
             child: CustomPaint(
               painter: _CornerTicksPainter(
-                color: msg.isError ? const Color(0xFFEF4444) : const Color(0xFF00F0FF),
+                color: msg.isError
+                    ? const Color(0xFFEF4444)
+                    : const Color(0xFF00F0FF),
               ),
             ),
           ),
@@ -458,7 +467,10 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: msg.isError
                             ? const Color(0x26EF4444)
@@ -476,7 +488,9 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                         style: LevMaxTheme.mono(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: msg.isError ? const Color(0xFFEF4444) : const Color(0xFF00F0FF),
+                          color: msg.isError
+                              ? const Color(0xFFEF4444)
+                              : const Color(0xFF00F0FF),
                           letterSpacing: 0.8,
                         ),
                       ),
@@ -518,13 +532,19 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                     ).copyWith(height: 1.4),
                   )
                 else
-                  _buildHighlightedDialogText(msg.text, isStreaming: msg.isStreaming),
+                  _buildHighlightedDialogText(
+                    msg.text,
+                    isStreaming: msg.isStreaming,
+                  ),
 
                 // Equalizer Waveform Footer: Muncul saat isStreaming == true
                 if (msg.isStreaming) ...[
                   const SizedBox(height: 14),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF171B26),
                       borderRadius: BorderRadius.circular(6),
@@ -534,7 +554,11 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.graphic_eq, size: 14, color: Color(0xFFB9CACB)),
+                            const Icon(
+                              Icons.graphic_eq,
+                              size: 14,
+                              color: Color(0xFFB9CACB),
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               'SYNTH_FREQ',
@@ -605,7 +629,11 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.person_pin, size: 12, color: Color(0xFFD2BBFF)),
+                const Icon(
+                  Icons.person_pin,
+                  size: 12,
+                  color: Color(0xFFD2BBFF),
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'HUNTER DIRECTIVE // $timeStr',
@@ -640,12 +668,18 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
           const SizedBox(
             width: 14,
             height: 14,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00F0FF)),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Color(0xFF00F0FF),
+            ),
           ),
           const SizedBox(width: 8),
           Text(
             'Analyzing Hunter telemetry stream...',
-            style: LevMaxTheme.mono(fontSize: 12, color: const Color(0xFFB9CACB)),
+            style: LevMaxTheme.mono(
+              fontSize: 12,
+              color: const Color(0xFFB9CACB),
+            ),
           ),
         ],
       );
@@ -656,7 +690,8 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
 
     for (final word in words) {
       final clean = word.toLowerCase();
-      final isHighlight = clean.contains('%') ||
+      final isHighlight =
+          clean.contains('%') ||
           clean.contains('ml') ||
           clean.contains('skincare') ||
           clean.contains('water') ||
@@ -673,15 +708,15 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
           style: LevMaxTheme.headline(
             fontSize: 14,
             fontWeight: isHighlight ? FontWeight.bold : FontWeight.normal,
-            color: isHighlight ? const Color(0xFF00F0FF) : const Color(0xFFDFE2F1),
+            color: isHighlight
+                ? const Color(0xFF00F0FF)
+                : const Color(0xFFDFE2F1),
           ).copyWith(height: 1.4),
         ),
       );
     }
 
-    return RichText(
-      text: TextSpan(children: spans),
-    );
+    return RichText(text: TextSpan(children: spans));
   }
 
   /// 8 Bar Equalizer Vertikal Cyan
@@ -692,8 +727,11 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: List.generate(8, (index) {
-            final double height = 4.0 +
-                (sin((_equalizerController.value * 2 * pi) + (index * 0.8)).abs() * 12.0);
+            final double height =
+                4.0 +
+                (sin((_equalizerController.value * 2 * pi) + (index * 0.8))
+                        .abs() *
+                    12.0);
 
             return Container(
               width: 3.5,
@@ -735,7 +773,11 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
             children: [
               Row(
                 children: [
-                  const Icon(Icons.monitor_heart, size: 14, color: Color(0xFF65F2B5)),
+                  const Icon(
+                    Icons.monitor_heart,
+                    size: 14,
+                    color: Color(0xFF65F2B5),
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'DIAGNOSTIC TELEMETRY',
@@ -774,7 +816,11 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                   children: [
                     Text(
                       'HP STATUS',
-                      style: LevMaxTheme.mono(fontSize: 9, color: const Color(0xFF849495), fontWeight: FontWeight.bold),
+                      style: LevMaxTheme.mono(
+                        fontSize: 9,
+                        color: const Color(0xFF849495),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Row(
@@ -783,11 +829,18 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                       children: [
                         Text(
                           '$playerHp',
-                          style: LevMaxTheme.headline(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFFDFE2F1)),
+                          style: LevMaxTheme.headline(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFFDFE2F1),
+                          ),
                         ),
                         Text(
                           '/100',
-                          style: LevMaxTheme.mono(fontSize: 10, color: const Color(0xFF849495)),
+                          style: LevMaxTheme.mono(
+                            fontSize: 10,
+                            color: const Color(0xFF849495),
+                          ),
                         ),
                       ],
                     ),
@@ -806,7 +859,10 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                             color: const Color(0xFF00F0FF),
                             borderRadius: BorderRadius.circular(2),
                             boxShadow: const [
-                              BoxShadow(color: Color(0x6600F0FF), blurRadius: 4),
+                              BoxShadow(
+                                color: Color(0x6600F0FF),
+                                blurRadius: 4,
+                              ),
                             ],
                           ),
                         ),
@@ -822,16 +878,28 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                   children: [
                     Text(
                       'LACTIC ACID',
-                      style: LevMaxTheme.mono(fontSize: 9, color: const Color(0xFF849495), fontWeight: FontWeight.bold),
+                      style: LevMaxTheme.mono(
+                        fontSize: 9,
+                        color: const Color(0xFF849495),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '64%',
-                      style: LevMaxTheme.headline(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFFEF4444)),
+                      style: LevMaxTheme.headline(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFEF4444),
+                      ),
                     ),
                     Text(
                       'Elevated',
-                      style: LevMaxTheme.mono(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFEF4444)),
+                      style: LevMaxTheme.mono(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFEF4444),
+                      ),
                     ),
                   ],
                 ),
@@ -843,20 +911,31 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                   children: [
                     Text(
                       'ACTION',
-                      style: LevMaxTheme.mono(fontSize: 9, color: const Color(0xFF849495), fontWeight: FontWeight.bold),
+                      style: LevMaxTheme.mono(
+                        fontSize: 9,
+                        color: const Color(0xFF849495),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Hydration',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: LevMaxTheme.headline(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFFDFE2F1)),
+                      style: LevMaxTheme.headline(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFDFE2F1),
+                      ),
                     ),
                     Text(
                       '+ Skincare',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: LevMaxTheme.mono(fontSize: 10, color: const Color(0xFFB9CACB)),
+                      style: LevMaxTheme.mono(
+                        fontSize: 10,
+                        color: const Color(0xFFB9CACB),
+                      ),
                     ),
                   ],
                 ),
@@ -873,9 +952,21 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
   // ==========================================================================
   Widget _buildAvailableResponses() {
     final prompts = [
-      {'num': '[1]', 'color': const Color(0xFF00F0FF), 'text': 'Provide optimal recovery routine'},
-      {'num': '[2]', 'color': const Color(0xFFEF4444), 'text': 'Inspect penalty probability'},
-      {'num': '[3]', 'color': const Color(0xFFD2BBFF), 'text': 'Review tomorrow\'s plan'},
+      {
+        'num': '[1]',
+        'color': const Color(0xFF00F0FF),
+        'text': 'Provide optimal recovery routine',
+      },
+      {
+        'num': '[2]',
+        'color': const Color(0xFFEF4444),
+        'text': 'Inspect penalty probability',
+      },
+      {
+        'num': '[3]',
+        'color': const Color(0xFFD2BBFF),
+        'text': 'Review tomorrow\'s plan',
+      },
     ];
 
     return Column(
@@ -904,7 +995,10 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                   decoration: BoxDecoration(
                     color: const Color(0xFF262A35),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0x14FFFFFF), width: 1),
+                    border: Border.all(
+                      color: const Color(0x14FFFFFF),
+                      width: 1,
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -928,7 +1022,11 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                           ),
                         ),
                       ),
-                      const Icon(Icons.chevron_right, size: 18, color: Color(0xFF849495)),
+                      const Icon(
+                        Icons.chevron_right,
+                        size: 18,
+                        color: Color(0xFF849495),
+                      ),
                     ],
                   ),
                 ),
@@ -992,7 +1090,9 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: _isSending ? const Color(0xFF00A2AC) : const Color(0xFF00F0FF),
+                    color: _isSending
+                        ? const Color(0xFF00A2AC)
+                        : const Color(0xFF00F0FF),
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: const [
                       BoxShadow(
@@ -1012,7 +1112,11 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                               color: Color(0xFF002022),
                             ),
                           )
-                        : const Icon(Icons.send, size: 18, color: Color(0xFF002022)),
+                        : const Icon(
+                            Icons.send,
+                            size: 18,
+                            color: Color(0xFF002022),
+                          ),
                   ),
                 ),
               ),
@@ -1079,7 +1183,11 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
                 height: 2,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.transparent, Color(0xFF00F0FF), Colors.transparent],
+                    colors: [
+                      Colors.transparent,
+                      Color(0xFF00F0FF),
+                      Colors.transparent,
+                    ],
                   ),
                 ),
               ),
@@ -1087,9 +1195,7 @@ class _SystemAiChatModalState extends State<SystemAiChatModal> with TickerProvid
 
             // Matrix Grid Texture Backdrop
             const Positioned.fill(
-              child: CustomPaint(
-                painter: _DigitalGridPainter(),
-              ),
+              child: CustomPaint(painter: _DigitalGridPainter()),
             ),
 
             // Top Drag Handle Indicator
@@ -1185,20 +1291,41 @@ class _CornerTicksPainter extends CustomPainter {
     canvas.drawLine(const Offset(0, 0), const Offset(0, tickLen), paint);
 
     // Kanan Atas
-    canvas.drawLine(Offset(size.width, 0), Offset(size.width - tickLen, 0), paint);
+    canvas.drawLine(
+      Offset(size.width, 0),
+      Offset(size.width - tickLen, 0),
+      paint,
+    );
     canvas.drawLine(Offset(size.width, 0), Offset(size.width, tickLen), paint);
 
     // Kiri Bawah
-    canvas.drawLine(Offset(0, size.height), Offset(tickLen, size.height), paint);
-    canvas.drawLine(Offset(0, size.height), Offset(0, size.height - tickLen), paint);
+    canvas.drawLine(
+      Offset(0, size.height),
+      Offset(tickLen, size.height),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(0, size.height),
+      Offset(0, size.height - tickLen),
+      paint,
+    );
 
     // Kanan Bawah
-    canvas.drawLine(Offset(size.width, size.height), Offset(size.width - tickLen, size.height), paint);
-    canvas.drawLine(Offset(size.width, size.height), Offset(size.width, size.height - tickLen), paint);
+    canvas.drawLine(
+      Offset(size.width, size.height),
+      Offset(size.width - tickLen, size.height),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width, size.height),
+      Offset(size.width, size.height - tickLen),
+      paint,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _CornerTicksPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _CornerTicksPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 // ==============================================================================

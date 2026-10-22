@@ -22,7 +22,9 @@ import 'ui/auth/login_page.dart';
 import 'ui/auth/register_page.dart';
 import 'ui/onboarding/onboarding_page.dart';
 import 'ui/main_navigation_page.dart';
+
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'ui/gamification/penalty_game_page.dart';
 import 'ui/gamification/mini_games_page.dart';
 import 'ui/shop/shop_page.dart';
@@ -147,8 +149,13 @@ class LevMaxApp extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF00E5FF),
             foregroundColor: Colors.black,
-            textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            textStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           ),
         ),
@@ -335,14 +342,19 @@ class _SplashScreenState extends State<SplashScreen>
                   height: 48,
                   child: CircularProgressIndicator(
                     strokeWidth: 3,
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00E5FF)),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFF00E5FF),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
 
                 // Pesan Status Sistem
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF131B2E),
                     borderRadius: BorderRadius.circular(8),

@@ -7,6 +7,7 @@
 // ==============================================================================
 
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -35,7 +36,8 @@ class GameOverPage extends StatefulWidget {
   State<GameOverPage> createState() => _GameOverPageState();
 }
 
-class _GameOverPageState extends State<GameOverPage> with TickerProviderStateMixin {
+class _GameOverPageState extends State<GameOverPage>
+    with TickerProviderStateMixin {
   // Palet Warna Eksak Game Over Google Stitch
   static const Color surface = Color(0xFF0F131D);
   static const Color surfaceContainerLowest = Color(0xFF0A0E18);
@@ -122,14 +124,15 @@ class _GameOverPageState extends State<GameOverPage> with TickerProviderStateMix
     try {
       // 1. Reset State Hive (player_cache_box)
       final player = widget.player ?? SupabaseApiService.getPlayerCache();
-      final updatedPlayer = (player ?? UserModel(username: 'Hunter', email: '')).copyWith(
-        level: 1,
-        rank: 'F',
-        hp: 100,
-        exp: 0,
-        gold: 0,
-        isPenaltyActive: false,
-      );
+      final updatedPlayer = (player ?? UserModel(username: 'Hunter', email: ''))
+          .copyWith(
+            level: 1,
+            rank: 'F',
+            hp: 100,
+            exp: 0,
+            gold: 0,
+            isPenaltyActive: false,
+          );
 
       await SupabaseApiService.savePlayerCache(updatedPlayer);
 
@@ -179,9 +182,7 @@ class _GameOverPageState extends State<GameOverPage> with TickerProviderStateMix
       // 5. Navigasi Paksa: Menghapus seluruh history route dan kembali ke Main Navigation
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(
-          builder: (context) => const MainNavigationPage(),
-        ),
+        MaterialPageRoute(builder: (context) => const MainNavigationPage()),
         (route) => false,
       );
     } catch (e) {
@@ -269,7 +270,9 @@ class _GameOverPageState extends State<GameOverPage> with TickerProviderStateMix
                 builder: (context, child) {
                   return _SkullIcon(
                     size: 14,
-                    color: Color.lerp(error, redGlow, _pulseAnimation.value) ?? error,
+                    color:
+                        Color.lerp(error, redGlow, _pulseAnimation.value) ??
+                        error,
                   );
                 },
               ),
@@ -301,7 +304,9 @@ class _GameOverPageState extends State<GameOverPage> with TickerProviderStateMix
                       color: redGlow,
                       boxShadow: [
                         BoxShadow(
-                          color: redGlow.withValues(alpha: 0.4 + 0.6 * _pulseAnimation.value),
+                          color: redGlow.withValues(
+                            alpha: 0.4 + 0.6 * _pulseAnimation.value,
+                          ),
                           blurRadius: 6,
                           spreadRadius: 1,
                         ),
@@ -345,7 +350,9 @@ class _GameOverPageState extends State<GameOverPage> with TickerProviderStateMix
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: redGlow.withValues(alpha: 0.25 + 0.35 * _pulseAnimation.value),
+                    color: redGlow.withValues(
+                      alpha: 0.25 + 0.35 * _pulseAnimation.value,
+                    ),
                     blurRadius: 36,
                     spreadRadius: 3,
                   ),
@@ -365,7 +372,10 @@ class _GameOverPageState extends State<GameOverPage> with TickerProviderStateMix
                       decoration: BoxDecoration(
                         color: surfaceContainerLowest,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: error.withValues(alpha: 0.4), width: 1.5),
+                        border: Border.all(
+                          color: error.withValues(alpha: 0.4),
+                          width: 1.5,
+                        ),
                       ),
                       child: const Center(
                         child: Icon(Icons.dangerous, size: 68, color: error),
@@ -505,11 +515,17 @@ class _GameOverPageState extends State<GameOverPage> with TickerProviderStateMix
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: errorContainer.withValues(alpha: 0.35),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: error.withValues(alpha: 0.40), width: 1),
+                        border: Border.all(
+                          color: error.withValues(alpha: 0.40),
+                          width: 1,
+                        ),
                       ),
                       child: Text(
                         'NON-NEGOTIABLE',
@@ -546,7 +562,10 @@ class _GameOverPageState extends State<GameOverPage> with TickerProviderStateMix
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: errorContainer.withValues(alpha: 0.40),
                           borderRadius: BorderRadius.circular(4),
@@ -570,11 +589,17 @@ class _GameOverPageState extends State<GameOverPage> with TickerProviderStateMix
                   iconColor: error,
                   title: 'Current Status',
                   trailingWidget: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: errorContainer.withValues(alpha: 0.30),
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: error.withValues(alpha: 0.45), width: 1),
+                      border: Border.all(
+                        color: error.withValues(alpha: 0.45),
+                        width: 1,
+                      ),
                     ),
                     child: Text(
                       'Rank F (Demoted)',
@@ -706,7 +731,10 @@ class _GameOverPageState extends State<GameOverPage> with TickerProviderStateMix
           decoration: BoxDecoration(
             color: _isButtonPressed ? surfaceContainerHigh : surfaceBright,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.16), width: 1),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.16),
+              width: 1,
+            ),
             boxShadow: const [
               BoxShadow(
                 color: Colors.black54,
@@ -839,7 +867,10 @@ class _GameOverPageState extends State<GameOverPage> with TickerProviderStateMix
             SafeArea(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -880,10 +911,7 @@ class _SkullIcon extends StatelessWidget {
   final Color color;
   final double size;
 
-  const _SkullIcon({
-    required this.color,
-    this.size = 14,
-  });
+  const _SkullIcon({required this.color, this.size = 14});
 
   @override
   Widget build(BuildContext context) {
@@ -925,20 +953,42 @@ class _SkullPainter extends CustomPainter {
     // Right jaw
     skullPath.lineTo(w * 0.72, h * 0.68);
     // Right temple / cranium curve
-    skullPath.cubicTo(w * 0.98, h * 0.60, w * 0.98, h * 0.12, w * 0.50, h * 0.10);
+    skullPath.cubicTo(
+      w * 0.98,
+      h * 0.60,
+      w * 0.98,
+      h * 0.12,
+      w * 0.50,
+      h * 0.10,
+    );
     // Left temple / cranium curve
-    skullPath.cubicTo(w * 0.02, h * 0.12, w * 0.02, h * 0.60, w * 0.28, h * 0.68);
+    skullPath.cubicTo(
+      w * 0.02,
+      h * 0.12,
+      w * 0.02,
+      h * 0.60,
+      w * 0.28,
+      h * 0.68,
+    );
     skullPath.close();
 
     canvas.drawPath(skullPath, strokePaint);
 
     // Eye sockets
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(w * 0.38, h * 0.44), width: w * 0.20, height: h * 0.22),
+      Rect.fromCenter(
+        center: Offset(w * 0.38, h * 0.44),
+        width: w * 0.20,
+        height: h * 0.22,
+      ),
       fillPaint,
     );
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(w * 0.62, h * 0.44), width: w * 0.20, height: h * 0.22),
+      Rect.fromCenter(
+        center: Offset(w * 0.62, h * 0.44),
+        width: w * 0.20,
+        height: h * 0.22,
+      ),
       fillPaint,
     );
 
@@ -951,10 +1001,19 @@ class _SkullPainter extends CustomPainter {
     canvas.drawPath(nosePath, fillPaint);
 
     // Vertical teeth lines
-    canvas.drawLine(Offset(w * 0.44, h * 0.78), Offset(w * 0.44, h * 0.90), strokePaint);
-    canvas.drawLine(Offset(w * 0.56, h * 0.78), Offset(w * 0.56, h * 0.90), strokePaint);
+    canvas.drawLine(
+      Offset(w * 0.44, h * 0.78),
+      Offset(w * 0.44, h * 0.90),
+      strokePaint,
+    );
+    canvas.drawLine(
+      Offset(w * 0.56, h * 0.78),
+      Offset(w * 0.56, h * 0.90),
+      strokePaint,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _SkullPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _SkullPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

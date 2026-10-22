@@ -6,6 +6,7 @@
 // ==============================================================================
 
 import 'dart:convert';
+
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
@@ -87,7 +88,8 @@ class ShopService {
       ItemShopModel(
         id: 'item_pride_orb_avarice_01',
         name: 'Orb of Avarice (Celestial)',
-        description: 'Permata api kosmik yang memancarkan aura prestise tak terbatas.',
+        description:
+            'Permata api kosmik yang memancarkan aura prestise tak terbatas.',
         priceGold: 18000,
         prideScore: 1200,
         category: 'PrideItem',
@@ -103,7 +105,9 @@ class ShopService {
     required ItemShopModel item,
   }) async {
     if (player.gold < item.priceGold) {
-      throw Exception('Insufficient Gold! Saldo Anda tidak mencukupi untuk item ini.');
+      throw Exception(
+        'Insufficient Gold! Saldo Anda tidak mencukupi untuk item ini.',
+      );
     }
 
     int newGold = player.gold - item.priceGold;
@@ -112,7 +116,8 @@ class ShopService {
 
     if (item.id.contains('hp_potion') || item.name.contains('+25 HP')) {
       newHp = (newHp + 25).clamp(0, 100);
-    } else if (item.id.contains('mana_catalyst') || item.name.contains('+50 EXP')) {
+    } else if (item.id.contains('mana_catalyst') ||
+        item.name.contains('+50 EXP')) {
       newExp += 50;
     }
 
@@ -153,7 +158,9 @@ class ShopService {
   }) async {
     // 1. Validasi Saldo Gold
     if (player.gold < item.priceGold) {
-      throw Exception('Insufficient Gold! Anda membutuhkan ${item.priceGold} Gold untuk mem-mint item ini.');
+      throw Exception(
+        'Insufficient Gold! Anda membutuhkan ${item.priceGold} Gold untuk mem-mint item ini.',
+      );
     }
 
     // 2. Ambil previous_hash dari tabel blockchain_inventory_logs atau Hive
@@ -193,7 +200,8 @@ class ShopService {
     final timestamp = DateTime.now().toIso8601String();
 
     // 5. Buat string dataPayload eksak sesuai Prompt 12
-    final dataPayload = 'USER:${player.id}_MINTED_ITEM:${item.id}_AT_$timestamp';
+    final dataPayload =
+        'USER:${player.id}_MINTED_ITEM:${item.id}_AT_$timestamp';
 
     // 6. Generate current_hash menggunakan SHA-256
     final rawHashInput = '$previousHash$dataPayload$timestamp';
@@ -284,7 +292,8 @@ class ShopService {
     final double eur = idr / 17360.0;
 
     return {
-      'idr': 'Rp ${idr.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}',
+      'idr':
+          'Rp ${idr.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}',
       'usd': '\$ ${usd.toStringAsFixed(2)}',
       'eur': '€ ${eur.toStringAsFixed(2)}',
     };

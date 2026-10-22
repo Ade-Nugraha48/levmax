@@ -12,6 +12,7 @@
 
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
@@ -62,10 +63,12 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
 
   // Zero-Lag Countdown Timer & Multi-Timezone Strip State (ValueNotifier)
   Timer? _countdownTimer;
-  final ValueNotifier<String> _resetCountdownNotifier =
-      ValueNotifier<String>('00:00:00');
-  final ValueNotifier<String> _timezoneStripNotifier =
-      ValueNotifier<String>('WIB --:-- | WITA --:-- | WIT --:-- | LND --:--');
+  final ValueNotifier<String> _resetCountdownNotifier = ValueNotifier<String>(
+    '00:00:00',
+  );
+  final ValueNotifier<String> _timezoneStripNotifier = ValueNotifier<String>(
+    'WIB --:-- | WITA --:-- | WIT --:-- | LND --:--',
+  );
 
   @override
   void initState() {
@@ -103,7 +106,9 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
   // ============================================================================
   void _checkPenaltyGuard() {
     if (widget.player.isPenaltyActive) {
-      debugPrint('[PENALTY GUARD] User is penalized! Redirecting to /penalty...');
+      debugPrint(
+        '[PENALTY GUARD] User is penalized! Redirecting to /penalty...',
+      );
       Navigator.of(context, rootNavigator: true).pushReplacement(
         MaterialPageRoute(builder: (_) => const PenaltyGamePage()),
       );
@@ -136,10 +141,14 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
     final durationRemaining = nextMidnightWib.difference(nowWib);
 
     final hours = durationRemaining.inHours.toString().padLeft(2, '0');
-    final minutes =
-        (durationRemaining.inMinutes % 60).toString().padLeft(2, '0');
-    final seconds =
-        (durationRemaining.inSeconds % 60).toString().padLeft(2, '0');
+    final minutes = (durationRemaining.inMinutes % 60).toString().padLeft(
+      2,
+      '0',
+    );
+    final seconds = (durationRemaining.inSeconds % 60).toString().padLeft(
+      2,
+      '0',
+    );
 
     _resetCountdownNotifier.value = '$hours:$minutes:$seconds';
 
@@ -160,7 +169,8 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
     final box = Hive.box<QuestModel>(HiveBoxes.questBox);
     if (box.isEmpty) {
       final today = DateTime.now().toIso8601String().substring(0, 10);
-      final rankTargets = WorkoutScaling.targets[widget.player.rank] ??
+      final rankTargets =
+          WorkoutScaling.targets[widget.player.rank] ??
           WorkoutScaling.targets['F']!;
 
       final initialQuests = [
@@ -244,24 +254,26 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
   bool _isMysteryQuestUnlocked(List<QuestModel> quests) {
     // Syarat: Minimal 2 Workout, 1 Cardio, 1 Appearance, 1 Study harus COMPLETED
     final workoutCompleted = quests
-        .where((q) =>
-            q.category.toLowerCase() == 'workout' && q.isCompleted)
+        .where((q) => q.category.toLowerCase() == 'workout' && q.isCompleted)
         .length;
     final cardioCompleted = quests
-        .where((q) =>
-            q.category.toLowerCase() == 'cardio' && q.isCompleted)
+        .where((q) => q.category.toLowerCase() == 'cardio' && q.isCompleted)
         .length;
     final appearanceCompleted = quests
-        .where((q) =>
-            (q.category.toLowerCase() == 'appearance' ||
-                q.category.toLowerCase() == 'skincare') &&
-            q.isCompleted)
+        .where(
+          (q) =>
+              (q.category.toLowerCase() == 'appearance' ||
+                  q.category.toLowerCase() == 'skincare') &&
+              q.isCompleted,
+        )
         .length;
     final studyCompleted = quests
-        .where((q) =>
-            (q.category.toLowerCase() == 'study' ||
-                q.category.toLowerCase() == 'work') &&
-            q.isCompleted)
+        .where(
+          (q) =>
+              (q.category.toLowerCase() == 'study' ||
+                  q.category.toLowerCase() == 'work') &&
+              q.isCompleted,
+        )
         .length;
 
     return workoutCompleted >= 2 &&
@@ -308,10 +320,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
     );
 
     // Sync status ke Supabase tabel daily_user_quests
-    await SupabaseApiService.syncQuest(
-      quest: quest,
-      userId: widget.player.id,
-    );
+    await SupabaseApiService.syncQuest(quest: quest, userId: widget.player.id);
 
     widget.onPlayerUpdated();
 
@@ -322,11 +331,18 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
-            side: const BorderSide(color: LevMaxTheme.primaryContainer, width: 1.5),
+            side: const BorderSide(
+              color: LevMaxTheme.primaryContainer,
+              width: 1.5,
+            ),
           ),
           content: Row(
             children: [
-              const Icon(Icons.bolt, color: LevMaxTheme.primaryContainer, size: 22),
+              const Icon(
+                Icons.bolt,
+                color: LevMaxTheme.primaryContainer,
+                size: 22,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -351,13 +367,41 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
   // ============================================================================
   void _openAppearanceBottomSheet(QuestModel quest) {
     final List<Map<String, dynamic>> skincareSteps = [
-      {'title': 'Cuci Muka Pagi', 'desc': 'Gentle Cleanser menghilangkan sebum tidur', 'checked': true},
-      {'title': 'Moisturizer Pagi', 'desc': 'Hydration Shield pelindung barier kulit', 'checked': true},
-      {'title': 'Sunscreen Pagi', 'desc': 'UV Barrier SPF 50+ PA++++ tahan radiasi', 'checked': true},
-      {'title': 'Re-apply Sunscreen', 'desc': 'Midday Refresh perlindungan matahari siang', 'checked': true},
-      {'title': 'Cuci Muka Malam', 'desc': 'Deep Pore Cleanse mengangkat polusi & kotoran', 'checked': false},
-      {'title': 'Eksfoliasi / Serum Malam', 'desc': 'Active Recovery regenerasi sel kulit mati', 'checked': false},
-      {'title': 'Moisturizer Malam', 'desc': 'Night Regeneration kunci kelembapan tidur', 'checked': false},
+      {
+        'title': 'Cuci Muka Pagi',
+        'desc': 'Gentle Cleanser menghilangkan sebum tidur',
+        'checked': true,
+      },
+      {
+        'title': 'Moisturizer Pagi',
+        'desc': 'Hydration Shield pelindung barier kulit',
+        'checked': true,
+      },
+      {
+        'title': 'Sunscreen Pagi',
+        'desc': 'UV Barrier SPF 50+ PA++++ tahan radiasi',
+        'checked': true,
+      },
+      {
+        'title': 'Re-apply Sunscreen',
+        'desc': 'Midday Refresh perlindungan matahari siang',
+        'checked': true,
+      },
+      {
+        'title': 'Cuci Muka Malam',
+        'desc': 'Deep Pore Cleanse mengangkat polusi & kotoran',
+        'checked': false,
+      },
+      {
+        'title': 'Eksfoliasi / Serum Malam',
+        'desc': 'Active Recovery regenerasi sel kulit mati',
+        'checked': false,
+      },
+      {
+        'title': 'Moisturizer Malam',
+        'desc': 'Night Regeneration kunci kelembapan tidur',
+        'checked': false,
+      },
     ];
 
     showModalBottomSheet(
@@ -402,10 +446,15 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF472B6).withValues(alpha: 0.15),
+                          color: const Color(0xFFF472B6)
+                              .withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.spa, color: Color(0xFFF472B6), size: 22),
+                        child: const Icon(
+                          Icons.spa,
+                          color: Color(0xFFF472B6),
+                          size: 22,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -449,7 +498,9 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: isChecked
-                              ? LevMaxTheme.primaryContainer.withValues(alpha: 0.6)
+                              ? LevMaxTheme.primaryContainer.withValues(
+                                  alpha: 0.6,
+                                )
                               : const Color(0xFF262A35),
                         ),
                       ),
@@ -488,7 +539,10 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                   // KUNCI VALIDASI: Jam >= 21:00
                   if (!isEligible)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
                         color: const Color(0xFFEF4444).withValues(alpha: 0.15),
@@ -497,7 +551,11 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.lock_clock, color: Color(0xFFEF4444), size: 18),
+                          const Icon(
+                            Icons.lock_clock,
+                            color: Color(0xFFEF4444),
+                            size: 18,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -534,7 +592,9 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                       ),
                     ),
                     child: Text(
-                      isEligible ? 'SUBMIT (+25 EXP & +2 CHA)' : 'SUBMIT (TERKUNCI < 21:00)',
+                      isEligible
+                          ? 'SUBMIT (+25 EXP & +2 CHA)'
+                          : 'SUBMIT (TERKUNCI < 21:00)',
                       style: LevMaxTheme.headline(
                         fontSize: 13,
                         fontWeight: FontWeight.w900,
@@ -653,7 +713,10 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('TUTUP', style: LevMaxTheme.mono(color: LevMaxTheme.outline)),
+              child: Text(
+                'TUTUP',
+                style: LevMaxTheme.mono(color: LevMaxTheme.outline),
+              ),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -676,13 +739,18 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                       backgroundColor: const Color(0xFF6001D1),
                       content: Text(
                         'MYSTERY QUEST CLEARED! +125 EXP & +100 GOLD TERCATAT DI BLOCKCHAIN!',
-                        style: LevMaxTheme.mono(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: LevMaxTheme.mono(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   );
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6001D1)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6001D1),
+              ),
               child: Text(
                 'ACCEPT & CLAIM',
                 style: LevMaxTheme.headline(
@@ -757,7 +825,10 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                   children: [
                     Text(
                       'STATUS SENSOR',
-                      style: LevMaxTheme.mono(fontSize: 10, color: LevMaxTheme.onSurfaceVariant),
+                      style: LevMaxTheme.mono(
+                        fontSize: 10,
+                        color: LevMaxTheme.onSurfaceVariant,
+                      ),
                     ),
                     Text(
                       'SATELLITE LOCKED',
@@ -775,14 +846,19 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('BATAL', style: LevMaxTheme.mono(color: LevMaxTheme.outline)),
+              child: Text(
+                'BATAL',
+                style: LevMaxTheme.mono(color: LevMaxTheme.outline),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(ctx);
                 _completeQuest(quest);
               },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF65F2B5)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF65F2B5),
+              ),
               child: Text(
                 'COMPLETE RUN',
                 style: LevMaxTheme.headline(
@@ -845,7 +921,10 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
           backgroundColor: const Color(0xFF131826),
           content: Text(
             'PENGINGAT SISTEM DIAKTIFKAN UNTUK PUKUL $timeStr',
-            style: LevMaxTheme.mono(color: LevMaxTheme.amberGold, fontWeight: FontWeight.bold),
+            style: LevMaxTheme.mono(
+              color: LevMaxTheme.amberGold,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       );
@@ -880,12 +959,18 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
         ),
         content: Text(
           'Apakah Anda yakin ingin memutuskan koneksi sesi Hunter dan keluar dari Sistem?',
-          style: LevMaxTheme.mono(fontSize: 11, color: LevMaxTheme.onSurfaceVariant),
+          style: LevMaxTheme.mono(
+            fontSize: 11,
+            color: LevMaxTheme.onSurfaceVariant,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('BATAL', style: LevMaxTheme.mono(color: LevMaxTheme.outline)),
+            child: Text(
+              'BATAL',
+              style: LevMaxTheme.mono(color: LevMaxTheme.outline),
+            ),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -895,10 +980,15 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                 Navigator.pushReplacementNamed(context, '/login');
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+            ),
             child: Text(
               'LOGOUT',
-              style: LevMaxTheme.mono(color: Colors.white, fontWeight: FontWeight.bold),
+              style: LevMaxTheme.mono(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -943,7 +1033,9 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
 
               // KOMPONEN 4: REACTIVE QUEST FEED (VALUELISTENABLEBUILDER)
               _buildReactiveQuestFeed(),
-              const SizedBox(height: 80), // Padding untuk Floating Action Buttons
+              const SizedBox(
+                height: 80,
+              ), // Padding untuk Floating Action Buttons
             ],
           ),
         ),
@@ -991,11 +1083,16 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF0F131D),
                   shape: BoxShape.circle,
-                  border: Border.all(color: LevMaxTheme.primaryContainer, width: 1.5),
+                  border: Border.all(
+                    color: LevMaxTheme.primaryContainer,
+                    width: 1.5,
+                  ),
                 ),
                 child: Center(
                   child: Text(
-                    player.username.isNotEmpty ? player.username[0].toUpperCase() : 'H',
+                    player.username.isNotEmpty
+                        ? player.username[0].toUpperCase()
+                        : 'H',
                     style: LevMaxTheme.headline(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -1028,9 +1125,14 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                         ),
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: LevMaxTheme.primaryContainer.withValues(alpha: 0.2),
+                            color: LevMaxTheme.primaryContainer.withValues(
+                              alpha: 0.2,
+                            ),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -1057,7 +1159,11 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
 
               // Tombol Mini-Games Arcade Training Ground
               IconButton(
-                icon: const Icon(Icons.sports_esports, color: LevMaxTheme.amberGold, size: 22),
+                icon: const Icon(
+                  Icons.sports_esports,
+                  color: LevMaxTheme.amberGold,
+                  size: 22,
+                ),
                 tooltip: 'Training Ground // Mini-Games',
                 onPressed: () {
                   Navigator.push(
@@ -1074,7 +1180,11 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
 
               // Tombol Logout Power Merah
               IconButton(
-                icon: const Icon(Icons.power_settings_new, color: Color(0xFFEF4444), size: 22),
+                icon: const Icon(
+                  Icons.power_settings_new,
+                  color: Color(0xFFEF4444),
+                  size: 22,
+                ),
                 tooltip: 'Disconnect Hunter',
                 onPressed: _confirmLogout,
               ),
@@ -1112,7 +1222,9 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
               value: hpRatio,
               minHeight: 6,
               backgroundColor: const Color(0xFF0F131D),
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFEF4444)),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFFEF4444),
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -1146,7 +1258,9 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
               value: expRatio,
               minHeight: 6,
               backgroundColor: const Color(0xFF0F131D),
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF00F0FF)),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFF00F0FF),
+              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -1158,7 +1272,11 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
               const SizedBox(width: 8),
               _buildAttributeBox('AGI', player.agi, const Color(0xFF65F2B5)),
               const SizedBox(width: 8),
-              _buildAttributeBox('INT', player.intStat, const Color(0xFF00F0FF)),
+              _buildAttributeBox(
+                'INT',
+                player.intStat,
+                const Color(0xFF00F0FF),
+              ),
               const SizedBox(width: 8),
               _buildAttributeBox('CHA', player.cha, const Color(0xFFC084FC)),
             ],
@@ -1177,10 +1295,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: glowColor.withValues(alpha: 0.5)),
           boxShadow: [
-            BoxShadow(
-              color: glowColor.withValues(alpha: 0.15),
-              blurRadius: 6,
-            ),
+            BoxShadow(color: glowColor.withValues(alpha: 0.15), blurRadius: 6),
           ],
         ),
         child: Column(
@@ -1309,8 +1424,15 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
             style: LevMaxTheme.mono(fontSize: 12, color: Colors.white),
             decoration: InputDecoration(
               hintText: 'Search quest directives...',
-              hintStyle: LevMaxTheme.mono(fontSize: 12, color: LevMaxTheme.outline),
-              prefixIcon: const Icon(Icons.search, color: LevMaxTheme.outline, size: 20),
+              hintStyle: LevMaxTheme.mono(
+                fontSize: 12,
+                color: LevMaxTheme.outline,
+              ),
+              prefixIcon: const Icon(
+                Icons.search,
+                color: LevMaxTheme.outline,
+                size: 20,
+              ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(vertical: 12),
             ),
@@ -1338,8 +1460,12 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                         selected: isSelected,
                         labelStyle: LevMaxTheme.mono(
                           fontSize: 11,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                          color: isSelected ? Colors.black : LevMaxTheme.onSurfaceVariant,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.w500,
+                          color: isSelected
+                              ? Colors.black
+                              : LevMaxTheme.onSurfaceVariant,
                         ),
                         backgroundColor: const Color(0xFF171B26),
                         selectedColor: LevMaxTheme.primaryContainer,
@@ -1383,7 +1509,10 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF6001D1),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                           side: BorderSide(
@@ -1424,14 +1553,24 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF171B26),
                       foregroundColor: LevMaxTheme.amberGold,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
-                        side: const BorderSide(color: Color(0xFFFBBF24), width: 1.2),
+                        side: const BorderSide(
+                          color: Color(0xFFFBBF24),
+                          width: 1.2,
+                        ),
                       ),
                       elevation: 4,
                     ),
-                    icon: const Icon(Icons.sports_esports, size: 16, color: Color(0xFFFBBF24)),
+                    icon: const Icon(
+                      Icons.sports_esports,
+                      size: 16,
+                      color: Color(0xFFFBBF24),
+                    ),
                     label: Text(
                       'ARCADE +50G',
                       style: LevMaxTheme.mono(
@@ -1465,17 +1604,21 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
         // Filter berdasarkan kategori
         if (_selectedCategory != 'All') {
           quests = quests
-              .where((q) =>
-                  q.category.toLowerCase() == _selectedCategory.toLowerCase())
+              .where(
+                (q) =>
+                    q.category.toLowerCase() == _selectedCategory.toLowerCase(),
+              )
               .toList();
         }
 
         // Filter berdasarkan pencarian
         if (_searchQuery.isNotEmpty) {
           quests = quests
-              .where((q) =>
-                  q.title.toLowerCase().contains(_searchQuery) ||
-                  q.description.toLowerCase().contains(_searchQuery))
+              .where(
+                (q) =>
+                    q.title.toLowerCase().contains(_searchQuery) ||
+                    q.description.toLowerCase().contains(_searchQuery),
+              )
               .toList();
         }
 
@@ -1485,7 +1628,11 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
             alignment: Alignment.center,
             child: Column(
               children: [
-                const Icon(Icons.shield_moon, color: LevMaxTheme.outline, size: 40),
+                const Icon(
+                  Icons.shield_moon,
+                  color: LevMaxTheme.outline,
+                  size: 40,
+                ),
                 const SizedBox(height: 10),
                 Text(
                   'NO QUEST DIRECTIVES FOUND',
@@ -1570,7 +1717,10 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: accentColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4),

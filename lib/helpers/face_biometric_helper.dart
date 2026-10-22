@@ -6,6 +6,7 @@
 // ==============================================================================
 
 import 'dart:math' as math;
+
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 
 /// Model Vektor Geometri Biometrik Wajah Ternormalisasi (Scale-Invariant)
@@ -38,15 +39,16 @@ class FaceBiometricVector {
     'faceAspectRatio': faceAspectRatio,
   };
 
-  factory FaceBiometricVector.fromMap(Map<String, dynamic> map) => FaceBiometricVector(
-    eyeDistanceRatio: (map['eyeDistanceRatio'] as num).toDouble(),
-    eyeToNoseRatio: (map['eyeToNoseRatio'] as num).toDouble(),
-    noseToMouthRatio: (map['noseToMouthRatio'] as num).toDouble(),
-    mouthWidthRatio: (map['mouthWidthRatio'] as num).toDouble(),
-    leftEyeToMouthRatio: (map['leftEyeToMouthRatio'] as num).toDouble(),
-    rightEyeToMouthRatio: (map['rightEyeToMouthRatio'] as num).toDouble(),
-    faceAspectRatio: (map['faceAspectRatio'] as num).toDouble(),
-  );
+  factory FaceBiometricVector.fromMap(Map<String, dynamic> map) =>
+      FaceBiometricVector(
+        eyeDistanceRatio: (map['eyeDistanceRatio'] as num).toDouble(),
+        eyeToNoseRatio: (map['eyeToNoseRatio'] as num).toDouble(),
+        noseToMouthRatio: (map['noseToMouthRatio'] as num).toDouble(),
+        mouthWidthRatio: (map['mouthWidthRatio'] as num).toDouble(),
+        leftEyeToMouthRatio: (map['leftEyeToMouthRatio'] as num).toDouble(),
+        rightEyeToMouthRatio: (map['rightEyeToMouthRatio'] as num).toDouble(),
+        faceAspectRatio: (map['faceAspectRatio'] as num).toDouble(),
+      );
 
   /// Ekstraksi rasio geometri dari objek Face ML Kit
   static FaceBiometricVector? fromFace(Face face) {
@@ -74,7 +76,10 @@ class FaceBiometricVector {
 
     math.Point<int>? eyeCenter;
     if (leftEye != null && rightEye != null) {
-      eyeCenter = math.Point<int>((leftEye.x + rightEye.x) ~/ 2, (leftEye.y + rightEye.y) ~/ 2);
+      eyeCenter = math.Point<int>(
+        (leftEye.x + rightEye.x) ~/ 2,
+        (leftEye.y + rightEye.y) ~/ 2,
+      );
     }
 
     // Jarak mata ke pangkal hidung
@@ -84,7 +89,10 @@ class FaceBiometricVector {
 
     math.Point<int>? mouthCenter;
     if (leftMouth != null && rightMouth != null) {
-      mouthCenter = math.Point<int>((leftMouth.x + rightMouth.x) ~/ 2, (leftMouth.y + rightMouth.y) ~/ 2);
+      mouthCenter = math.Point<int>(
+        (leftMouth.x + rightMouth.x) ~/ 2,
+        (leftMouth.y + rightMouth.y) ~/ 2,
+      );
     } else if (bottomMouth != null) {
       mouthCenter = bottomMouth;
     }
@@ -126,8 +134,10 @@ class FaceBiometricVector {
     totalDiff += (eyeToNoseRatio - baseline.eyeToNoseRatio).abs() * 2.0;
     totalDiff += (noseToMouthRatio - baseline.noseToMouthRatio).abs() * 2.0;
     totalDiff += (mouthWidthRatio - baseline.mouthWidthRatio).abs() * 1.5;
-    totalDiff += (leftEyeToMouthRatio - baseline.leftEyeToMouthRatio).abs() * 1.5;
-    totalDiff += (rightEyeToMouthRatio - baseline.rightEyeToMouthRatio).abs() * 1.5;
+    totalDiff +=
+        (leftEyeToMouthRatio - baseline.leftEyeToMouthRatio).abs() * 1.5;
+    totalDiff +=
+        (rightEyeToMouthRatio - baseline.rightEyeToMouthRatio).abs() * 1.5;
     totalDiff += (faceAspectRatio - baseline.faceAspectRatio).abs() * 1.0;
 
     // Total bobot = 12.0

@@ -13,6 +13,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -35,7 +36,12 @@ enum WorkoutSessionType {
   final String muscleGroup;
   final int bonusThreshold;
   final IconData icon;
-  const WorkoutSessionType(this.title, this.muscleGroup, this.bonusThreshold, this.icon);
+  const WorkoutSessionType(
+    this.title,
+    this.muscleGroup,
+    this.bonusThreshold,
+    this.icon,
+  );
 }
 
 class OnboardingPage extends StatefulWidget {
@@ -99,8 +105,9 @@ class _OnboardingPageState extends State<OnboardingPage>
   final ValueNotifier<int> _remainingSecondsNotifier = ValueNotifier<int>(60);
   final ValueNotifier<int> _repCountNotifier = ValueNotifier<int>(0);
   final ValueNotifier<double> _angleNotifier = ValueNotifier<double>(180.0);
-  final ValueNotifier<String> _feedbackNotifier =
-      ValueNotifier<String>('POSISIKAN SELURUH TUBUH DALAM RETICLE KAMERA');
+  final ValueNotifier<String> _feedbackNotifier = ValueNotifier<String>(
+    'POSISIKAN SELURUH TUBUH DALAM RETICLE KAMERA',
+  );
   final ValueNotifier<bool> _isRestingNotifier = ValueNotifier<bool>(false);
   final ValueNotifier<int> _restSecondsNotifier = ValueNotifier<int>(5);
 
@@ -167,7 +174,8 @@ class _OnboardingPageState extends State<OnboardingPage>
     PoseLandmark midPoint,
     PoseLandmark lastPoint,
   ) {
-    final radians = math.atan2(lastPoint.y - midPoint.y, lastPoint.x - midPoint.x) -
+    final radians =
+        math.atan2(lastPoint.y - midPoint.y, lastPoint.x - midPoint.x) -
         math.atan2(firstPoint.y - midPoint.y, firstPoint.x - midPoint.x);
     var angle = (radians * 180.0 / math.pi).abs();
     if (angle > 180.0) {
@@ -205,8 +213,11 @@ class _OnboardingPageState extends State<OnboardingPage>
     rotation ??= InputImageRotation.rotation0deg;
 
     // Deteksi Format Pixel
-    final format = InputImageFormatValue.fromRawValue(image.format.raw) ??
-        (Platform.isAndroid ? InputImageFormat.nv21 : InputImageFormat.bgra8888);
+    final format =
+        InputImageFormatValue.fromRawValue(image.format.raw) ??
+        (Platform.isAndroid
+            ? InputImageFormat.nv21
+            : InputImageFormat.bgra8888);
 
     // Gabungkan seluruh plane bytes (Y, U, V)
     final WriteBuffer allBytes = WriteBuffer();
@@ -328,14 +339,16 @@ class _OnboardingPageState extends State<OnboardingPage>
 
     // Tentukan sisi tubuh terbaik dengan likelihood kepercayaan tertinggi
     double? detectedAngle;
-    final bool leftValid = p1Left != null &&
+    final bool leftValid =
+        p1Left != null &&
         p2Left != null &&
         p3Left != null &&
         p1Left.likelihood > 0.4 &&
         p2Left.likelihood > 0.4 &&
         p3Left.likelihood > 0.4;
 
-    final bool rightValid = p1Right != null &&
+    final bool rightValid =
+        p1Right != null &&
         p2Right != null &&
         p3Right != null &&
         p1Right.likelihood > 0.4 &&
@@ -450,7 +463,8 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   Future<void> _toggleCameraLens() async {
     if (_availableCameras.length < 2) return;
-    _selectedCameraIndex = (_selectedCameraIndex + 1) % _availableCameras.length;
+    _selectedCameraIndex =
+        (_selectedCameraIndex + 1) % _availableCameras.length;
     setState(() {
       _isCameraInitialized = false;
     });
@@ -577,7 +591,8 @@ class _OnboardingPageState extends State<OnboardingPage>
   /// Menghitung Rank Akhir berdasarkan Repetisi Ujian Fisik
   /// Jika Push-up > 30, Sit-up > 30, Squat > 40, Pull-up > 2 -> Naik 1 Rank
   Map<String, dynamic> _evaluateFinalAwakening() {
-    final bool meetsPromotion = _pushupCount > 30 &&
+    final bool meetsPromotion =
+        _pushupCount > 30 &&
         _situpCount > 30 &&
         _squatCount > 40 &&
         _pullupCount > 2;
@@ -591,10 +606,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       }
     }
 
-    return {
-      'promoted': meetsPromotion,
-      'finalRank': finalRank,
-    };
+    return {'promoted': meetsPromotion, 'finalRank': finalRank};
   }
 
   // ============================================================================
@@ -629,7 +641,9 @@ class _OnboardingPageState extends State<OnboardingPage>
             mainAxisSize: MainAxisSize.min,
             children: [
               const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(LevMaxTheme.primaryContainer),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  LevMaxTheme.primaryContainer,
+                ),
               ),
               const SizedBox(height: 20),
               Text(
@@ -664,23 +678,24 @@ class _OnboardingPageState extends State<OnboardingPage>
       final username = await UserInfo.getUsername() ?? 'Hunter';
       final email = await UserInfo.getEmail() ?? 'hunter@system.sys';
 
-      final userToUpdate = (cachedPlayer ??
-              UserModel.initial(
-                id: userId,
-                username: username,
-                email: email,
-              ))
-          .copyWith(
-        height: _tbCm.toInt(),
-        weight: _bbKg,
-        bmiScore: double.parse(_calculatedBmi.toStringAsFixed(2)),
-        maxPushup: _pushupCount,
-        maxSitup: _situpCount,
-        maxSquat: _squatCount,
-        maxPullup: _pullupCount,
-        rank: finalRank,
-        isOnboarded: true,
-      );
+      final userToUpdate =
+          (cachedPlayer ??
+                  UserModel.initial(
+                    id: userId,
+                    username: username,
+                    email: email,
+                  ))
+              .copyWith(
+                height: _tbCm.toInt(),
+                weight: _bbKg,
+                bmiScore: double.parse(_calculatedBmi.toStringAsFixed(2)),
+                maxPushup: _pushupCount,
+                maxSitup: _situpCount,
+                maxSquat: _squatCount,
+                maxPullup: _pullupCount,
+                rank: finalRank,
+                isOnboarded: true,
+              );
 
       // 2. Simpan status onboarding dan cache lokal ke Hive
       await UserInfo.setIsOnboarded(true);
@@ -762,7 +777,10 @@ class _OnboardingPageState extends State<OnboardingPage>
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: LevMaxTheme.primaryContainer.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
@@ -848,10 +866,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (_tempRank == 'E'
-                            ? LevMaxTheme.tertiaryFixed
-                            : const Color(0xFFFFB4AB))
-                        .withValues(alpha: 0.15),
+                    color:
+                        (_tempRank == 'E'
+                                ? LevMaxTheme.tertiaryFixed
+                                : const Color(0xFFFFB4AB))
+                            .withValues(alpha: 0.15),
                     blurRadius: 16,
                   ),
                 ],
@@ -885,8 +904,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                             _calculatedBmi < 18.5
                                 ? 'UNDERWEIGHT // KEKURANGAN BOBOT'
                                 : _calculatedBmi <= 24.9
-                                    ? 'NORMAL // COMBAT READY'
-                                    : 'OVERWEIGHT // PERLU KONDISIONING',
+                                ? 'NORMAL // COMBAT READY'
+                                : 'OVERWEIGHT // PERLU KONDISIONING',
                             style: LevMaxTheme.mono(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -899,7 +918,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF0A0E18),
                           borderRadius: BorderRadius.circular(12),
@@ -943,7 +964,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                         : '⚠ BMI di luar rentang normal: Terdaftar pada Temp Rank F. Anda dapat meningkatkan rank melalui Ujian Fisik kamera.',
                     style: TextStyle(
                       fontSize: 11,
-                      color: LevMaxTheme.onSurfaceVariant.withValues(alpha: 0.9),
+                      color: LevMaxTheme.onSurfaceVariant.withValues(
+                        alpha: 0.9,
+                      ),
                       height: 1.4,
                     ),
                   ),
@@ -970,7 +993,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                   borderRadius: BorderRadius.circular(14),
                 ),
                 elevation: 6,
-                shadowColor: LevMaxTheme.primaryContainer.withValues(alpha: 0.5),
+                shadowColor: LevMaxTheme.primaryContainer.withValues(
+                  alpha: 0.5,
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1099,12 +1124,19 @@ class _OnboardingPageState extends State<OnboardingPage>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.videocam_off, color: Color(0xFFFFB4AB), size: 48),
+                          const Icon(
+                            Icons.videocam_off,
+                            color: Color(0xFFFFB4AB),
+                            size: 48,
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             _cameraErrorMessage,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Color(0xFFFFB4AB), fontSize: 13),
+                            style: const TextStyle(
+                              color: Color(0xFFFFB4AB),
+                              fontSize: 13,
+                            ),
                           ),
                           const SizedBox(height: 20),
                           ElevatedButton(
@@ -1115,7 +1147,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                       ),
                     )
                   : const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(LevMaxTheme.primaryContainer),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        LevMaxTheme.primaryContainer,
+                      ),
                     ),
             ),
           ),
@@ -1129,8 +1163,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                 margin: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: LevMaxTheme.primaryContainer
-                        .withValues(alpha: _pulseAnimation.value * 0.4 + 0.1),
+                    color: LevMaxTheme.primaryContainer.withValues(
+                      alpha: _pulseAnimation.value * 0.4 + 0.1,
+                    ),
                     width: 1.5,
                   ),
                   borderRadius: BorderRadius.circular(16),
@@ -1150,7 +1185,10 @@ class _OnboardingPageState extends State<OnboardingPage>
               decoration: BoxDecoration(
                 color: const Color(0xFF0F131D).withValues(alpha: 0.88),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: LevMaxTheme.primaryContainer, width: 1.2),
+                border: Border.all(
+                  color: LevMaxTheme.primaryContainer,
+                  width: 1.2,
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1185,7 +1223,10 @@ class _OnboardingPageState extends State<OnboardingPage>
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.cameraswitch, color: LevMaxTheme.primaryContainer),
+                    icon: const Icon(
+                      Icons.cameraswitch,
+                      color: LevMaxTheme.primaryContainer,
+                    ),
                     onPressed: _toggleCameraLens,
                   ),
                 ],
@@ -1203,7 +1244,10 @@ class _OnboardingPageState extends State<OnboardingPage>
                 valueListenable: _remainingSecondsNotifier,
                 builder: (context, seconds, child) {
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF0A0E18).withValues(alpha: 0.75),
                       shape: BoxShape.circle,
@@ -1320,17 +1364,26 @@ class _OnboardingPageState extends State<OnboardingPage>
                     valueListenable: _feedbackNotifier,
                     builder: (context, feedback, child) {
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF0A0E18),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: LevMaxTheme.primaryContainer.withValues(alpha: 0.4),
+                            color: LevMaxTheme.primaryContainer.withValues(
+                              alpha: 0.4,
+                            ),
                           ),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.radar, color: LevMaxTheme.primaryContainer, size: 16),
+                            const Icon(
+                              Icons.radar,
+                              color: LevMaxTheme.primaryContainer,
+                              size: 16,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -1486,13 +1539,18 @@ class _OnboardingPageState extends State<OnboardingPage>
                 color: const Color(0xFF131826),
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: promoted ? LevMaxTheme.tertiaryFixed : LevMaxTheme.primaryContainer,
+                  color: promoted
+                      ? LevMaxTheme.tertiaryFixed
+                      : LevMaxTheme.primaryContainer,
                   width: 2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: (promoted ? LevMaxTheme.tertiaryFixed : LevMaxTheme.primaryContainer)
-                        .withValues(alpha: 0.25),
+                    color:
+                        (promoted
+                                ? LevMaxTheme.tertiaryFixed
+                                : LevMaxTheme.primaryContainer)
+                            .withValues(alpha: 0.25),
                     blurRadius: 20,
                     spreadRadius: 2,
                   ),
@@ -1505,7 +1563,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                     style: LevMaxTheme.mono(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: promoted ? LevMaxTheme.tertiaryFixed : LevMaxTheme.primaryContainer,
+                      color: promoted
+                          ? LevMaxTheme.tertiaryFixed
+                          : LevMaxTheme.primaryContainer,
                       letterSpacing: 2.0,
                     ),
                   ),
@@ -1515,7 +1575,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                     style: LevMaxTheme.headline(
                       fontSize: 48,
                       fontWeight: FontWeight.w900,
-                      color: promoted ? LevMaxTheme.tertiaryFixed : Colors.white,
+                      color: promoted
+                          ? LevMaxTheme.tertiaryFixed
+                          : Colors.white,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -1526,7 +1588,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12,
-                      color: LevMaxTheme.onSurfaceVariant.withValues(alpha: 0.9),
+                      color: LevMaxTheme.onSurfaceVariant.withValues(
+                        alpha: 0.9,
+                      ),
                       height: 1.4,
                     ),
                   ),
@@ -1587,7 +1651,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                   borderRadius: BorderRadius.circular(14),
                 ),
                 elevation: 6,
-                shadowColor: LevMaxTheme.primaryContainer.withValues(alpha: 0.5),
+                shadowColor: LevMaxTheme.primaryContainer.withValues(
+                  alpha: 0.5,
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1670,7 +1736,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                 style: LevMaxTheme.mono(
                   fontSize: 9,
                   fontWeight: FontWeight.bold,
-                  color: passed ? LevMaxTheme.tertiaryFixed : LevMaxTheme.onSurfaceVariant,
+                  color: passed
+                      ? LevMaxTheme.tertiaryFixed
+                      : LevMaxTheme.onSurfaceVariant,
                 ),
               ),
             ],

@@ -8,6 +8,7 @@
 
 import 'dart:convert';
 import 'dart:math';
+
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
@@ -31,7 +32,10 @@ String generateUuidV4() {
     bytes.sublist(4, 6).map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
     bytes.sublist(6, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
     bytes.sublist(8, 10).map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
-    bytes.sublist(10, 16).map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
+    bytes
+        .sublist(10, 16)
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join(),
   ].join('-');
 }
 
@@ -51,11 +55,11 @@ class SupabaseService {
       !supabaseUrl.contains('YOUR_SUPABASE_PROJECT_ID');
 
   static Map<String, String> get _headers => {
-        'apikey': supabaseAnonKey,
-        'Authorization': 'Bearer $supabaseAnonKey',
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation',
-      };
+    'apikey': supabaseAnonKey,
+    'Authorization': 'Bearer $supabaseAnonKey',
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation',
+  };
 
   // ============================================================================
   // 1. SINKRONISASI QUEST HARIAN DENGAN JOIN (daily_user_quests + master_quests)
@@ -65,7 +69,9 @@ class SupabaseService {
   /// berdasarkan user_id (UUID) dan date hari ini.
   /// Jika berhasil: simpan ke QuestBox (today_quests) & update last_sync_date.
   /// Jika gagal/offline: kembalikan data cache dari QuestBox.
-  static Future<List<DailyUserQuestModel>> syncDailyQuests(String userId) async {
+  static Future<List<DailyUserQuestModel>> syncDailyQuests(
+    String userId,
+  ) async {
     final today = DateTime.now().toIso8601String().substring(0, 10);
     final questBox = HiveBoxes.getQuestCacheBox();
 
@@ -89,8 +95,10 @@ class SupabaseService {
       if (res.statusCode == 200) {
         final List list = jsonDecode(res.body);
         final quests = list
-            .map((item) =>
-                DailyUserQuestModel.fromJson(item as Map<String, dynamic>))
+            .map(
+              (item) =>
+                  DailyUserQuestModel.fromJson(item as Map<String, dynamic>),
+            )
             .toList();
 
         // Simpan ke Hive questCacheBox dalam format JSON String
@@ -117,8 +125,10 @@ class SupabaseService {
         final decoded = (raw is String) ? jsonDecode(raw) : raw;
         if (decoded is List) {
           return decoded
-              .map((item) =>
-                  DailyUserQuestModel.fromJson(item as Map<String, dynamic>))
+              .map(
+                (item) =>
+                    DailyUserQuestModel.fromJson(item as Map<String, dynamic>),
+              )
               .toList();
         }
       }
@@ -156,7 +166,10 @@ class SupabaseService {
     // 3. Eksekusi Level Up
     final newLevel = user.level + 1;
     final newExp = user.exp - 100;
-    final newRank = UserModel.calculateRank(newLevel, minStatValue: user.minStat);
+    final newRank = UserModel.calculateRank(
+      newLevel,
+      minStatValue: user.minStat,
+    );
 
     final updatedUser = user.copyWith(
       level: newLevel,
@@ -242,12 +255,15 @@ class SupabaseService {
           '&limit=1',
         );
 
-        final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 7));
+        final res = await http
+            .get(uri, headers: _headers)
+            .timeout(const Duration(seconds: 7));
         if (res.statusCode == 200) {
           final List list = jsonDecode(res.body);
           if (list.isNotEmpty) {
             final lastLog = list.first as Map<String, dynamic>;
-            previousHash = lastLog['current_hash']?.toString() ?? defaultGenesis;
+            previousHash =
+                lastLog['current_hash']?.toString() ?? defaultGenesis;
           }
         }
       } catch (e) {
@@ -277,11 +293,9 @@ class SupabaseService {
     if (isConfigured) {
       try {
         final uri = Uri.parse('$supabaseUrl/rest/v1/blockchain_inventory_logs');
-        await http.post(
-          uri,
-          headers: _headers,
-          body: jsonEncode(logModel.toJson()),
-        ).timeout(const Duration(seconds: 8));
+        await http
+            .post(uri, headers: _headers, body: jsonEncode(logModel.toJson()))
+            .timeout(const Duration(seconds: 8));
       } catch (e) {
         debugPrint('[Blockchain] Post inventory log network error: $e');
       }
@@ -300,7 +314,8 @@ class SupabaseService {
 
     if (!isConfigured) {
       final cached = getPlayerCache();
-      if (cached != null && (cached.id == idStr || idStr == '0' || idStr == '1')) {
+      if (cached != null &&
+          (cached.id == idStr || idStr == '0' || idStr == '1')) {
         return cached;
       }
       return null;
@@ -308,7 +323,9 @@ class SupabaseService {
 
     try {
       final uri = Uri.parse('$supabaseUrl/rest/v1/users?id=eq.$idStr&select=*');
-      final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 8));
+      final res = await http
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 8));
 
       if (res.statusCode == 200) {
         final List list = jsonDecode(res.body);
@@ -320,7 +337,8 @@ class SupabaseService {
       }
     } catch (_) {
       final cached = getPlayerCache();
-      if (cached != null && (cached.id == idStr || idStr == '0' || idStr == '1')) {
+      if (cached != null &&
+          (cached.id == idStr || idStr == '0' || idStr == '1')) {
         return cached;
       }
     }
@@ -330,15 +348,20 @@ class SupabaseService {
   static Future<UserModel?> getUserByUsername(String username) async {
     if (!isConfigured) {
       final cached = getPlayerCache();
-      if (cached != null && cached.username.toLowerCase() == username.toLowerCase()) {
+      if (cached != null &&
+          cached.username.toLowerCase() == username.toLowerCase()) {
         return cached;
       }
       return null;
     }
 
     try {
-      final uri = Uri.parse('$supabaseUrl/rest/v1/users?username=eq.$username&select=*');
-      final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 8));
+      final uri = Uri.parse(
+        '$supabaseUrl/rest/v1/users?username=eq.$username&select=*',
+      );
+      final res = await http
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 8));
 
       if (res.statusCode == 200) {
         final List list = jsonDecode(res.body);
@@ -350,7 +373,8 @@ class SupabaseService {
       }
     } catch (_) {
       final cached = getPlayerCache();
-      if (cached != null && cached.username.toLowerCase() == username.toLowerCase()) {
+      if (cached != null &&
+          cached.username.toLowerCase() == username.toLowerCase()) {
         return cached;
       }
     }
@@ -358,14 +382,18 @@ class SupabaseService {
   }
 
   static Future<UserModel?> createUser(UserModel user) async {
-    final uuidRegex = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
     final validId = (user.id.isNotEmpty && uuidRegex.hasMatch(user.id))
         ? user.id
         : generateUuidV4();
     final userWithId = user.copyWith(id: validId);
 
     if (!isConfigured) {
-      debugPrint('[SupabaseService] Supabase not configured. Using local fallback.');
+      debugPrint(
+        '[SupabaseService] Supabase not configured. Using local fallback.',
+      );
       await savePlayerCache(userWithId);
       return userWithId;
     }
@@ -384,10 +412,14 @@ class SupabaseService {
 
       final created = UserModel.fromJson(res);
       await savePlayerCache(created);
-      debugPrint('[SupabaseService] User successfully created via SDK with ID: ${created.id}');
+      debugPrint(
+        '[SupabaseService] User successfully created via SDK with ID: ${created.id}',
+      );
       return created;
     } catch (sdkError) {
-      debugPrint('[SupabaseService] SDK insert failed ($sdkError), trying REST HTTP POST fallback...');
+      debugPrint(
+        '[SupabaseService] SDK insert failed ($sdkError), trying REST HTTP POST fallback...',
+      );
     }
 
     // 2. Fallback ke Direct HTTP REST POST
@@ -397,7 +429,9 @@ class SupabaseService {
           .post(uri, headers: _headers, body: jsonEncode(payload))
           .timeout(const Duration(seconds: 10));
 
-      debugPrint('[SupabaseService] HTTP REST Response: status=${res.statusCode}, body=${res.body}');
+      debugPrint(
+        '[SupabaseService] HTTP REST Response: status=${res.statusCode}, body=${res.body}',
+      );
 
       if (res.statusCode == 201 || res.statusCode == 200) {
         final dynamic decoded = jsonDecode(res.body);
@@ -438,7 +472,9 @@ class SupabaseService {
           .timeout(const Duration(seconds: 10));
       return true;
     } catch (sdkError) {
-      debugPrint('[SupabaseService] SDK update error ($sdkError), trying REST HTTP...');
+      debugPrint(
+        '[SupabaseService] SDK update error ($sdkError), trying REST HTTP...',
+      );
     }
 
     // 2. Fallback ke REST HTTP PATCH
@@ -485,10 +521,14 @@ class SupabaseService {
     if (!isConfigured) return [];
     try {
       final uri = Uri.parse('$supabaseUrl/rest/v1/master_quests?select=*');
-      final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 8));
+      final res = await http
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
         final List list = jsonDecode(res.body);
-        return list.map((e) => MasterQuestModel.fromJson(e as Map<String, dynamic>)).toList();
+        return list
+            .map((e) => MasterQuestModel.fromJson(e as Map<String, dynamic>))
+            .toList();
       }
     } catch (e) {
       debugPrint('[SupabaseService] getMasterQuests error: $e');
@@ -500,10 +540,14 @@ class SupabaseService {
     if (!isConfigured) return [];
     try {
       final uri = Uri.parse('$supabaseUrl/rest/v1/item_shop?select=*');
-      final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 8));
+      final res = await http
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
         final List list = jsonDecode(res.body);
-        return list.map((e) => ItemShopModel.fromJson(e as Map<String, dynamic>)).toList();
+        return list
+            .map((e) => ItemShopModel.fromJson(e as Map<String, dynamic>))
+            .toList();
       }
     } catch (e) {
       debugPrint('[SupabaseService] getItemsShop error: $e');
@@ -528,7 +572,9 @@ class SupabaseService {
         'auth_key': authKey,
         'expires_at': expiresAt.toUtc().toIso8601String(),
       });
-      final res = await http.post(uri, headers: _headers, body: body).timeout(const Duration(seconds: 8));
+      final res = await http
+          .post(uri, headers: _headers, body: body)
+          .timeout(const Duration(seconds: 8));
       return res.statusCode == 201 || res.statusCode == 200;
     } catch (_) {
       return false;
@@ -550,7 +596,9 @@ class SupabaseService {
         'prev_hash': block.prevHash,
         'current_hash': block.currentHash,
       });
-      final res = await http.post(uri, headers: _headers, body: body).timeout(const Duration(seconds: 8));
+      final res = await http
+          .post(uri, headers: _headers, body: body)
+          .timeout(const Duration(seconds: 8));
       return res.statusCode == 201 || res.statusCode == 200;
     } catch (_) {
       return false;
@@ -578,7 +626,9 @@ class SupabaseService {
         'kesan': kesan,
         'saran': saran,
       });
-      final res = await http.post(uri, headers: _headers, body: body).timeout(const Duration(seconds: 8));
+      final res = await http
+          .post(uri, headers: _headers, body: body)
+          .timeout(const Duration(seconds: 8));
       return res.statusCode == 201 || res.statusCode == 200;
     } catch (_) {
       return false;
@@ -588,11 +638,17 @@ class SupabaseService {
   static Future<List<FeedbackModel>> getFeedbackList() async {
     if (!isConfigured) return [];
     try {
-      final uri = Uri.parse('$supabaseUrl/rest/v1/saran_kesan?select=*&order=created_at.desc');
-      final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 8));
+      final uri = Uri.parse(
+        '$supabaseUrl/rest/v1/saran_kesan?select=*&order=created_at.desc',
+      );
+      final res = await http
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
         final List list = jsonDecode(res.body);
-        return list.map((e) => FeedbackModel.fromMap(e as Map<String, dynamic>)).toList();
+        return list
+            .map((e) => FeedbackModel.fromMap(e as Map<String, dynamic>))
+            .toList();
       }
     } catch (_) {}
     return [];
@@ -601,8 +657,12 @@ class SupabaseService {
   static Future<UserModel?> getUserByEmail(String email) async {
     if (!isConfigured) return null;
     try {
-      final uri = Uri.parse('$supabaseUrl/rest/v1/users?email=eq.$email&select=*');
-      final res = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 8));
+      final uri = Uri.parse(
+        '$supabaseUrl/rest/v1/users?email=eq.$email&select=*',
+      );
+      final res = await http
+          .get(uri, headers: _headers)
+          .timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
         final List list = jsonDecode(res.body);
         if (list.isNotEmpty) {
@@ -629,8 +689,12 @@ class SupabaseService {
   }) async {
     if (!isConfigured) return true;
     try {
-      final uri = Uri.parse('$supabaseUrl/rest/v1/user_tokens?auth_key=eq.$authKey');
-      final res = await http.delete(uri, headers: _headers).timeout(const Duration(seconds: 8));
+      final uri = Uri.parse(
+        '$supabaseUrl/rest/v1/user_tokens?auth_key=eq.$authKey',
+      );
+      final res = await http
+          .delete(uri, headers: _headers)
+          .timeout(const Duration(seconds: 8));
       return res.statusCode == 200 || res.statusCode == 204;
     } catch (_) {
       return false;
@@ -650,9 +714,13 @@ class SupabaseService {
         'status': (quest.isCompleted ?? false) ? 'completed' : 'pending',
         'target_value': quest.targetValue ?? 10,
         'achieved_value': quest.currentValue ?? 0,
-        'date': quest.scheduledDate ?? DateTime.now().toIso8601String().substring(0, 10),
+        'date':
+            quest.scheduledDate ??
+            DateTime.now().toIso8601String().substring(0, 10),
       };
-      final res = await http.post(uri, headers: _headers, body: jsonEncode(body)).timeout(const Duration(seconds: 8));
+      final res = await http
+          .post(uri, headers: _headers, body: jsonEncode(body))
+          .timeout(const Duration(seconds: 8));
       return res.statusCode == 200 || res.statusCode == 201;
     } catch (_) {
       return false;
@@ -662,4 +730,3 @@ class SupabaseService {
 
 /// Alias SupabaseApiService untuk kompatibilitas penuh dengan kode yang sudah ada
 typedef SupabaseApiService = SupabaseService;
-

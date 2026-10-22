@@ -8,6 +8,7 @@
 
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
@@ -23,13 +24,7 @@ enum FaceScanMode {
   enroll, // Setor wajah patokan sekuritas
 }
 
-enum FaceScanFeedback {
-  neutral,
-  noFace,
-  warning,
-  mismatch,
-  success,
-}
+enum FaceScanFeedback { neutral, noFace, warning, mismatch, success }
 
 class FaceScanCameraPage extends StatefulWidget {
   final FaceScanMode mode;
@@ -172,7 +167,8 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
         if (mounted) {
           setState(() {
             _isCameraError = true;
-            _errorMessage = 'Tidak ditemukan hardware kamera pada perangkat ini.';
+            _errorMessage =
+                'Tidak ditemukan hardware kamera pada perangkat ini.';
           });
         }
         return;
@@ -198,7 +194,8 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
       setState(() {
         _isCameraInitialized = true;
         _isScanningActive = true;
-        if (_currentMode == FaceScanMode.enroll || _currentMode == FaceScanMode.register) {
+        if (_currentMode == FaceScanMode.enroll ||
+            _currentMode == FaceScanMode.register) {
           _statusText = 'ARAHKAN WAJAH KE DALAM LINGKARAN UNTUK SETOR PATOKAN';
         } else {
           _statusText = 'ARAHKAN WAJAH KE KAMERA UNTUK VERIFIKASI';
@@ -211,7 +208,8 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
       if (mounted) {
         setState(() {
           _isCameraError = true;
-          _errorMessage = 'Gagal mengakses kamera: $e\nHarap pastikan izin kamera diaktifkan.';
+          _errorMessage =
+              'Gagal mengakses kamera: $e\nHarap pastikan izin kamera diaktifkan.';
         });
       }
     }
@@ -260,7 +258,8 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
     if (faces.isEmpty) {
       setState(() {
         _feedbackState = FaceScanFeedback.noFace;
-        _statusText = 'WAJAH TIDAK TERDETEKSI! Posisikan wajah di dalam lingkaran';
+        _statusText =
+            'WAJAH TIDAK TERDETEKSI! Posisikan wajah di dalam lingkaran';
         _consecutiveMatchCount = 0;
         if (_currentMode != FaceScanMode.enroll) {
           _scanProgress = 0.0;
@@ -273,7 +272,8 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
     if (faces.length > 1) {
       setState(() {
         _feedbackState = FaceScanFeedback.warning;
-        _statusText = 'TERDETEKSI LEBIH DARI 1 WAJAH! Pastikan hanya wajah Anda';
+        _statusText =
+            'TERDETEKSI LEBIH DARI 1 WAJAH! Pastikan hanya wajah Anda';
         _consecutiveMatchCount = 0;
       });
       return;
@@ -295,7 +295,8 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
     final liveVector = eval.vector!;
 
     // 4. CABANG A: MODE SETOR WAJAH (ENROLLMENT)
-    if (_currentMode == FaceScanMode.enroll || _currentMode == FaceScanMode.register) {
+    if (_currentMode == FaceScanMode.enroll ||
+        _currentMode == FaceScanMode.register) {
       _processEnrollmentStep(liveVector);
     }
     // 5. CABANG B: MODE VERIFIKASI / LOGIN (VERIFY DENGAN PATOKAN)
@@ -313,7 +314,8 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
     setState(() {
       _scanProgress = progress;
       _feedbackState = FaceScanFeedback.success;
-      _statusText = 'MEREKAM PATOKAN WAJAH: $count/$_targetEnrollmentSamples (TETAP DIAM)';
+      _statusText =
+          'MEREKAM PATOKAN WAJAH: $count/$_targetEnrollmentSamples (TETAP DIAM)';
     });
 
     if (count >= _targetEnrollmentSamples) {
@@ -321,7 +323,9 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
       _isScanningActive = false;
 
       // Hitung rata-rata sampel untuk dijadikan baseline stabil
-      final averageBaseline = FaceBiometricHelper.averageVectors(_enrollmentSamples);
+      final averageBaseline = FaceBiometricHelper.averageVectors(
+        _enrollmentSamples,
+      );
 
       // Simpan baseline ke SharedPreferences via UserInfo
       await UserInfo.saveEnrolledFaceTemplate(averageBaseline.toMap());
@@ -356,12 +360,16 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
     // Ambang batas standar keamanan industri: 70% kecocokan landmark geometri
     if (similarity >= 0.70) {
       _consecutiveMatchCount++;
-      final progress = (_consecutiveMatchCount / _targetMatchStreak).clamp(0.0, 1.0);
+      final progress = (_consecutiveMatchCount / _targetMatchStreak).clamp(
+        0.0,
+        1.0,
+      );
 
       setState(() {
         _feedbackState = FaceScanFeedback.success;
         _scanProgress = progress;
-        _statusText = 'WAJAH SESUAI ($matchPercentage% COCOK) - MENYAHKAN OTORISASI...';
+        _statusText =
+            'WAJAH SESUAI ($matchPercentage% COCOK) - MENYAHKAN OTORISASI...';
       });
 
       if (_consecutiveMatchCount >= _targetMatchStreak) {
@@ -384,7 +392,8 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
       setState(() {
         _feedbackState = FaceScanFeedback.mismatch;
         _scanProgress = 0.0;
-        _statusText = 'WAJAH TIDAK COCOK DENGAN PATOKAN! ($matchPercentage% cocok)';
+        _statusText =
+            'WAJAH TIDAK COCOK DENGAN PATOKAN! ($matchPercentage% cocok)';
       });
     }
   }
@@ -447,17 +456,28 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.camera_alt_outlined, color: Color(0xFFFF1744), size: 64),
+                        const Icon(
+                          Icons.camera_alt_outlined,
+                          color: Color(0xFFFF1744),
+                          size: 64,
+                        ),
                         const SizedBox(height: 16),
                         const Text(
                           'AKSES KAMERA TERHAMBAT',
-                          style: TextStyle(color: Color(0xFFFF1744), fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(
+                            color: Color(0xFFFF1744),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           _errorMessage,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
@@ -486,7 +506,11 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
                         SizedBox(height: 16),
                         Text(
                           'MENGHUBUNGKAN KE KAMERA DEPAN...',
-                          style: TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.bold, fontSize: 12),
+                          style: TextStyle(
+                            color: Color(0xFF00E5FF),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -517,13 +541,17 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
                     return AnimatedBuilder(
                       animation: _scanLaserAnimation,
                       builder: (context, child) {
-                        final laserY = centerY + (_scanLaserAnimation.value * radius);
+                        final laserY =
+                            centerY + (_scanLaserAnimation.value * radius);
 
                         return Stack(
                           children: [
                             Positioned(
                               left: centerX - radius + 10,
-                              right: constraints.maxWidth - (centerX + radius) + 10,
+                              right:
+                                  constraints.maxWidth -
+                                  (centerX + radius) +
+                                  10,
                               top: laserY,
                               child: Container(
                                 height: 3,
@@ -536,7 +564,8 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
                                       spreadRadius: 2,
                                     ),
                                     BoxShadow(
-                                      color: const Color(0xFF7B1FA2).withValues(alpha: 0.6),
+                                      color: const Color(0xFF7B1FA2)
+                                          .withValues(alpha: 0.6),
                                       blurRadius: 20,
                                       spreadRadius: 4,
                                     ),
@@ -555,7 +584,10 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
             // 4. LAYER HUD ELEMEN SOLO LEVELING & KONTROL
             Positioned.fill(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 16.0,
+                ),
                 child: Column(
                   children: [
                     // Top App Bar
@@ -563,13 +595,20 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF00E5FF)),
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Color(0xFF00E5FF),
+                          ),
                           onPressed: () => Navigator.pop(context, false),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF131B2E).withValues(alpha: 0.85),
+                            color: const Color(0xFF131B2E)
+                                .withValues(alpha: 0.85),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: borderColor, width: 1.2),
                           ),
@@ -637,12 +676,17 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
                         padding: const EdgeInsets.all(20),
                         margin: const EdgeInsets.only(bottom: 16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF131B2E).withValues(alpha: 0.95),
+                          color: const Color(0xFF131B2E)
+                              .withValues(alpha: 0.95),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFFFB300), width: 1.8),
+                          border: Border.all(
+                            color: const Color(0xFFFFB300),
+                            width: 1.8,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFFFB300).withValues(alpha: 0.3),
+                              color: const Color(0xFFFFB300)
+                                  .withValues(alpha: 0.3),
                               blurRadius: 20,
                               spreadRadius: 2,
                             ),
@@ -653,7 +697,11 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
                           children: [
                             const Row(
                               children: [
-                                Icon(Icons.warning_amber_rounded, color: Color(0xFFFFB300), size: 28),
+                                Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: Color(0xFFFFB300),
+                                  size: 28,
+                                ),
                                 SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
@@ -671,18 +719,27 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
                             const SizedBox(height: 12),
                             const Text(
                               'Sistem keamanan LevMax mewajibkan Anda untuk menyetor wajah patokan terlebih dahulu agar sistem dapat memvalidasi identitas Hunter Anda.',
-                              style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                                height: 1.4,
+                              ),
                             ),
                             const SizedBox(height: 16),
                             ElevatedButton.icon(
                               onPressed: _switchToEnrollmentMode,
                               icon: const Icon(Icons.face, color: Colors.black),
-                              label: const Text('SETOR WAJAH SEKARANG', style: TextStyle(fontWeight: FontWeight.bold)),
+                              label: const Text(
+                                'SETOR WAJAH SEKARANG',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF00E5FF),
                                 foregroundColor: Colors.black,
                                 minimumSize: const Size.fromHeight(46),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
                           ],
@@ -691,14 +748,15 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
                     else
                       // BOTTOM HUD PANEL STATUS DETEKSI
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF131B2E).withValues(alpha: 0.92),
+                          color: const Color(0xFF131B2E)
+                              .withValues(alpha: 0.92),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: borderColor,
-                            width: 1.8,
-                          ),
+                          border: Border.all(color: borderColor, width: 1.8),
                           boxShadow: [
                             BoxShadow(
                               color: borderColor.withValues(alpha: 0.35),
@@ -718,11 +776,13 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
                                     Icon(
                                       _isScanComplete
                                           ? Icons.verified
-                                          : _feedbackState == FaceScanFeedback.mismatch
-                                              ? Icons.highlight_off
-                                              : _feedbackState == FaceScanFeedback.noFace
-                                                  ? Icons.person_off_outlined
-                                                  : Icons.face_retouching_natural,
+                                          : _feedbackState ==
+                                                FaceScanFeedback.mismatch
+                                          ? Icons.highlight_off
+                                          : _feedbackState ==
+                                                FaceScanFeedback.noFace
+                                          ? Icons.person_off_outlined
+                                          : Icons.face_retouching_natural,
                                       color: borderColor,
                                       size: 20,
                                     ),
@@ -731,8 +791,8 @@ class _FaceScanCameraPageState extends State<FaceScanCameraPage>
                                       _isScanComplete
                                           ? 'SELESAI DISAHKAN'
                                           : _currentMode == FaceScanMode.enroll
-                                              ? 'PROGRES SETOR PATOKAN'
-                                              : 'STATUS KECOCOKAN',
+                                          ? 'PROGRES SETOR PATOKAN'
+                                          : 'STATUS KECOCOKAN',
                                       style: TextStyle(
                                         color: borderColor,
                                         fontWeight: FontWeight.bold,
@@ -809,7 +869,11 @@ class FaceApertureOverlayPainter extends CustomPainter {
     final circlePath = Path()
       ..addOval(Rect.fromCircle(center: center, radius: radius));
 
-    final overlayPath = Path.combine(PathOperation.difference, bgPath, circlePath);
+    final overlayPath = Path.combine(
+      PathOperation.difference,
+      bgPath,
+      circlePath,
+    );
     final overlayPaint = Paint()
       ..color = const Color(0xFF0A0E1A).withValues(alpha: 0.88);
     canvas.drawPath(overlayPath, overlayPaint);
@@ -832,20 +896,52 @@ class FaceApertureOverlayPainter extends CustomPainter {
     final double offset = radius + 8.0;
 
     // Kiri Atas
-    canvas.drawLine(Offset(center.dx - offset, center.dy - offset + cornerLen), Offset(center.dx - offset, center.dy - offset), cornerPaint);
-    canvas.drawLine(Offset(center.dx - offset, center.dy - offset), Offset(center.dx - offset + cornerLen, center.dy - offset), cornerPaint);
+    canvas.drawLine(
+      Offset(center.dx - offset, center.dy - offset + cornerLen),
+      Offset(center.dx - offset, center.dy - offset),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(center.dx - offset, center.dy - offset),
+      Offset(center.dx - offset + cornerLen, center.dy - offset),
+      cornerPaint,
+    );
 
     // Kanan Atas
-    canvas.drawLine(Offset(center.dx + offset - cornerLen, center.dy - offset), Offset(center.dx + offset, center.dy - offset), cornerPaint);
-    canvas.drawLine(Offset(center.dx + offset, center.dy - offset), Offset(center.dx + offset, center.dy - offset + cornerLen), cornerPaint);
+    canvas.drawLine(
+      Offset(center.dx + offset - cornerLen, center.dy - offset),
+      Offset(center.dx + offset, center.dy - offset),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(center.dx + offset, center.dy - offset),
+      Offset(center.dx + offset, center.dy - offset + cornerLen),
+      cornerPaint,
+    );
 
     // Kiri Bawah
-    canvas.drawLine(Offset(center.dx - offset, center.dy + offset - cornerLen), Offset(center.dx - offset, center.dy + offset), cornerPaint);
-    canvas.drawLine(Offset(center.dx - offset, center.dy + offset), Offset(center.dx - offset + cornerLen, center.dy + offset), cornerPaint);
+    canvas.drawLine(
+      Offset(center.dx - offset, center.dy + offset - cornerLen),
+      Offset(center.dx - offset, center.dy + offset),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(center.dx - offset, center.dy + offset),
+      Offset(center.dx - offset + cornerLen, center.dy + offset),
+      cornerPaint,
+    );
 
     // Kanan Bawah
-    canvas.drawLine(Offset(center.dx + offset - cornerLen, center.dy + offset), Offset(center.dx + offset, center.dy + offset), cornerPaint);
-    canvas.drawLine(Offset(center.dx + offset, center.dy + offset), Offset(center.dx + offset, center.dy + offset - cornerLen), cornerPaint);
+    canvas.drawLine(
+      Offset(center.dx + offset - cornerLen, center.dy + offset),
+      Offset(center.dx + offset, center.dy + offset),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(center.dx + offset, center.dy + offset),
+      Offset(center.dx + offset, center.dy + offset - cornerLen),
+      cornerPaint,
+    );
   }
 
   @override

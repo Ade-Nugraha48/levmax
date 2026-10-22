@@ -10,6 +10,7 @@
 
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -23,10 +24,7 @@ import 'game_over_page.dart';
 class PenaltyGamePage extends StatefulWidget {
   final UserModel? player;
 
-  const PenaltyGamePage({
-    super.key,
-    this.player,
-  });
+  const PenaltyGamePage({super.key, this.player});
 
   @override
   State<PenaltyGamePage> createState() => _PenaltyGamePageState();
@@ -73,7 +71,8 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
   void initState() {
     super.initState();
 
-    _currentPlayer = widget.player ??
+    _currentPlayer =
+        widget.player ??
         SupabaseApiService.getPlayerCache() ??
         UserModel(username: 'Hunter', email: '');
 
@@ -328,11 +327,7 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
               ),
-              child: const Icon(
-                Icons.close,
-                size: 18,
-                color: onSurface,
-              ),
+              child: const Icon(Icons.close, size: 18, color: onSurface),
             ),
           ),
 
@@ -352,7 +347,9 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                         color: redGlow,
                         boxShadow: [
                           BoxShadow(
-                            color: redGlow.withValues(alpha: 0.4 + 0.6 * _pulseAnimation.value),
+                            color: redGlow.withValues(
+                              alpha: 0.4 + 0.6 * _pulseAnimation.value,
+                            ),
                             blurRadius: 6,
                             spreadRadius: 1,
                           ),
@@ -395,14 +392,13 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: surfaceContainer,
-              border: Border.all(color: cyanAccent.withValues(alpha: 0.7), width: 1.5),
+              border: Border.all(
+                color: cyanAccent.withValues(alpha: 0.7),
+                width: 1.5,
+              ),
             ),
             child: const Center(
-              child: Icon(
-                Icons.person_outline,
-                size: 18,
-                color: cyanAccent,
-              ),
+              child: Icon(Icons.person_outline, size: 18, color: cyanAccent),
             ),
           ),
         ],
@@ -437,7 +433,11 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                     return Icon(
                       Icons.warning_amber_rounded,
                       size: 14,
-                      color: Color.lerp(error, Colors.white, _pulseAnimation.value),
+                      color: Color.lerp(
+                        error,
+                        Colors.white,
+                        _pulseAnimation.value,
+                      ),
                     );
                   },
                 ),
@@ -464,7 +464,10 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
             decoration: BoxDecoration(
               color: const Color(0xFF1A0305),
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: error.withValues(alpha: 0.4), width: 0.8),
+              border: Border.all(
+                color: error.withValues(alpha: 0.4),
+                width: 0.8,
+              ),
             ),
             child: Text(
               'LVL 0 EXILE',
@@ -491,7 +494,10 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
       decoration: BoxDecoration(
         color: surfaceContainerLow,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: errorContainer.withValues(alpha: 0.35), width: 1),
+        border: Border.all(
+          color: errorContainer.withValues(alpha: 0.35),
+          width: 1,
+        ),
         boxShadow: const [
           BoxShadow(
             color: Colors.black54,
@@ -528,7 +534,11 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                         return Icon(
                           Icons.crisis_alert,
                           size: 13,
-                          color: Color.lerp(error, Colors.white, _pulseAnimation.value),
+                          color: Color.lerp(
+                            error,
+                            Colors.white,
+                            _pulseAnimation.value,
+                          ),
                         );
                       },
                     ),
@@ -556,11 +566,7 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.favorite_border,
-                      size: 12,
-                      color: error,
-                    ),
+                    const Icon(Icons.favorite_border, size: 12, color: error),
                     const SizedBox(width: 4),
                     Text(
                       'PULSE: 178 BPM',
@@ -735,7 +741,9 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                       color: redGlow,
                       boxShadow: [
                         BoxShadow(
-                          color: redGlow.withValues(alpha: 0.4 + 0.6 * _pulseAnimation.value),
+                          color: redGlow.withValues(
+                            alpha: 0.4 + 0.6 * _pulseAnimation.value,
+                          ),
                           blurRadius: 6,
                           spreadRadius: 1,
                         ),
@@ -773,7 +781,10 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
       decoration: BoxDecoration(
         color: surfaceContainer,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+          width: 1,
+        ),
         boxShadow: const [
           BoxShadow(
             color: Colors.black87,
@@ -793,11 +804,7 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                 children: [
                   Transform.rotate(
                     angle: pi / 4,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      color: error,
-                    ),
+                    child: Container(width: 8, height: 8, color: error),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -816,7 +823,10 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                 decoration: BoxDecoration(
                   color: error.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: error.withValues(alpha: 0.30), width: 1),
+                  border: Border.all(
+                    color: error.withValues(alpha: 0.30),
+                    width: 1,
+                  ),
                 ),
                 child: Text(
                   'RANK-S THREAT',
@@ -841,26 +851,10 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                 alignment: Alignment.center,
                 children: [
                   // 4 Reticle Corner Ticks
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    child: _buildReticleTick(),
-                  ),
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: _buildReticleTick(),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    child: _buildReticleTick(),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: _buildReticleTick(),
-                  ),
+                  Positioned(top: 0, left: 0, child: _buildReticleTick()),
+                  Positioned(top: 0, right: 0, child: _buildReticleTick()),
+                  Positioned(bottom: 0, left: 0, child: _buildReticleTick()),
+                  Positioned(bottom: 0, right: 0, child: _buildReticleTick()),
 
                   // Lingkaran Pendaran Reticle Merah Darah
                   AnimatedBuilder(
@@ -873,12 +867,16 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                           shape: BoxShape.circle,
                           color: errorContainer.withValues(alpha: 0.3),
                           border: Border.all(
-                            color: redGlow.withValues(alpha: 0.4 + 0.3 * _pulseAnimation.value),
+                            color: redGlow.withValues(
+                              alpha: 0.4 + 0.3 * _pulseAnimation.value,
+                            ),
                             width: 1.5,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: redGlow.withValues(alpha: 0.2 + 0.2 * _pulseAnimation.value),
+                              color: redGlow.withValues(
+                                alpha: 0.2 + 0.2 * _pulseAnimation.value,
+                              ),
                               blurRadius: 24,
                               spreadRadius: 2,
                             ),
@@ -905,7 +903,11 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                               fit: BoxFit.cover,
                               errorBuilder: (context, err, stackTrace) {
                                 return const Center(
-                                  child: Icon(Icons.bug_report, size: 68, color: error),
+                                  child: Icon(
+                                    Icons.bug_report,
+                                    size: 68,
+                                    color: error,
+                                  ),
                                 );
                               },
                             ),
@@ -921,7 +923,9 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                       child: Center(
                         child: CustomPaint(
                           size: const Size(64, 64),
-                          painter: _CrosshairReticlePainter(color: error.withValues(alpha: 0.4)),
+                          painter: _CrosshairReticlePainter(
+                            color: error.withValues(alpha: 0.4),
+                          ),
                         ),
                       ),
                     ),
@@ -931,7 +935,10 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                   Positioned(
                     bottom: 4,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: error,
                         borderRadius: BorderRadius.circular(20),
@@ -998,7 +1005,10 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
             decoration: BoxDecoration(
               color: surfaceContainerLowest,
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.08),
+                width: 1,
+              ),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(3),
@@ -1020,10 +1030,7 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
             children: [
               Text(
                 '0 (DEATH ZONE)',
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 9,
-                  color: outline,
-                ),
+                style: GoogleFonts.jetBrainsMono(fontSize: 9, color: outline),
               ),
               Text(
                 'SURVIVAL ESCAPE THRESHOLD: $_targetTaps TAPS',
@@ -1066,7 +1073,8 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                   animation: _rippleAnimation,
                   builder: (context, child) {
                     final scale = 1.0 + 0.45 * _rippleAnimation.value;
-                    final opacity = (1.0 - _rippleAnimation.value).clamp(0.0, 1.0) * 0.4;
+                    final opacity =
+                        (1.0 - _rippleAnimation.value).clamp(0.0, 1.0) * 0.4;
                     return Transform.scale(
                       scale: scale,
                       child: Container(
@@ -1138,7 +1146,9 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                           // Crossed Swords Vector Icon
                           CustomPaint(
                             size: const Size(36, 36),
-                            painter: _CrossedSwordsPainter(color: errorContainer),
+                            painter: _CrossedSwordsPainter(
+                              color: errorContainer,
+                            ),
                           ),
                           const SizedBox(height: 6),
 
@@ -1204,7 +1214,10 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
       decoration: BoxDecoration(
         color: surfaceContainerLow,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+          width: 1,
+        ),
       ),
       child: IntrinsicHeight(
         child: Row(
@@ -1246,7 +1259,9 @@ class _PenaltyGamePageState extends State<PenaltyGamePage>
                           height: 1.45,
                         ),
                         children: const [
-                          TextSpan(text: 'Failure to reach 50 taps before 00:00 will result in '),
+                          TextSpan(
+                            text: 'Failure to reach 50 taps before 00:00 will result in ',
+                          ),
                           TextSpan(
                             text: 'Total Player Demotion',
                             style: TextStyle(
@@ -1435,14 +1450,30 @@ class _CrossedSwordsPainter extends CustomPainter {
     final h = size.height;
 
     // Sword 1: Top-Left to Bottom-Right
-    canvas.drawLine(Offset(w * 0.22, h * 0.22), Offset(w * 0.78, h * 0.78), bladePaint);
+    canvas.drawLine(
+      Offset(w * 0.22, h * 0.22),
+      Offset(w * 0.78, h * 0.78),
+      bladePaint,
+    );
     // Hilt 1
-    canvas.drawLine(Offset(w * 0.68, h * 0.82), Offset(w * 0.82, h * 0.68), hiltPaint);
+    canvas.drawLine(
+      Offset(w * 0.68, h * 0.82),
+      Offset(w * 0.82, h * 0.68),
+      hiltPaint,
+    );
 
     // Sword 2: Top-Right to Bottom-Left
-    canvas.drawLine(Offset(w * 0.78, h * 0.22), Offset(w * 0.22, h * 0.78), bladePaint);
+    canvas.drawLine(
+      Offset(w * 0.78, h * 0.22),
+      Offset(w * 0.22, h * 0.78),
+      bladePaint,
+    );
     // Hilt 2
-    canvas.drawLine(Offset(w * 0.18, h * 0.68), Offset(w * 0.32, h * 0.82), hiltPaint);
+    canvas.drawLine(
+      Offset(w * 0.18, h * 0.68),
+      Offset(w * 0.32, h * 0.82),
+      hiltPaint,
+    );
   }
 
   @override

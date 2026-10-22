@@ -7,9 +7,11 @@
 // ==============================================================================
 
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+
 import '../models/user_model.dart';
 
 class AiSystemService {
@@ -31,8 +33,8 @@ class AiSystemService {
     }
 
     // 1. Cek flutter_dotenv (.env)
-    final envKey = dotenv.maybeGet('GCP_API_KEY') ??
-        dotenv.maybeGet('GEMINI_API_KEY');
+    final envKey =
+        dotenv.maybeGet('GCP_API_KEY') ?? dotenv.maybeGet('GEMINI_API_KEY');
     if (envKey != null && envKey.isNotEmpty) {
       return envKey;
     }
@@ -85,7 +87,9 @@ Aturan Khusus:
   /// Inisialisasi model dan sesi chat baru
   void initChat({UserModel? player}) {
     if (!isConfigured) {
-      debugPrint('[AiSystemService] Gemini API Key belum dikonfigurasi. Mode offline/fallback siap.');
+      debugPrint(
+        '[AiSystemService] Gemini API Key belum dikonfigurasi. Mode offline/fallback siap.',
+      );
       _model = null;
       _chatSession = null;
       return;
@@ -98,7 +102,9 @@ Aturan Khusus:
         systemInstruction: Content.system(_buildSystemInstruction(player)),
       );
       _chatSession = _model!.startChat();
-      debugPrint('[AiSystemService] ChatSession aktif dengan persona The System (gemini-3.8-flash).');
+      debugPrint(
+        '[AiSystemService] ChatSession aktif dengan persona The System (gemini-3.8-flash).',
+      );
     } catch (e) {
       debugPrint('[AiSystemService] Gagal inisialisasi GenerativeModel: $e');
       _model = null;
@@ -119,7 +125,9 @@ Aturan Khusus:
 
     // Jika API Key belum terkonfigurasi, lempar exception spesifik agar UI menampilkan pesan error merah
     if (!isConfigured) {
-      throw Exception('SYSTEM ERROR: Mana connection severed. Provide valid API Key to restore telepathic link.');
+      throw Exception(
+        'SYSTEM ERROR: Mana connection severed. Provide valid API Key to restore telepathic link.',
+      );
     }
 
     // Pastikan session sudah terinisialisasi
@@ -128,11 +136,15 @@ Aturan Khusus:
     }
 
     if (_chatSession == null) {
-      throw Exception('SYSTEM ERROR: Mana connection severed. Provide valid API Key to restore telepathic link.');
+      throw Exception(
+        'SYSTEM ERROR: Mana connection severed. Provide valid API Key to restore telepathic link.',
+      );
     }
 
     // Kirim pesan stream via package:google_generative_ai
-    final responseStream = _chatSession!.sendMessageStream(Content.text(trimmed));
+    final responseStream = _chatSession!.sendMessageStream(
+      Content.text(trimmed),
+    );
 
     await for (final response in responseStream) {
       if (response.text != null && response.text!.isNotEmpty) {

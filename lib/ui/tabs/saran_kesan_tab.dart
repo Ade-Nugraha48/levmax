@@ -5,6 +5,7 @@
 // ==============================================================================
 
 import 'package:flutter/material.dart';
+
 import '../../models/user_model.dart';
 import 'feedback_tab.dart';
 
@@ -14,17 +15,10 @@ class SaranKesanTab extends StatelessWidget {
   final UserModel player;
   final VoidCallback? onPlayerUpdated;
 
-  const SaranKesanTab({
-    super.key,
-    required this.player,
-    this.onPlayerUpdated,
-  });
+  const SaranKesanTab({super.key, required this.player, this.onPlayerUpdated});
 
   @override
   Widget build(BuildContext context) {
-    return FeedbackTab(
-      player: player,
-      onPlayerUpdated: onPlayerUpdated,
-    );
+    return FeedbackTab(player: player, onPlayerUpdated: onPlayerUpdated);
   }
 }

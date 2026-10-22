@@ -7,6 +7,7 @@
 // ==============================================================================
 
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../helpers/levmax_theme.dart';
@@ -42,7 +43,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
   // State Dinamis & Interaktif Live Optical Chamber
   double _scanProgress = 0.68;
-  String _scanStatusText = 'Align face with system sensor • Keep head level in the reticle.';
+  String _scanStatusText =
+      'Align face with system sensor • Keep head level in the reticle.';
   String _matchPercentage = '99.4%';
   bool _isScanError = false;
   bool _isScanning = false;
@@ -135,23 +137,26 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
     Map<String, dynamic> res;
     try {
-      res = await AuthService.loginUser(
-        email: emailInput,
-        password: passInput,
-      );
+      res = await AuthService.loginUser(email: emailInput, password: passInput);
     } catch (e) {
       debugPrint('Supabase login error, fallback to offline demo Hunter: $e');
       // Fallback offline simulasi agar demo/testing di Samsung M31 selalu lancar
       final fallbackUser = UserModel.initial(
         id: 1,
-        username: emailInput.contains('@') ? emailInput.split('@').first : emailInput,
-        email: emailInput.contains('@') ? emailInput : '$emailInput@monarch.sys',
+        username: emailInput.contains('@')
+            ? emailInput.split('@').first
+            : emailInput,
+        email: emailInput.contains('@')
+            ? emailInput
+            : '$emailInput@monarch.sys',
       );
       await UserInfo.setUserID(fallbackUser.id);
       await UserInfo.setUsername(fallbackUser.username);
       await UserInfo.setEmail(fallbackUser.email);
       await UserInfo.setLoginStatus(true);
-      await UserInfo.setToken('demo_token_${DateTime.now().millisecondsSinceEpoch}');
+      await UserInfo.setToken(
+        'demo_token_${DateTime.now().millisecondsSinceEpoch}',
+      );
       await UserInfo.setLastActive(DateTime.now().toIso8601String());
       await SupabaseApiService.savePlayerCache(fallbackUser);
 
@@ -187,7 +192,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         Navigator.pushReplacementNamed(context, '/main');
       }
     } else {
-      _showSystemAlertSnackBar(res['message'] ?? 'Akses Sistem Ditolak: Kredensial tidak cocok.');
+      _showSystemAlertSnackBar(
+        res['message'] ?? 'Akses Sistem Ditolak: Kredensial tidak cocok.',
+      );
     }
   }
 
@@ -199,7 +206,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
     final hasHardware = _capability?.hasBiometrics ?? true;
     if (!hasHardware) {
-      _showSystemAlertSnackBar('Sensor biometrik tidak tersedia pada perangkat.');
+      _showSystemAlertSnackBar(
+        'Sensor biometrik tidak tersedia pada perangkat.',
+      );
       return;
     }
     final isConfigured = _isFaceConfigured || _isFingerprintConfigured;
@@ -227,7 +236,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       _isScanning = true;
       _scanProgress = 0.25;
       _matchPercentage = '25.0%';
-      _scanStatusText = 'Calibrating Vessel Biometrics • Scanning optical aperture...';
+      _scanStatusText =
+          'Calibrating Vessel Biometrics • Scanning optical aperture...';
     });
 
     await Future.delayed(const Duration(milliseconds: 300));
@@ -236,7 +246,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     setState(() {
       _scanProgress = 0.68;
       _matchPercentage = '68.0%';
-      _scanStatusText = 'Calibrating Vessel Biometrics • Aligning Hunter mana mesh...';
+      _scanStatusText =
+          'Calibrating Vessel Biometrics • Aligning Hunter mana mesh...';
     });
 
     Map<String, dynamic> authResult;
@@ -283,10 +294,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         _isScanning = false;
         _scanProgress = 0.0;
         _matchPercentage = '0.0%';
-        _scanStatusText = authResult['message'] ?? 'AUTENTIKASI GAGAL ATAU DIBATALKAN. Gunakan Security Key.';
+        _scanStatusText =
+            authResult['message'] ??
+            'AUTENTIKASI GAGAL ATAU DIBATALKAN. Gunakan Security Key.';
       });
 
-      _showSystemAlertSnackBar(authResult['message'] ?? 'Pemindaian biometrik dibatalkan.');
+      _showSystemAlertSnackBar(
+        authResult['message'] ?? 'Pemindaian biometrik dibatalkan.',
+      );
     }
   }
 
@@ -301,15 +316,25 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         backgroundColor: LevMaxTheme.surfaceContainerLow,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: LevMaxTheme.primaryContainer, width: 1.5),
+          side: const BorderSide(
+            color: LevMaxTheme.primaryContainer,
+            width: 1.5,
+          ),
         ),
         title: Row(
           children: [
-            const Icon(Icons.security, color: LevMaxTheme.primaryContainer, size: 24),
+            const Icon(
+              Icons.security,
+              color: LevMaxTheme.primaryContainer,
+              size: 24,
+            ),
             const SizedBox(width: 8),
             Text(
               'SYSTEM PROMPT: BIOMETRICS',
-              style: LevMaxTheme.headline(fontSize: 14, color: LevMaxTheme.primaryContainer),
+              style: LevMaxTheme.headline(
+                fontSize: 14,
+                color: LevMaxTheme.primaryContainer,
+              ),
             ),
           ],
         ),
@@ -320,18 +345,27 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'skip'),
-            child: Text('NANTI SAJA', style: LevMaxTheme.mono(fontSize: 10, color: LevMaxTheme.outline)),
+            child: Text(
+              'NANTI SAJA',
+              style: LevMaxTheme.mono(fontSize: 10, color: LevMaxTheme.outline),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, 'enroll'),
             style: ElevatedButton.styleFrom(
               backgroundColor: LevMaxTheme.primaryContainer,
               foregroundColor: LevMaxTheme.onPrimaryFixed,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
             ),
             child: Text(
               'HUBUNGKAN SEKARANG',
-              style: LevMaxTheme.mono(fontSize: 11, fontWeight: FontWeight.bold, color: LevMaxTheme.onPrimaryFixed),
+              style: LevMaxTheme.mono(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: LevMaxTheme.onPrimaryFixed,
+              ),
             ),
           ),
         ],
@@ -344,7 +378,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       );
       if (auth.success) {
         await AuthService.setFaceIdStatusForUser(userId: userId, enable: true);
-        await AuthService.setFingerprintStatusForUser(userId: userId, enable: true);
+        await AuthService.setFingerprintStatusForUser(
+          userId: userId,
+          enable: true,
+        );
       }
     }
 
@@ -362,12 +399,19 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         ),
         content: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: LevMaxTheme.hpRed, size: 20),
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: LevMaxTheme.hpRed,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 message,
-                style: LevMaxTheme.mono(fontSize: 11, color: LevMaxTheme.onSurface),
+                style: LevMaxTheme.mono(
+                  fontSize: 11,
+                  color: LevMaxTheme.onSurface,
+                ),
               ),
             ),
           ],
@@ -479,7 +523,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                       child: CustomPaint(
                         size: const Size(80, 80),
                         painter: _DashedCirclePainter(
-                          color: LevMaxTheme.primaryContainer.withValues(alpha: 0.25),
+                          color: LevMaxTheme.primaryContainer.withValues(
+                            alpha: 0.25,
+                          ),
                           strokeWidth: 1.5,
                           dashCount: 28,
                         ),
@@ -490,22 +536,38 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     Positioned(
                       top: 0,
                       left: 36,
-                      child: Container(width: 8, height: 2, color: LevMaxTheme.primaryContainer),
+                      child: Container(
+                        width: 8,
+                        height: 2,
+                        color: LevMaxTheme.primaryContainer,
+                      ),
                     ),
                     Positioned(
                       bottom: 0,
                       left: 36,
-                      child: Container(width: 8, height: 2, color: LevMaxTheme.primaryContainer),
+                      child: Container(
+                        width: 8,
+                        height: 2,
+                        color: LevMaxTheme.primaryContainer,
+                      ),
                     ),
                     Positioned(
                       left: 0,
                       top: 36,
-                      child: Container(width: 2, height: 8, color: LevMaxTheme.primaryContainer),
+                      child: Container(
+                        width: 2,
+                        height: 8,
+                        color: LevMaxTheme.primaryContainer,
+                      ),
                     ),
                     Positioned(
                       right: 0,
                       top: 36,
-                      child: Container(width: 2, height: 8, color: LevMaxTheme.primaryContainer),
+                      child: Container(
+                        width: 2,
+                        height: 8,
+                        color: LevMaxTheme.primaryContainer,
+                      ),
                     ),
 
                     // 3. Inner Core Shield Box
@@ -517,7 +579,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                         color: LevMaxTheme.surfaceContainerLow,
                         boxShadow: [
                           BoxShadow(
-                            color: LevMaxTheme.primaryContainer.withValues(alpha: 0.1),
+                            color: LevMaxTheme.primaryContainer.withValues(
+                              alpha: 0.1,
+                            ),
                             blurRadius: 16,
                           ),
                         ],
@@ -533,7 +597,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               begin: Alignment.bottomCenter,
                               end: Alignment.topCenter,
                               colors: [
-                                LevMaxTheme.primaryContainer.withValues(alpha: 0.2),
+                                LevMaxTheme.primaryContainer.withValues(
+                                  alpha: 0.2,
+                                ),
                                 Colors.transparent,
                               ],
                             ),
@@ -557,7 +623,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: LevMaxTheme.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(99),
@@ -572,7 +641,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                           shape: BoxShape.circle,
                           color: LevMaxTheme.tertiaryContainer,
                           boxShadow: [
-                            BoxShadow(color: LevMaxTheme.tertiaryContainer, blurRadius: 4),
+                            BoxShadow(
+                              color: LevMaxTheme.tertiaryContainer,
+                              blurRadius: 4,
+                            ),
                           ],
                         ),
                       ),
@@ -668,7 +740,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                       Expanded(
                         child: Row(
                           children: [
-                            const Icon(Icons.badge_outlined, size: 14, color: LevMaxTheme.primaryContainer),
+                            const Icon(
+                              Icons.badge_outlined,
+                              size: 14,
+                              color: LevMaxTheme.primaryContainer,
+                            ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
@@ -699,13 +775,22 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   const SizedBox(height: 6),
                   TextFormField(
                     controller: _emailOrUsernameController,
-                    style: LevMaxTheme.mono(fontSize: 12, color: LevMaxTheme.primary),
+                    style: LevMaxTheme.mono(
+                      fontSize: 12,
+                      color: LevMaxTheme.primary,
+                    ),
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: LevMaxTheme.surfaceContainerLowest,
                       hintText: 'hunter_id@monarch.sys',
-                      hintStyle: LevMaxTheme.mono(fontSize: 12, color: LevMaxTheme.outline),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      hintStyle: LevMaxTheme.mono(
+                        fontSize: 12,
+                        color: LevMaxTheme.outline,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
                       suffixIcon: const Icon(
                         Icons.verified_user_outlined,
                         size: 16,
@@ -721,10 +806,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: LevMaxTheme.primaryContainer, width: 1.5),
+                        borderSide: const BorderSide(
+                          color: LevMaxTheme.primaryContainer,
+                          width: 1.5,
+                        ),
                       ),
                     ),
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Hunter ID wajib diisi' : null,
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? 'Hunter ID wajib diisi'
+                        : null,
                   ),
                   const SizedBox(height: 14),
 
@@ -734,7 +824,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                       Expanded(
                         child: Row(
                           children: [
-                            const Icon(Icons.enhanced_encryption_outlined, size: 14, color: LevMaxTheme.secondary),
+                            const Icon(
+                              Icons.enhanced_encryption_outlined,
+                              size: 14,
+                              color: LevMaxTheme.secondary,
+                            ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
@@ -767,16 +861,27 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
-                    style: LevMaxTheme.mono(fontSize: 12, color: LevMaxTheme.secondary),
+                    style: LevMaxTheme.mono(
+                      fontSize: 12,
+                      color: LevMaxTheme.secondary,
+                    ),
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: LevMaxTheme.surfaceContainerLowest,
                       hintText: '••••••••••••••••',
-                      hintStyle: LevMaxTheme.mono(fontSize: 12, color: LevMaxTheme.outline),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      hintStyle: LevMaxTheme.mono(
+                        fontSize: 12,
+                        color: LevMaxTheme.outline,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                           size: 18,
                           color: LevMaxTheme.outline,
                         ),
@@ -796,10 +901,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: LevMaxTheme.secondary, width: 1.5),
+                        borderSide: const BorderSide(
+                          color: LevMaxTheme.secondary,
+                          width: 1.5,
+                        ),
                       ),
                     ),
-                    validator: (v) => v == null || v.isEmpty ? 'Security Key wajib diisi' : null,
+                    validator: (v) => v == null || v.isEmpty
+                        ? 'Security Key wajib diisi'
+                        : null,
                   ),
                   const SizedBox(height: 12),
 
@@ -816,7 +926,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               value: _rememberToken,
                               activeColor: LevMaxTheme.primaryContainer,
                               checkColor: LevMaxTheme.onPrimaryFixed,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(3),
+                              ),
                               onChanged: (val) {
                                 setState(() {
                                   _rememberToken = val ?? true;
@@ -840,15 +952,27 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             context: context,
                             builder: (ctx) => AlertDialog(
                               backgroundColor: LevMaxTheme.surfaceContainer,
-                              title: Text('RECOVER CODE', style: LevMaxTheme.headline(color: LevMaxTheme.primaryContainer)),
+                              title: Text(
+                                'RECOVER CODE',
+                                style: LevMaxTheme.headline(
+                                  color: LevMaxTheme.primaryContainer,
+                                ),
+                              ),
                               content: Text(
                                 'Silakan hubungi administrator Sistem atau daftarkan akun baru jika lupa password.',
-                                style: LevMaxTheme.mono(color: LevMaxTheme.onSurface),
+                                style: LevMaxTheme.mono(
+                                  color: LevMaxTheme.onSurface,
+                                ),
                               ),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(ctx),
-                                  child: Text('OK', style: LevMaxTheme.mono(color: LevMaxTheme.primaryContainer)),
+                                  child: Text(
+                                    'OK',
+                                    style: LevMaxTheme.mono(
+                                      color: LevMaxTheme.primaryContainer,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -937,7 +1061,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                           onTap: () async {
                             await Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const RegisterPage()),
+                              MaterialPageRoute(
+                                builder: (_) => const RegisterPage(),
+                              ),
                             );
                             if (mounted) {
                               _initBiometricState();
@@ -975,11 +1101,19 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              const Expanded(child: Divider(color: LevMaxTheme.surfaceContainerHighest, thickness: 1)),
+              const Expanded(
+                child: Divider(
+                  color: LevMaxTheme.surfaceContainerHighest,
+                  thickness: 1,
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: LevMaxTheme.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(4),
@@ -995,7 +1129,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-              const Expanded(child: Divider(color: LevMaxTheme.surfaceContainerHighest, thickness: 1)),
+              const Expanded(
+                child: Divider(
+                  color: LevMaxTheme.surfaceContainerHighest,
+                  thickness: 1,
+                ),
+              ),
             ],
           ),
         ),
@@ -1025,7 +1164,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: _isFaceConfigured
-                            ? LevMaxTheme.primaryContainer.withValues(alpha: 0.5)
+                            ? LevMaxTheme.primaryContainer.withValues(
+                                alpha: 0.5,
+                              )
                             : LevMaxTheme.surfaceContainerHigh,
                       ),
                     ),
@@ -1038,7 +1179,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             color: LevMaxTheme.surfaceContainerHigh,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.face, size: 20, color: LevMaxTheme.primaryContainer),
+                          child: const Icon(
+                            Icons.face,
+                            size: 20,
+                            color: LevMaxTheme.primaryContainer,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -1093,10 +1238,16 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                           width: 32,
                           height: 32,
                           decoration: BoxDecoration(
-                            color: LevMaxTheme.secondaryContainer.withValues(alpha: 0.4),
+                            color: LevMaxTheme.secondaryContainer.withValues(
+                              alpha: 0.4,
+                            ),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.fingerprint, size: 20, color: LevMaxTheme.secondary),
+                          child: const Icon(
+                            Icons.fingerprint,
+                            size: 20,
+                            color: LevMaxTheme.secondary,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -1138,7 +1289,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   // KOMPONEN 5: PANEL [ LIVE OPTICAL CHAMBER ] (INTERACTIVE FACE ID HUD)
   // ============================================================================
   Widget _buildLiveOpticalChamberHUD() {
-    final activeColor = _isScanError ? LevMaxTheme.hpRed : LevMaxTheme.primaryContainer;
+    final activeColor = _isScanError
+        ? LevMaxTheme.hpRed
+        : LevMaxTheme.primaryContainer;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -1155,7 +1308,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
-                color: LevMaxTheme.surfaceContainerLowest.withValues(alpha: 0.5),
+                color: LevMaxTheme.surfaceContainerLowest.withValues(
+                  alpha: 0.5,
+                ),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Row(
@@ -1170,7 +1325,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             shape: BoxShape.circle,
                             color: LevMaxTheme.tertiaryFixedDim,
                             boxShadow: [
-                              BoxShadow(color: LevMaxTheme.tertiaryFixedDim, blurRadius: 4),
+                              BoxShadow(
+                                color: LevMaxTheme.tertiaryFixedDim,
+                                blurRadius: 4,
+                              ),
                             ],
                           ),
                         ),
@@ -1195,7 +1353,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     _isScanning ? 'SCANNING...' : 'FPS: 60.0 • 1080P',
                     style: LevMaxTheme.mono(
                       fontSize: 9.5,
-                      color: _isScanning ? LevMaxTheme.primaryContainer : LevMaxTheme.outline,
+                      color: _isScanning
+                          ? LevMaxTheme.primaryContainer
+                          : LevMaxTheme.outline,
                     ),
                   ),
                 ],
@@ -1281,22 +1441,38 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   Positioned(
                     top: 14,
                     left: 14,
-                    child: _CornerBracket(isTop: true, isLeft: true, color: activeColor),
+                    child: _CornerBracket(
+                      isTop: true,
+                      isLeft: true,
+                      color: activeColor,
+                    ),
                   ),
                   Positioned(
                     top: 14,
                     right: 14,
-                    child: _CornerBracket(isTop: true, isLeft: false, color: activeColor),
+                    child: _CornerBracket(
+                      isTop: true,
+                      isLeft: false,
+                      color: activeColor,
+                    ),
                   ),
                   Positioned(
                     bottom: 14,
                     left: 14,
-                    child: _CornerBracket(isTop: false, isLeft: true, color: activeColor),
+                    child: _CornerBracket(
+                      isTop: false,
+                      isLeft: true,
+                      color: activeColor,
+                    ),
                   ),
                   Positioned(
                     bottom: 14,
                     right: 14,
-                    child: _CornerBracket(isTop: false, isLeft: false, color: activeColor),
+                    child: _CornerBracket(
+                      isTop: false,
+                      isLeft: false,
+                      color: activeColor,
+                    ),
                   ),
                 ],
               ),
@@ -1309,7 +1485,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 Expanded(
                   child: Row(
                     children: [
-                      const Icon(Icons.videocam_outlined, size: 14, color: LevMaxTheme.tertiaryContainer),
+                      const Icon(
+                        Icons.videocam_outlined,
+                        size: 14,
+                        color: LevMaxTheme.tertiaryContainer,
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -1416,16 +1596,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 color: LevMaxTheme.surfaceContainerLowest,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: _isScanError ? LevMaxTheme.hpRed : const Color(0xFF1E293B),
+                  color: _isScanError
+                      ? LevMaxTheme.hpRed
+                      : const Color(0xFF1E293B),
                 ),
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.blur_on,
-                    size: 18,
-                    color: activeColor,
-                  ),
+                  Icon(Icons.blur_on, size: 18, color: activeColor),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -1451,17 +1629,26 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   children: [
                     Text(
                       'OPTICAL ACCURACY: 99.4%',
-                      style: LevMaxTheme.mono(fontSize: 9, color: LevMaxTheme.outline),
+                      style: LevMaxTheme.mono(
+                        fontSize: 9,
+                        color: LevMaxTheme.outline,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Text(
                       'LATENCY: 12ms',
-                      style: LevMaxTheme.mono(fontSize: 9, color: LevMaxTheme.outline),
+                      style: LevMaxTheme.mono(
+                        fontSize: 9,
+                        color: LevMaxTheme.outline,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Text(
                       'CHAMBER: ONLINE',
-                      style: LevMaxTheme.mono(fontSize: 9, color: LevMaxTheme.outline),
+                      style: LevMaxTheme.mono(
+                        fontSize: 9,
+                        color: LevMaxTheme.outline,
+                      ),
                     ),
                   ],
                 ),
@@ -1596,7 +1783,11 @@ class _HunterFaceSilhouettePainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     // Kontur Kepala (Oval Putus-Putus)
-    final headRect = Rect.fromCenter(center: Offset(cx, cy - 8), width: 70, height: 92);
+    final headRect = Rect.fromCenter(
+      center: Offset(cx, cy - 8),
+      width: 70,
+      height: 92,
+    );
     _drawDashedOval(canvas, headRect, dashedPaint, 32);
 
     // Kontur Bahu
@@ -1611,7 +1802,11 @@ class _HunterFaceSilhouettePainter extends CustomPainter {
     final finePaint = Paint()
       ..color = color.withValues(alpha: 0.3)
       ..strokeWidth = 0.8;
-    canvas.drawLine(Offset(cx - 36, cy - 8), Offset(cx + 36, cy - 8), finePaint);
+    canvas.drawLine(
+      Offset(cx - 36, cy - 8),
+      Offset(cx + 36, cy - 8),
+      finePaint,
+    );
     canvas.drawLine(Offset(cx, cy - 48), Offset(cx, cy + 32), finePaint);
 
     // Reticle Target Mata Kiri & Kanan (cx: 38%, cy: 45% dan cx: 62%, cy: 45%)
@@ -1628,7 +1823,11 @@ class _HunterFaceSilhouettePainter extends CustomPainter {
     canvas.drawLine(Offset(cx, cy - 8), Offset(cx, cy + 4), eyePaint);
 
     // Lengkungan Target Mulut
-    final mouthRect = Rect.fromCenter(center: Offset(cx, cy + 14), width: 20, height: 10);
+    final mouthRect = Rect.fromCenter(
+      center: Offset(cx, cy + 14),
+      width: 20,
+      height: 10,
+    );
     canvas.drawArc(mouthRect, 0.2, math.pi - 0.4, false, eyePaint);
 
     // Titik Matriks Tipis
@@ -1647,7 +1846,8 @@ class _HunterFaceSilhouettePainter extends CustomPainter {
   void _drawDashedOval(Canvas canvas, Rect rect, Paint paint, int dashCount) {
     final double rx = rect.width / 2;
     final double ry = rect.height / 2;
-    final double perimeter = math.pi * (3 * (rx + ry) - math.sqrt((3 * rx + ry) * (rx + 3 * ry)));
+    final double perimeter =
+        math.pi * (3 * (rx + ry) - math.sqrt((3 * rx + ry) * (rx + 3 * ry)));
     final double dashLen = (perimeter / dashCount) * 0.6;
     final double gapLen = (perimeter / dashCount) * 0.4;
     final double totalDash = dashLen + gapLen;
@@ -1656,15 +1856,22 @@ class _HunterFaceSilhouettePainter extends CustomPainter {
     while (d < perimeter) {
       final double t1 = (d / perimeter) * 2 * math.pi;
       final double t2 = ((d + dashLen) / perimeter) * 2 * math.pi;
-      final p1 = Offset(rect.center.dx + rx * math.cos(t1), rect.center.dy + ry * math.sin(t1));
-      final p2 = Offset(rect.center.dx + rx * math.cos(t2), rect.center.dy + ry * math.sin(t2));
+      final p1 = Offset(
+        rect.center.dx + rx * math.cos(t1),
+        rect.center.dy + ry * math.sin(t1),
+      );
+      final p2 = Offset(
+        rect.center.dx + rx * math.cos(t2),
+        rect.center.dy + ry * math.sin(t2),
+      );
       canvas.drawLine(p1, p2, paint);
       d += totalDash;
     }
   }
 
   @override
-  bool shouldRepaint(covariant _HunterFaceSilhouettePainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _HunterFaceSilhouettePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 // ==============================================================================
@@ -1731,5 +1938,6 @@ class _BracketPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _BracketPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _BracketPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

@@ -59,13 +59,18 @@ class FeedbackModel extends HiveObject {
   /// Buat instance FeedbackModel dari Map data (Supabase / JSON)
   factory FeedbackModel.fromMap(Map<String, dynamic> map) {
     return FeedbackModel(
-      id: map['id'] is int ? map['id'] : int.tryParse(map['id']?.toString() ?? '0') ?? 0,
-      userId: map['user_id'] is int ? map['user_id'] : int.tryParse(map['user_id']?.toString() ?? '0') ?? 0,
+      id: map['id'] is int
+          ? map['id']
+          : int.tryParse(map['id']?.toString() ?? '0') ?? 0,
+      userId: map['user_id'] is int
+          ? map['user_id']
+          : int.tryParse(map['user_id']?.toString() ?? '0') ?? 0,
       namaMahasiswa: map['nama_mahasiswa']?.toString() ?? '',
       nim: map['nim']?.toString() ?? '',
       kesan: map['kesan']?.toString() ?? '',
       saran: map['saran']?.toString() ?? '',
-      createdAt: map['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+      createdAt:
+          map['created_at']?.toString() ?? DateTime.now().toIso8601String(),
     );
   }
 
@@ -84,7 +89,9 @@ class FeedbackModel extends HiveObject {
 
   /// Ekstraksi mata kuliah/disiplin
   String get discipline {
-    if (namaMahasiswa.isNotEmpty && namaMahasiswa != 'Hunter' && namaMahasiswa != 'Admin') {
+    if (namaMahasiswa.isNotEmpty &&
+        namaMahasiswa != 'Hunter' &&
+        namaMahasiswa != 'Admin') {
       return namaMahasiswa;
     }
     if (nim.contains('SECTOR:')) {

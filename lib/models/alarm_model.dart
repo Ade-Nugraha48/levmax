@@ -27,12 +27,7 @@ class AlarmModel extends HiveObject {
     this.isActive = true,
   });
 
-  AlarmModel copyWith({
-    int? id,
-    String? time,
-    String? label,
-    bool? isActive,
-  }) {
+  AlarmModel copyWith({int? id, String? time, String? label, bool? isActive}) {
     return AlarmModel(
       id: id ?? this.id,
       time: time ?? this.time,
@@ -43,20 +38,19 @@ class AlarmModel extends HiveObject {
 
   factory AlarmModel.fromJson(Map<String, dynamic> json) {
     return AlarmModel(
-      id: json['id'] is int ? json['id'] as int : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
+      id: json['id'] is int
+          ? json['id'] as int
+          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       time: json['time'] as String? ?? '07:00',
       label: json['label'] as String? ?? 'Hunter Alarm',
-      isActive: json['is_active'] is bool ? json['is_active'] as bool : (json['isActive'] as bool? ?? true),
+      isActive: json['is_active'] is bool
+          ? json['is_active'] as bool
+          : (json['isActive'] as bool? ?? true),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'time': time,
-      'label': label,
-      'is_active': isActive,
-    };
+    return {'id': id, 'time': time, 'label': label, 'is_active': isActive};
   }
 }
 

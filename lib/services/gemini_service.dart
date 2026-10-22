@@ -6,6 +6,7 @@
 // ==============================================================================
 
 import 'package:google_generative_ai/google_generative_ai.dart';
+
 import '../models/user_model.dart';
 
 class GeminiService {
@@ -74,7 +75,10 @@ Karakteristik & Nada Bicara:
     final rank = player?.rank ?? 'F';
     final level = player?.level ?? 1;
 
-    if (lower.contains('push up') || lower.contains('pushup') || lower.contains('workout') || lower.contains('otot')) {
+    if (lower.contains('push up') ||
+        lower.contains('pushup') ||
+        lower.contains('workout') ||
+        lower.contains('otot')) {
       return '''
 [THE SYSTEM: ANALISIS WORKOUT]
 Player Rank $rank (Level $level), dengarkan instruksi:
@@ -86,7 +90,10 @@ Untuk membangun kekuatan dada, trisep, dan core:
 [Sistem mencatat komitmen Anda. Selesaikan quest fisik hari ini.]''';
     }
 
-    if (lower.contains('skincare') || lower.contains('jerawat') || lower.contains('wajah') || lower.contains('looksmax')) {
+    if (lower.contains('skincare') ||
+        lower.contains('jerawat') ||
+        lower.contains('wajah') ||
+        lower.contains('looksmax')) {
       return '''
 [THE SYSTEM: PROTOKOL LOOKSMAXXING]
 Penampilan fisik adalah cerminan disiplin internal seorang Hunter:
@@ -98,7 +105,10 @@ Penampilan fisik adalah cerminan disiplin internal seorang Hunter:
 [Kekuatan tanpa karisma visual tidak optimal. Laksanakan.]''';
     }
 
-    if (lower.contains('belajar') || lower.contains('tugas') || lower.contains('fokus') || lower.contains('produktif')) {
+    if (lower.contains('belajar') ||
+        lower.contains('tugas') ||
+        lower.contains('fokus') ||
+        lower.contains('produktif')) {
       return '''
 [THE SYSTEM: PROTOKOL PRODUKTIVITAS & DEEP WORK]
 Distraksi adalah musuh terbesar seorang Hunter terdisiplin:
@@ -109,7 +119,9 @@ Distraksi adalah musuh terbesar seorang Hunter terdisiplin:
 [Disiplin hari ini menentukan rank Anda esok hari.]''';
     }
 
-    if (lower.contains('lari') || lower.contains('cardio') || lower.contains('jogging')) {
+    if (lower.contains('lari') ||
+        lower.contains('cardio') ||
+        lower.contains('jogging')) {
       return '''
 [THE SYSTEM: ANALISIS ENDURANCE & CARDIO]
 Kapasitas aerobik menentukan batas stamina Anda dalam dungeon:

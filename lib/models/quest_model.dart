@@ -6,6 +6,7 @@
 // ==============================================================================
 
 import 'package:hive/hive.dart';
+
 export 'quest_models.dart';
 
 @HiveType(typeId: 0)
@@ -92,18 +93,31 @@ class QuestModel extends HiveObject {
   /// Buat instance QuestModel dari Map data (Supabase / JSON)
   factory QuestModel.fromMap(Map<String, dynamic> map) {
     return QuestModel(
-      id: map['local_quest_id']?.toString() ?? map['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      id:
+          map['local_quest_id']?.toString() ??
+          map['id']?.toString() ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
       title: map['title']?.toString() ?? '',
       description: map['description']?.toString() ?? '',
       category: map['category']?.toString() ?? 'Workout',
-      targetValue: map['target_value'] is int ? map['target_value'] : int.tryParse(map['target_value']?.toString() ?? '10') ?? 10,
-      currentValue: map['current_value'] is int ? map['current_value'] : int.tryParse(map['current_value']?.toString() ?? '0') ?? 0,
+      targetValue: map['target_value'] is int
+          ? map['target_value']
+          : int.tryParse(map['target_value']?.toString() ?? '10') ?? 10,
+      currentValue: map['current_value'] is int
+          ? map['current_value']
+          : int.tryParse(map['current_value']?.toString() ?? '0') ?? 0,
       unit: map['unit']?.toString() ?? 'Reps',
-      expReward: map['exp_reward'] is int ? map['exp_reward'] : int.tryParse(map['exp_reward']?.toString() ?? '20') ?? 20,
-      goldReward: map['gold_reward'] is int ? map['gold_reward'] : int.tryParse(map['gold_reward']?.toString() ?? '10') ?? 10,
+      expReward: map['exp_reward'] is int
+          ? map['exp_reward']
+          : int.tryParse(map['exp_reward']?.toString() ?? '20') ?? 20,
+      goldReward: map['gold_reward'] is int
+          ? map['gold_reward']
+          : int.tryParse(map['gold_reward']?.toString() ?? '10') ?? 10,
       isCompleted: map['is_completed'] == true,
       isPenaltyQuest: map['is_penalty_quest'] == true,
-      scheduledDate: map['quest_date']?.toString() ?? DateTime.now().toIso8601String().substring(0, 10),
+      scheduledDate:
+          map['quest_date']?.toString() ??
+          DateTime.now().toIso8601String().substring(0, 10),
     );
   }
 

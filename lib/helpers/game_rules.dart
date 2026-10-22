@@ -12,7 +12,8 @@ class RankConfig {
   final String currentRank;
   final String targetRank;
   final int requiredExp; // -1 untuk Uncapped (Mode Leaderboard)
-  final int minAllStat; // Syarat minimal untuk seluruh stat (STR, AGI, INT, CHA)
+  final int
+  minAllStat; // Syarat minimal untuk seluruh stat (STR, AGI, INT, CHA)
   final int baseExpPerQuest;
   final String description;
 
@@ -304,7 +305,10 @@ class PenaltyRules {
   static const int cardioIntervalDays = 3;
 
   /// Menghitung beban repetisi penalti yang dikalikan dua
-  static int calculatePenaltyTarget(int missedTargetValue, {int multiplier = penaltyMultiplier}) {
+  static int calculatePenaltyTarget(
+    int missedTargetValue, {
+    int multiplier = penaltyMultiplier,
+  }) {
     return missedTargetValue * multiplier;
   }
 }

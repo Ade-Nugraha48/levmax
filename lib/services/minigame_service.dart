@@ -45,7 +45,9 @@ class MinigameService {
 
     // 1. Validasi Daily Cap: Hanya boleh 1x per hari
     if (isDailyRewardClaimed()) {
-      debugPrint('[MinigameService] Daily reward already claimed today ($today).');
+      debugPrint(
+        '[MinigameService] Daily reward already claimed today ($today).',
+      );
       return false;
     }
 
@@ -84,7 +86,9 @@ class MinigameService {
       userId: player.id,
     );
 
-    debugPrint('[MinigameService] Successfully claimed +$rewardGold Gold for today ($today)');
+    debugPrint(
+      '[MinigameService] Successfully claimed +$rewardGold Gold for today ($today)',
+    );
     return true;
   }
 }
