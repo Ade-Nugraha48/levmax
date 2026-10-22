@@ -41,125 +41,180 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   @override
   void initState() {
     super.initState();
+    // Fast Load: Gunakan data cache lokal secara instan jika sudah tersedia
+    final cached = SupabaseApiService.getPlayerCache();
+    if (cached != null) {
+      _currentPlayer = cached;
+      _isLoading = false;
+    }
     _loadPlayerAndCheckPenalty();
   }
 
   /// Memuat profil player dan menjalankan pemeriksaan pergantian hari & penalti (Bab 5)
   Future<void> _loadPlayerAndCheckPenalty() async {
-    final uid = await UserInfo.getUserID();
-    UserModel? player;
+    try {
+      // 1. Ambil data player dari local cache terlebih dahulu untuk responsivitas instan
+      UserModel? player = SupabaseApiService.getPlayerCache();
 
-    if (uid != null && uid > 0) {
-      player = await SupabaseApiService.getUserById(uid);
-    }
-    player ??= SupabaseApiService.getPlayerCache();
+      // 2. Ambil ID pengguna dari session
+      final uid = await UserInfo.getUserID();
+      final uidStr = uid?.toString().trim() ?? '';
 
-    if (player == null) {
-      final username = await UserInfo.getUsername() ?? 'Hunter';
-      final email = await UserInfo.getEmail() ?? '';
-      player = UserModel.initial(
-        id: uid ?? 1,
-        username: username,
-        email: email,
-      );
-      await SupabaseApiService.savePlayerCache(player);
-    }
-
-    // Periksa apakah HP <= 0 (Game Over)
-    if (player.hp <= 0) {
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const GameOverPage()),
-      );
-      return;
-    }
-
-    // Periksa apakah Penalti Aktif (Penalty Guard)
-    if (player.isPenaltyActive) {
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const PenaltyGamePage()),
-      );
-      return;
-    }
-
-    // ========================================================================
-    // ATURAN PERGANTIAN HARI & SISTEM PENALTI (BAB 5 RULES)
-    // ========================================================================
-    final today = DateTime.now().toIso8601String().substring(0, 10);
-    if (player.lastActiveDate.isNotEmpty && player.lastActiveDate != today) {
-      // Terjadi pergantian hari (melewati pukul 23:59)
-      final questBox = Hive.box<QuestModel>(HiveBoxes.questBox);
-      final hasIncompleteQuests = questBox.values.any((q) => !q.isCompleted);
-
-      if (hasIncompleteQuests) {
-        int hpDeduction = 20;
-        if (player.isPenaltyActive) {
-          hpDeduction = 40; // Double penalty jika penalti sebelumnya diabaikan
+      // 3. Jika cache lokal belum ada dan uid valid, ambil dari Supabase Cloud
+      if (player == null && uidStr.isNotEmpty && uidStr != '0') {
+        try {
+          player = await SupabaseApiService.getUserById(uidStr);
+        } catch (e) {
+          debugPrint('[MainNavigation] getUserById error: $e');
         }
-
-        final newHp = max(0, player.hp - hpDeduction);
-        const isPenaltyActive = true;
-
-        // Tambahkan Extra Penalty Quest
-        final penaltyQuest = QuestModel(
-          id: 'penalty_quest_${DateTime.now().millisecondsSinceEpoch}',
-          title: 'EXTRA QUEST: HUKUMAN SISTEM',
-          description:
-              'Lakukan 50x Push-up penalti untuk memulihkan kehormatan Hunter!',
-          category: 'Workout',
-          targetValue: 50,
-          currentValue: 0,
-          unit: 'Reps',
-          expReward: 10,
-          goldReward: 5,
-          isCompleted: false,
-          isPenaltyQuest: true,
-          scheduledDate: today,
-        );
-        await questBox.add(penaltyQuest);
-
-        player = player.copyWith(
-          hp: newHp,
-          isPenaltyActive: isPenaltyActive,
-          lastActiveDate: today,
-        );
-
-        await SupabaseApiService.updateUser(player);
-        await NotificationService.showPenaltyNotification(
-          hpDeduction: hpDeduction,
-        );
-
-        if (newHp <= 0) {
-          await NotificationService.showGameOverNotification();
-          if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const GameOverPage()),
-          );
-          return;
-        }
-
-        // Tampilkan prompt navigasi ke Penalty Mini-Game
-        if (mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _showPenaltyWarningDialog();
-          });
-        }
-      } else {
-        // Hari berganti dan semua quest kemarin selesai
-        player = player.copyWith(lastActiveDate: today);
-        await SupabaseApiService.updateUser(player);
       }
-    }
 
-    if (mounted) {
-      setState(() {
-        _currentPlayer = player;
-        _isLoading = false;
-      });
+      // 4. Jika tetap belum ada, buat initial model berbasis session
+      if (player == null) {
+        final username = await UserInfo.getUsername() ?? 'Hunter';
+        final email = await UserInfo.getEmail() ?? '';
+        player = UserModel.initial(
+          id: uidStr.isNotEmpty
+              ? uidStr
+              : 'hunter_${DateTime.now().millisecondsSinceEpoch}',
+          username: username,
+          email: email,
+        );
+        await SupabaseApiService.savePlayerCache(player);
+      }
+
+      // 5. Periksa apakah HP <= 0 (Game Over)
+      if (player.hp <= 0) {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const GameOverPage()),
+        );
+        return;
+      }
+
+      // 6. Periksa apakah Penalti Aktif (Penalty Guard)
+      if (player.isPenaltyActive) {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const PenaltyGamePage()),
+        );
+        return;
+      }
+
+      // 7. ATURAN PERGANTIAN HARI & SISTEM PENALTI (BAB 5 RULES)
+      try {
+        final today = DateTime.now().toIso8601String().substring(0, 10);
+        if (player.lastActiveDate.isNotEmpty &&
+            player.lastActiveDate != today) {
+          // Terjadi pergantian hari (melewati pukul 23:59)
+          if (!Hive.isBoxOpen(HiveBoxes.questBox)) {
+            await Hive.openBox<QuestModel>(HiveBoxes.questBox);
+          }
+          final questBox = Hive.box<QuestModel>(HiveBoxes.questBox);
+          final hasIncompleteQuests = questBox.values.any(
+            (q) => !q.isCompleted,
+          );
+
+          if (hasIncompleteQuests) {
+            int hpDeduction = 20;
+            if (player.isPenaltyActive) {
+              hpDeduction =
+                  40; // Double penalty jika penalti sebelumnya diabaikan
+            }
+
+            final newHp = max(0, player.hp - hpDeduction);
+            const isPenaltyActive = true;
+
+            // Tambahkan Extra Penalty Quest
+            final penaltyQuest = QuestModel(
+              id: 'penalty_quest_${DateTime.now().millisecondsSinceEpoch}',
+              title: 'EXTRA QUEST: HUKUMAN SISTEM',
+              description: 'Lakukan 50x Push-up penalti untuk memulihkan kehormatan Hunter!',
+              category: 'Workout',
+              targetValue: 50,
+              currentValue: 0,
+              unit: 'Reps',
+              expReward: 10,
+              goldReward: 5,
+              isCompleted: false,
+              isPenaltyQuest: true,
+              scheduledDate: today,
+            );
+            await questBox.add(penaltyQuest);
+
+            player = player.copyWith(
+              hp: newHp,
+              isPenaltyActive: isPenaltyActive,
+              lastActiveDate: today,
+            );
+
+            try {
+              await SupabaseApiService.updateUser(player);
+            } catch (_) {}
+            try {
+              await NotificationService.showPenaltyNotification(
+                hpDeduction: hpDeduction,
+              );
+            } catch (_) {}
+
+            if (newHp <= 0) {
+              try {
+                await NotificationService.showGameOverNotification();
+              } catch (_) {}
+              if (!mounted) return;
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const GameOverPage()),
+              );
+              return;
+            }
+
+            // Tampilkan prompt navigasi ke Penalty Mini-Game
+            if (mounted) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _showPenaltyWarningDialog();
+              });
+            }
+          } else {
+            // Hari berganti dan semua quest kemarin selesai
+            player = player.copyWith(lastActiveDate: today);
+            try {
+              await SupabaseApiService.updateUser(player);
+            } catch (_) {}
+          }
+        }
+      } catch (dayResetErr) {
+        debugPrint(
+          '[MainNavigation] Day transition check warning: $dayResetErr',
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          _currentPlayer = player;
+          _isLoading = false;
+        });
+      }
+    } catch (e, stack) {
+      debugPrint(
+        '[MainNavigation] Critical error in _loadPlayerAndCheckPenalty: $e\n$stack',
+      );
+    } finally {
+      // Jaminan mutlak: Spinner loading tidak akan pernah menggantung selamanya
+      if (mounted && _isLoading) {
+        setState(() {
+          _currentPlayer ??=
+              SupabaseApiService.getPlayerCache() ??
+              UserModel.initial(
+                id: 'hunter_emergency',
+                username: 'Hunter',
+                email: '',
+              );
+          _isLoading = false;
+        });
+      }
     }
   }
 
