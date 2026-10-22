@@ -68,5 +68,7 @@
 	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Kamera dibutuhkan untuk mendeteksi postur tubuh saat ujian fisik Hunter.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Lokasi GPS dibutuhkan untuk mendeteksi posisi Hunter di Tactical Dungeon Map dan Mystery Gates.</string>
 </dict>
 </plist>
