@@ -1,16 +1,19 @@
 // ==============================================================================
 // LEVMAX: ASISTEN MANAJEMEN GAYA HIDUP CERDAS (SOLO LEVELING LIFESTYLE RPG)
 // File: lib/ui/auth/onboarding_page.dart
-// Deskripsi: Superprompt Prompt 8 - The Awakening Trial (Onboarding Kamera AI & ML Kit)
-//            Fase 1: Kalkulasi BMI & Temp Rank (E atau F).
-//            Fase 2: Ujian Kemampuan Fisik AI (4 Sesi x 60 Detik: Push-up, Sit-up, Squat, Pull-up)
-//                    dengan google_mlkit_pose_detection real-time joint angle validation.
-//            Fase 3: Penentuan Rank Akhir, Bonus Threshold Sync ke Supabase & Hive, lalu ke /main.
+// Deskripsi: Superprompt Prompt 8 - "The Awakening Trial"
+//            Fase 1: Vessel Metrics (Input BMI & Penentuan Temp Rank E / F)
+//            Fase 2: The Physical Trial (Live Camera Feed + ML-Kit Pose Detection
+//                    Stream Processing, Penghitungan Sudut Sendi dengan atan2,
+//                    State Machine Naik/Turun, Timer 60s, & Jeda Istirahat 5s)
+//            Fase 3: Result & Re-Awakening Sync (Evaluasi Promosi Rank, Hive
+//                    Auth/Player Cache, dan Sinkronisasi Cloud Supabase users)
 // ==============================================================================
 
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
@@ -21,19 +24,12 @@ import '../../helpers/user_info.dart';
 import '../../models/user_model.dart';
 import '../../services/supabase_api_service.dart';
 
-class OnboardingPage extends StatefulWidget {
-  const OnboardingPage({super.key});
-
-  @override
-  State<OnboardingPage> createState() => _OnboardingPageState();
-}
-
-/// Sesi Ujian Fisik
+/// Jenis Ujian Fisik dalam The Awakening Trial
 enum WorkoutSessionType {
-  pushup('PUSH-UP', 'Dada & Triceps', 35, Icons.fitness_center),
-  situp('SIT-UP', 'Core & Abdominal', 35, Icons.sports_gymnastics),
+  pushup('PUSH-UP', 'Dada & Triceps', 30, Icons.fitness_center),
+  situp('SIT-UP', 'Core & Abdomen', 30, Icons.sports_gymnastics),
   squat('SQUAT', 'Quadriceps & Glutes', 40, Icons.accessibility_new),
-  pullup('PULL-UP', 'Lats & Biceps', 5, Icons.horizontal_rule);
+  pullup('PULL-UP', 'Lats & Biceps', 2, Icons.horizontal_rule);
 
   final String title;
   final String muscleGroup;
@@ -42,233 +38,381 @@ enum WorkoutSessionType {
   const WorkoutSessionType(this.title, this.muscleGroup, this.bonusThreshold, this.icon);
 }
 
+class OnboardingPage extends StatefulWidget {
+  const OnboardingPage({super.key});
+
+  @override
+  State<OnboardingPage> createState() => _OnboardingPageState();
+}
+
 class _OnboardingPageState extends State<OnboardingPage>
     with TickerProviderStateMixin {
-  // ============================================================================
-  // FASE OPERASI ONBOARDING (1: BMI, 2: KAMERA AI, 3: HASIL RANK & SYNC)
-  // ============================================================================
-  int _currentPhase = 1;
+  // PageController untuk Navigasi 3 Fase
+  final PageController _pageController = PageController();
+  int _activePageIndex = 0;
 
-  // ----------------------------------------------------------------------------
-  // FASE 1: STATISTIK ANTROPOMETRI (VESSEL METRICS & BMI)
-  // ----------------------------------------------------------------------------
+  // ============================================================================
+  // FASE 1 STATE: STATISTIK ANTROPOMETRI (VESSEL METRICS & BMI)
+  // ============================================================================
   double _tbCm = 175.0;
   double _bbKg = 68.0;
-  final TextEditingController _tbController = TextEditingController(text: '175');
-  final TextEditingController _bbController = TextEditingController(text: '68');
+  String _tempRank = 'E'; // Default kalkulasi awal
+  double _calculatedBmi = 22.2;
 
-  // ----------------------------------------------------------------------------
-  // FASE 2: UJIAN KEMAMPUAN FISIK KAMERA AI (ML KIT POSE DETECTION)
-  // ----------------------------------------------------------------------------
+  // ============================================================================
+  // FASE 2 STATE: THE PHYSICAL TRIAL (KAMERA & ML-KIT POSE DETECTION)
+  // ============================================================================
   CameraController? _cameraController;
   List<CameraDescription> _availableCameras = [];
-  bool _isCameraReady = false;
+  int _selectedCameraIndex = 0;
+  bool _isCameraInitialized = false;
   bool _isCameraError = false;
   String _cameraErrorMessage = '';
-  int _selectedCameraIndex = 0;
 
-  // ML Kit Pose Detector
+  // Google ML Kit Pose Detector
   PoseDetector? _poseDetector;
   bool _isProcessingFrame = false;
   bool _isSessionActive = false;
 
-  // Urutan Sesi Latihan (1. Push-up -> 2. Sit-up -> 3. Squat -> 4. Pull-up)
-  int _currentSessionIndex = 0;
+  // Daftar Sesi Latihan: Push-up -> Sit-up -> Squat -> Pull-up
   final List<WorkoutSessionType> _sessions = [
     WorkoutSessionType.pushup,
     WorkoutSessionType.situp,
     WorkoutSessionType.squat,
     WorkoutSessionType.pullup,
   ];
+  int _currentSessionIndex = 0;
+  WorkoutSessionType get _currentSession => _sessions[_currentSessionIndex];
 
-  // Counter Repetisi Tiap Sesi
+  // State Machine Inflection Point (Naik / Turun)
+  bool _isDownPosition = false;
+
+  // Hasil Akhir Repetisi
   int _pushupCount = 0;
   int _situpCount = 0;
   int _squatCount = 0;
   int _pullupCount = 0;
 
-  // State Deteksi Repetisi (State Machine Inflection Point)
-  bool _isJointFlexed = false; // Inflection point (posisi bawah/tertekuk)
-  double _currentJointAngle = 180.0;
-  String _poseFeedbackText = 'Posisikan seluruh tubuh terlihat dalam reticle';
+  // Timer & ValueNotifiers untuk UI 60 FPS tanpa setState di imageStream
+  Timer? _trialTimer;
+  Timer? _restTimer;
+  final ValueNotifier<int> _remainingSecondsNotifier = ValueNotifier<int>(60);
+  final ValueNotifier<int> _repCountNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<double> _angleNotifier = ValueNotifier<double>(180.0);
+  final ValueNotifier<String> _feedbackNotifier =
+      ValueNotifier<String>('POSISIKAN SELURUH TUBUH DALAM RETICLE KAMERA');
+  final ValueNotifier<bool> _isRestingNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<int> _restSecondsNotifier = ValueNotifier<int>(5);
 
-  // Timer 60 Detik per Sesi
-  static const int _sessionDurationSeconds = 60;
-  int _remainingSeconds = _sessionDurationSeconds;
-  Timer? _countdownTimer;
-
-  // ----------------------------------------------------------------------------
-  // FASE 3: SINKRONISASI SUPABASE & ANIMASI
-  // ----------------------------------------------------------------------------
-  bool _isSyncing = false;
+  // Animasi Glitch & HUD Pulse
   late AnimationController _pulseController;
-  late AnimationController _scanLaserController;
+  late Animation<double> _pulseAnimation;
+
+  // Map rotasi perangkat resmi Android
+  static final Map<DeviceOrientation, int> _orientations = {
+    DeviceOrientation.portraitUp: 0,
+    DeviceOrientation.landscapeLeft: 90,
+    DeviceOrientation.portraitDown: 180,
+    DeviceOrientation.landscapeRight: 270,
+  };
 
   @override
   void initState() {
     super.initState();
+    _calculateBmiAndTempRank();
 
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
 
-    _scanLaserController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
 
-    _tbController.addListener(() {
-      final val = double.tryParse(_tbController.text);
-      if (val != null && val >= 100 && val <= 250 && val != _tbCm) {
-        setState(() => _tbCm = val);
-      }
-    });
-
-    _bbController.addListener(() {
-      final val = double.tryParse(_bbController.text);
-      if (val != null && val >= 30 && val <= 250 && val != _bbKg) {
-        setState(() => _bbKg = val);
-      }
-    });
+    // Inisialisasi Google ML Kit Pose Detector dengan mode stream
+    final options = PoseDetectorOptions(
+      mode: PoseDetectionMode.stream,
+      model: PoseDetectionModel.base,
+    );
+    _poseDetector = PoseDetector(options: options);
   }
 
   @override
   void dispose() {
+    _trialTimer?.cancel();
+    _restTimer?.cancel();
     _pulseController.dispose();
-    _scanLaserController.dispose();
-    _countdownTimer?.cancel();
-    _stopCamera();
+    _stopAndDisposeCamera();
     _poseDetector?.close();
-    _tbController.dispose();
-    _bbController.dispose();
+    _remainingSecondsNotifier.dispose();
+    _repCountNotifier.dispose();
+    _angleNotifier.dispose();
+    _feedbackNotifier.dispose();
+    _isRestingNotifier.dispose();
+    _restSecondsNotifier.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
   // ============================================================================
-  // KALKULASI BMI & RANKING LOGIC
+  // LOGIKA MATEMATIKA KALKULASI SUDUT SENDI (ATAN2 SESUAI PERSYARATAN)
   // ============================================================================
 
-  /// Kalkulasi Skor BMI: BB (kg) / (TB (m))^2
-  double get _calculatedBmi {
-    final heightMeter = _tbCm / 100.0;
-    if (heightMeter <= 0) return 22.0;
-    final bmi = _bbKg / (heightMeter * heightMeter);
-    return double.parse(bmi.toStringAsFixed(1));
-  }
-
-  /// Logika Rank Sementara (Temp Rank):
-  /// - Normal (18.5 - 24.9) -> 'E'
-  /// - Underweight (< 18.5) atau Overweight/Obese (>= 25) -> 'F'
-  String get _tempRank {
-    final bmi = _calculatedBmi;
-    if (bmi >= 18.5 && bmi <= 24.9) {
-      return 'E';
-    } else {
-      return 'F';
+  /// Menghitung sudut sendi antara 3 titik landmark tubuh:
+  /// firstPoint (titik awal), midPoint (sendi vertex), lastPoint (titik akhir).
+  /// Menggunakan atan2 untuk akurasi radian dan mengonversinya ke rentang 0 - 180 derajat.
+  double getAngle(
+    PoseLandmark firstPoint,
+    PoseLandmark midPoint,
+    PoseLandmark lastPoint,
+  ) {
+    final radians = math.atan2(lastPoint.y - midPoint.y, lastPoint.x - midPoint.x) -
+        math.atan2(firstPoint.y - midPoint.y, firstPoint.x - midPoint.x);
+    var angle = (radians * 180.0 / math.pi).abs();
+    if (angle > 180.0) {
+      angle = 360.0 - angle;
     }
+    return angle;
   }
 
-  /// Status Kategori BMI
-  String get _bmiCategoryText {
-    final bmi = _calculatedBmi;
-    if (bmi < 18.5) return 'UNDERWEIGHT // RECOVERY REQ';
-    if (bmi <= 24.9) return 'NORMAL // COMBAT READY';
-    if (bmi <= 29.9) return 'OVERWEIGHT // CONDITIONING';
-    return 'OBESE // HEAVY RECALIBRATION';
-  }
+  // ============================================================================
+  // LOGIKA KONVERSI CAMERAIMAGE KE INPUTIMAGE (ML-KIT YUV420 ROTASI SENSOR)
+  // ============================================================================
 
-  Color get _bmiCategoryColor {
-    final bmi = _calculatedBmi;
-    if (bmi >= 18.5 && bmi <= 24.9) return LevMaxTheme.tertiaryContainer;
-    if (bmi < 18.5) return const Color(0xFFFFA000);
-    return LevMaxTheme.hpRed;
-  }
+  /// Mengonversi CameraImage stream menjadi InputImage untuk ML Kit
+  InputImage? _inputImageFromCameraImage(CameraImage image) {
+    if (_cameraController == null || _availableCameras.isEmpty) return null;
 
-  /// Evaluasi Apakah Pengguna Memenuhi Seluruh Threshold Bonus:
-  /// Push-up > 35, Sit-up > 35, Squat > 40, Pull-up > 5 (Semua Terpenuhi)
-  bool get _isBonusRankAchieved {
-    return _pushupCount > WorkoutSessionType.pushup.bonusThreshold &&
-        _situpCount > WorkoutSessionType.situp.bonusThreshold &&
-        _squatCount > WorkoutSessionType.squat.bonusThreshold &&
-        _pullupCount > WorkoutSessionType.pullup.bonusThreshold;
-  }
+    final camera = _availableCameras[_selectedCameraIndex];
+    final sensorOrientation = camera.sensorOrientation;
 
-  /// Penentuan Rank Akhir:
-  /// - Jika temp_rank == 'E' & performa bonus -> Final Rank = 'D'
-  /// - Jika temp_rank == 'F' & performa bonus -> Final Rank = 'E'
-  /// - Tanpa bonus -> Final Rank = temp_rank
-  String get _finalRank {
-    final base = _tempRank;
-    if (_isBonusRankAchieved) {
-      if (base == 'E') return 'D';
-      if (base == 'F') return 'E';
+    InputImageRotation? rotation;
+    if (Platform.isIOS) {
+      rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
+    } else if (Platform.isAndroid) {
+      var rotationCompensation =
+          _orientations[_cameraController!.value.deviceOrientation];
+      if (rotationCompensation == null) return null;
+      if (camera.lensDirection == CameraLensDirection.front) {
+        rotationCompensation = (sensorOrientation + rotationCompensation) % 360;
+      } else {
+        rotationCompensation =
+            (sensorOrientation - rotationCompensation + 360) % 360;
+      }
+      rotation = InputImageRotationValue.fromRawValue(rotationCompensation);
     }
-    return base;
+    rotation ??= InputImageRotation.rotation0deg;
+
+    // Deteksi Format Pixel
+    final format = InputImageFormatValue.fromRawValue(image.format.raw) ??
+        (Platform.isAndroid ? InputImageFormat.nv21 : InputImageFormat.bgra8888);
+
+    // Gabungkan seluruh plane bytes (Y, U, V)
+    final WriteBuffer allBytes = WriteBuffer();
+    for (final Plane plane in image.planes) {
+      allBytes.putUint8List(plane.bytes);
+    }
+    final bytes = allBytes.done().buffer.asUint8List();
+
+    final metadata = InputImageMetadata(
+      size: Size(image.width.toDouble(), image.height.toDouble()),
+      rotation: rotation,
+      format: format,
+      bytesPerRow: image.planes.first.bytesPerRow,
+    );
+
+    return InputImage.fromBytes(bytes: bytes, metadata: metadata);
   }
 
-  // ============================================================================
-  // INISIALISASI KAMERA & GOOGLE ML KIT POSE DETECTOR (FASE 2)
-  // ============================================================================
+  /// Callback pemrosesan frame realtime kamera
+  Future<void> _processCameraImage(CameraImage image) async {
+    // Hindari pemrosesan ganda, kondisi jeda istirahat, atau sesi non-aktif
+    if (_isProcessingFrame ||
+        !_isSessionActive ||
+        _isRestingNotifier.value ||
+        _activePageIndex != 1) {
+      return;
+    }
 
-  Future<void> _startPhysicalTrials() async {
-    setState(() {
-      _currentPhase = 2;
-      _currentSessionIndex = 0;
-      _pushupCount = 0;
-      _situpCount = 0;
-      _squatCount = 0;
-      _pullupCount = 0;
-      _remainingSeconds = _sessionDurationSeconds;
-    });
+    _isProcessingFrame = true;
 
-    await _initializeCameraAndDetector();
-    _startSessionTimer();
-  }
-
-  Future<void> _initializeCameraAndDetector() async {
     try {
-      // Inisialisasi ML Kit Pose Detector
-      _poseDetector = PoseDetector(
-        options: PoseDetectorOptions(
-          mode: PoseDetectionMode.stream,
-          model: PoseDetectionModel.base,
-        ),
-      );
+      final inputImage = _inputImageFromCameraImage(image);
+      if (inputImage == null) {
+        _isProcessingFrame = false;
+        return;
+      }
 
-      // Ambil daftar kamera perangkat
+      final poses = await _poseDetector?.processImage(inputImage);
+      if (poses != null && poses.isNotEmpty && _isSessionActive) {
+        _evaluatePose(poses.first);
+      } else {
+        _feedbackNotifier.value = 'MENCARI SILUET HUNTER DALAM RETICLE...';
+      }
+    } catch (e) {
+      debugPrint('[ML-Kit Pose Stream] Error: $e');
+    } finally {
+      _isProcessingFrame = false;
+    }
+  }
+
+  // ============================================================================
+  // STATE MACHINE EVALUASI SENDI NAIK / TURUN SESI UJIAN FISIK
+  // ============================================================================
+
+  void _evaluatePose(Pose pose) {
+    PoseLandmark? p1Left, p2Left, p3Left;
+    PoseLandmark? p1Right, p2Right, p3Right;
+
+    double lowerThreshold = 90.0;
+    double upperThreshold = 150.0;
+
+    switch (_currentSession) {
+      case WorkoutSessionType.pushup:
+        // Push-up: Bahu (shoulder), Siku (elbow), Pergelangan Tangan (wrist)
+        p1Left = pose.landmarks[PoseLandmarkType.leftShoulder];
+        p2Left = pose.landmarks[PoseLandmarkType.leftElbow];
+        p3Left = pose.landmarks[PoseLandmarkType.leftWrist];
+
+        p1Right = pose.landmarks[PoseLandmarkType.rightShoulder];
+        p2Right = pose.landmarks[PoseLandmarkType.rightElbow];
+        p3Right = pose.landmarks[PoseLandmarkType.rightWrist];
+
+        lowerThreshold = 90.0; // Siku tertekuk maksimal saat dada turun
+        upperThreshold = 155.0; // Lengan lurus saat mendorong ke atas
+        break;
+
+      case WorkoutSessionType.situp:
+        // Sit-up: Bahu (shoulder), Pinggul (hip), Lutut (knee)
+        p1Left = pose.landmarks[PoseLandmarkType.leftShoulder];
+        p2Left = pose.landmarks[PoseLandmarkType.leftHip];
+        p3Left = pose.landmarks[PoseLandmarkType.leftKnee];
+
+        p1Right = pose.landmarks[PoseLandmarkType.rightShoulder];
+        p2Right = pose.landmarks[PoseLandmarkType.rightHip];
+        p3Right = pose.landmarks[PoseLandmarkType.rightKnee];
+
+        lowerThreshold = 75.0; // Badan ditekuk ke atas mendekati lutut
+        upperThreshold = 125.0; // Badan kembali berbaring di matras
+        break;
+
+      case WorkoutSessionType.squat:
+        // Squat: Pinggul (hip), Lutut (knee), Pergelangan Kaki (ankle)
+        p1Left = pose.landmarks[PoseLandmarkType.leftHip];
+        p2Left = pose.landmarks[PoseLandmarkType.leftKnee];
+        p3Left = pose.landmarks[PoseLandmarkType.leftAnkle];
+
+        p1Right = pose.landmarks[PoseLandmarkType.rightHip];
+        p2Right = pose.landmarks[PoseLandmarkType.rightKnee];
+        p3Right = pose.landmarks[PoseLandmarkType.rightAnkle];
+
+        lowerThreshold = 95.0; // Paha sejajar lantai saat jongkok
+        upperThreshold = 160.0; // Kaki berdiri tegak lurus sempurna
+        break;
+
+      case WorkoutSessionType.pullup:
+        // Pull-up: Pergelangan Tangan (wrist), Siku (elbow), Bahu (shoulder)
+        p1Left = pose.landmarks[PoseLandmarkType.leftWrist];
+        p2Left = pose.landmarks[PoseLandmarkType.leftElbow];
+        p3Left = pose.landmarks[PoseLandmarkType.leftShoulder];
+
+        p1Right = pose.landmarks[PoseLandmarkType.rightWrist];
+        p2Right = pose.landmarks[PoseLandmarkType.rightElbow];
+        p3Right = pose.landmarks[PoseLandmarkType.rightShoulder];
+
+        lowerThreshold = 85.0; // Dagu melewati bar, siku tertekuk
+        upperThreshold = 150.0; // Lengan menggantung lurus ke bawah
+        break;
+    }
+
+    // Tentukan sisi tubuh terbaik dengan likelihood kepercayaan tertinggi
+    double? detectedAngle;
+    final bool leftValid = p1Left != null &&
+        p2Left != null &&
+        p3Left != null &&
+        p1Left.likelihood > 0.4 &&
+        p2Left.likelihood > 0.4 &&
+        p3Left.likelihood > 0.4;
+
+    final bool rightValid = p1Right != null &&
+        p2Right != null &&
+        p3Right != null &&
+        p1Right.likelihood > 0.4 &&
+        p2Right.likelihood > 0.4 &&
+        p3Right.likelihood > 0.4;
+
+    if (leftValid && rightValid) {
+      final angleL = getAngle(p1Left, p2Left, p3Left);
+      final angleR = getAngle(p1Right, p2Right, p3Right);
+      detectedAngle = (angleL + angleR) / 2.0;
+    } else if (leftValid) {
+      detectedAngle = getAngle(p1Left, p2Left, p3Left);
+    } else if (rightValid) {
+      detectedAngle = getAngle(p1Right, p2Right, p3Right);
+    }
+
+    if (detectedAngle == null) {
+      _feedbackNotifier.value = 'RETICLE: SELURUH SENDI HARUS TERLIHAT';
+      return;
+    }
+
+    _angleNotifier.value = detectedAngle;
+
+    // STATE MACHINE NAIK/TURUN:
+    // Jika sudut < threshold bawah -> isDownPosition = true
+    // Jika sudut > threshold atas DAN isDownPosition == true -> repCount++ & isDownPosition = false
+    if (detectedAngle < lowerThreshold) {
+      if (!_isDownPosition) {
+        _isDownPosition = true;
+        _feedbackNotifier.value = 'POSISI TERTEKUK TERCAPAI! DORONG PENUH!';
+      }
+    } else if (detectedAngle > upperThreshold && _isDownPosition) {
+      _isDownPosition = false;
+      _repCountNotifier.value++;
+      _feedbackNotifier.value = 'REPETISI VALID: ${_repCountNotifier.value}!';
+    } else if (_isDownPosition) {
+      _feedbackNotifier.value = 'TAHAN & KEMBALIKAN KE POSISI SEMULA';
+    } else {
+      _feedbackNotifier.value = 'TURUNKAN BADAN UNTUK REPETISI BERIKUTNYA';
+    }
+  }
+
+  // ============================================================================
+  // INISIALISASI & KONTROL KAMERA DEPAN
+  // ============================================================================
+
+  Future<void> _initCamera() async {
+    try {
       _availableCameras = await availableCameras();
       if (_availableCameras.isEmpty) {
         setState(() {
           _isCameraError = true;
-          _cameraErrorMessage = 'Tidak ada sensor kamera terdeteksi pada perangkat.';
+          _cameraErrorMessage = 'Tidak ada hardware kamera yang terdeteksi.';
         });
         return;
       }
 
-      // Pilih kamera depan sebagai preferensi agar user dapat melihat layar saat latihan
-      int frontCamIndex = _availableCameras.indexWhere(
-        (c) => c.lensDirection == CameraLensDirection.front,
+      // Utamakan kamera depan untuk ujian fisik mandiri
+      final frontIndex = _availableCameras.indexWhere(
+        (cam) => cam.lensDirection == CameraLensDirection.front,
       );
-      _selectedCameraIndex = frontCamIndex != -1 ? frontCamIndex : 0;
+      _selectedCameraIndex = frontIndex != -1 ? frontIndex : 0;
 
       await _setupCameraController(_availableCameras[_selectedCameraIndex]);
     } catch (e) {
-      debugPrint('[Onboarding Camera] Inisialisasi gagal: $e');
-      if (mounted) {
-        setState(() {
-          _isCameraError = true;
-          _cameraErrorMessage = 'Kamera tidak dapat diakses: $e\nMode simulasi AI tetap aktif.';
-        });
-      }
+      setState(() {
+        _isCameraError = true;
+        _cameraErrorMessage = 'Gagal menginisialisasi kamera: $e';
+      });
     }
   }
 
-  Future<void> _setupCameraController(CameraDescription cameraDescription) async {
-    _cameraController?.dispose();
+  Future<void> _setupCameraController(CameraDescription cameraDesc) async {
+    await _cameraController?.dispose();
 
     final controller = CameraController(
-      cameraDescription,
+      cameraDesc,
       ResolutionPreset.medium,
       enableAudio: false,
       imageFormatGroup: Platform.isAndroid
@@ -283,1065 +427,621 @@ class _OnboardingPageState extends State<OnboardingPage>
       if (!mounted) return;
 
       setState(() {
-        _isCameraReady = true;
+        _isCameraInitialized = true;
         _isCameraError = false;
         _isSessionActive = true;
       });
 
-      // Mulai loop pemrosesan frame berkala
-      _startLivePoseDetectionLoop();
+      // Mulai stream gambar tanpa setState (UI lancar 60 FPS)
+      await controller.startImageStream(_processCameraImage);
+
+      // Mulai timer 60 detik untuk sesi 1
+      _startTrialTimer();
     } catch (e) {
       if (mounted) {
         setState(() {
-          _isCameraReady = false;
+          _isCameraInitialized = false;
           _isCameraError = true;
-          _cameraErrorMessage = 'Gagal membuka aperture kamera: $e';
+          _cameraErrorMessage = 'Gagal membuka live stream kamera: $e';
         });
       }
     }
   }
 
-  /// Mengalihkan antara kamera depan dan kamera belakang
   Future<void> _toggleCameraLens() async {
     if (_availableCameras.length < 2) return;
     _selectedCameraIndex = (_selectedCameraIndex + 1) % _availableCameras.length;
     setState(() {
-      _isCameraReady = false;
+      _isCameraInitialized = false;
     });
     await _setupCameraController(_availableCameras[_selectedCameraIndex]);
   }
 
-  Future<void> _stopCamera() async {
+  Future<void> _stopAndDisposeCamera() async {
     _isSessionActive = false;
+    _trialTimer?.cancel();
+    _restTimer?.cancel();
     try {
+      if (_cameraController?.value.isStreamingImages ?? false) {
+        await _cameraController?.stopImageStream();
+      }
       await _cameraController?.dispose();
     } catch (_) {}
     _cameraController = null;
+    _isCameraInitialized = false;
   }
 
   // ============================================================================
-  // LOOP DETEKSI POSE & LOGIKA SUDUT SENDI ML KIT REAL-TIME
+  // SIKLUS TRIAL: 60 DETIK LATIHAN -> 5 DETIK REST -> LANJUT SESI BERIKUTNYA
   // ============================================================================
 
-  /// Loop pemindaian frame kamera untuk ML Kit Pose Detection
-  void _startLivePoseDetectionLoop() async {
-    while (_isSessionActive && mounted && _currentPhase == 2) {
-      if (!_isProcessingFrame &&
-          _cameraController != null &&
-          _cameraController!.value.isInitialized) {
-        _isProcessingFrame = true;
+  void _startTrialTimer() {
+    _trialTimer?.cancel();
+    _remainingSecondsNotifier.value = 60;
+    _isDownPosition = false;
+    _repCountNotifier.value = 0;
+    _feedbackNotifier.value = 'MULAI SESI ${_currentSession.title}!';
 
-        try {
-          // Ambil frame snapshot dari kamera
-          final xFile = await _cameraController!.takePicture();
-          final file = File(xFile.path);
-
-          if (await file.exists()) {
-            final inputImage = InputImage.fromFile(file);
-            final poses = await _poseDetector?.processImage(inputImage);
-
-            // Bersihkan file frame temporer untuk menghemat memori
-            try {
-              await file.delete();
-            } catch (_) {}
-
-            if (mounted && poses != null && poses.isNotEmpty) {
-              _processPoseLandmarks(poses.first);
-            }
-          }
-        } catch (e) {
-          // Tangani jika camera sibuk atau drop frame
-          debugPrint('[Pose Loop] Frame processing skip: $e');
-        } finally {
-          _isProcessingFrame = false;
-        }
-      }
-
-      // Interval 180ms agar pemrosesan berjalan mulus tanpa overheating pada Android/Samsung M31
-      await Future.delayed(const Duration(milliseconds: 180));
-    }
-  }
-
-  /// ==========================================================================
-  /// FUNGSI MATEMATIKA: MENGHITUNG SUDUT SENDI ANTARA 3 TITIK LANDMARK
-  /// Sudut dihitung pada vertex B (titik sendi siku/lutut/pinggul).
-  /// Formula: arccos((BA . BC) / (|BA| * |BC|))
-  /// ==========================================================================
-  double _calculateJointAngle(PoseLandmark p1, PoseLandmark p2, PoseLandmark p3) {
-    final radians = math.atan2(p3.y - p2.y, p3.x - p2.x) -
-        math.atan2(p1.y - p2.y, p1.x - p2.x);
-    var angle = (radians * 180.0 / math.pi).abs();
-    if (angle > 180.0) {
-      angle = 360.0 - angle;
-    }
-    return angle;
-  }
-
-  /// Memproses titik landmark tubuh berdasarkan jenis sesi latihan aktif
-  void _processPoseLandmarks(Pose pose) {
-    final currentSession = _sessions[_currentSessionIndex];
-
-    switch (currentSession) {
-      // ------------------------------------------------------------------------
-      // 1. PUSH-UP: Deteksi Sudut Siku (Elbow) antara Shoulder, Elbow, & Wrist
-      // ------------------------------------------------------------------------
-      case WorkoutSessionType.pushup:
-        final shoulder = pose.landmarks[PoseLandmarkType.leftShoulder] ??
-            pose.landmarks[PoseLandmarkType.rightShoulder];
-        final elbow = pose.landmarks[PoseLandmarkType.leftElbow] ??
-            pose.landmarks[PoseLandmarkType.rightElbow];
-        final wrist = pose.landmarks[PoseLandmarkType.leftWrist] ??
-            pose.landmarks[PoseLandmarkType.rightWrist];
-
-        if (shoulder != null && elbow != null && wrist != null) {
-          // KOMENTAR KOMPREHENSIF - PUSH-UP JOINT ANGLE:
-          // Titik vertex adalah Siku (Elbow).
-          // Posisi Bawah (Dada turun menyentuh lantai): Sudut siku <= 90 derajat.
-          // Posisi Atas (Lengan lurus terkunci): Sudut siku >= 160 derajat.
-          final angle = _calculateJointAngle(shoulder, elbow, wrist);
-
-          setState(() {
-            _currentJointAngle = angle;
-          });
-
-          if (angle <= 90.0) {
-            // Pengguna berhasil turun secara sah
-            if (!_isJointFlexed) {
-              _isJointFlexed = true;
-              setState(() {
-                _poseFeedbackText = 'KEDALAMAN SAH! Dorong tubuh ke atas!';
-              });
-            }
-          } else if (angle >= 155.0 && _isJointFlexed) {
-            // Repetisi komplit saat kembali ke ekstensi penuh
-            _isJointFlexed = false;
-            HapticFeedback.mediumImpact();
-            setState(() {
-              _pushupCount++;
-              _poseFeedbackText = 'REPETISI SAH +1! Pertahankan ritme.';
-            });
-          }
-        } else {
-          setState(() {
-            _poseFeedbackText = 'Arahkan kamera ke bahu, siku, dan tangan Anda.';
-          });
-        }
-        break;
-
-      // ------------------------------------------------------------------------
-      // 2. SIT-UP: Deteksi Fleksi Pinggul (Hip) antara Shoulder, Hip, & Knee
-      // ------------------------------------------------------------------------
-      case WorkoutSessionType.situp:
-        final shoulder = pose.landmarks[PoseLandmarkType.leftShoulder] ??
-            pose.landmarks[PoseLandmarkType.rightShoulder];
-        final hip = pose.landmarks[PoseLandmarkType.leftHip] ??
-            pose.landmarks[PoseLandmarkType.rightHip];
-        final knee = pose.landmarks[PoseLandmarkType.leftKnee] ??
-            pose.landmarks[PoseLandmarkType.rightKnee];
-
-        if (shoulder != null && hip != null && knee != null) {
-          // KOMENTAR KOMPREHENSIF - SIT-UP JOINT ANGLE:
-          // Titik vertex adalah Pinggul (Hip).
-          // Posisi Bawah (Punggung di lantai): Sudut pinggul >= 140 derajat.
-          // Posisi Atas (Tubuh naik mendekati lutut): Sudut pinggul <= 80 derajat.
-          final angle = _calculateJointAngle(shoulder, hip, knee);
-
-          setState(() {
-            _currentJointAngle = angle;
-          });
-
-          if (angle <= 80.0) {
-            // Puncak kontraksi sit-up tercapai
-            if (!_isJointFlexed) {
-              _isJointFlexed = true;
-              setState(() {
-                _poseFeedbackText = 'KONTRAKSI OPTIMAL! Turunkan punggung perlahan.';
-              });
-            }
-          } else if (angle >= 135.0 && _isJointFlexed) {
-            // Punggung kembali menyentuh matras -> 1 Repetisi Sah
-            _isJointFlexed = false;
-            HapticFeedback.mediumImpact();
-            setState(() {
-              _situpCount++;
-              _poseFeedbackText = 'SIT-UP SAH +1! Angkat kembali tubuh Anda.';
-            });
-          }
-        }
-        break;
-
-      // ------------------------------------------------------------------------
-      // 3. SQUAT: Deteksi Sudut Lutut (Knee) antara Hip, Knee, & Ankle
-      // ------------------------------------------------------------------------
-      case WorkoutSessionType.squat:
-        final hip = pose.landmarks[PoseLandmarkType.leftHip] ??
-            pose.landmarks[PoseLandmarkType.rightHip];
-        final knee = pose.landmarks[PoseLandmarkType.leftKnee] ??
-            pose.landmarks[PoseLandmarkType.rightKnee];
-        final ankle = pose.landmarks[PoseLandmarkType.leftAnkle] ??
-            pose.landmarks[PoseLandmarkType.rightAnkle];
-
-        if (hip != null && knee != null && ankle != null) {
-          // KOMENTAR KOMPREHENSIF - SQUAT JOINT ANGLE:
-          // Titik vertex adalah Lutut (Knee).
-          // Posisi Bawah (Paha sejajar lantai / Deep Squat): Sudut lutut <= 95 derajat.
-          // Posisi Berdiri (Tegak sempurna): Sudut lutut >= 160 derajat.
-          final angle = _calculateJointAngle(hip, knee, ankle);
-
-          setState(() {
-            _currentJointAngle = angle;
-          });
-
-          if (angle <= 95.0) {
-            // Titik terendah squat tercapai
-            if (!_isJointFlexed) {
-              _isJointFlexed = true;
-              setState(() {
-                _poseFeedbackText = 'KEDALAMAN TERCAPAI! Berdiri tegak!';
-              });
-            }
-          } else if (angle >= 155.0 && _isJointFlexed) {
-            // Pengguna berdiri sempurna -> 1 Repetisi Sah
-            _isJointFlexed = false;
-            HapticFeedback.mediumImpact();
-            setState(() {
-              _squatCount++;
-              _poseFeedbackText = 'SQUAT SAH +1! Turun kembali.';
-            });
-          }
-        }
-        break;
-
-      // ------------------------------------------------------------------------
-      // 4. PULL-UP: Deteksi Fleksi Siku & Angkat Dagu di Atas Palang
-      // ------------------------------------------------------------------------
-      case WorkoutSessionType.pullup:
-        final shoulder = pose.landmarks[PoseLandmarkType.leftShoulder] ??
-            pose.landmarks[PoseLandmarkType.rightShoulder];
-        final elbow = pose.landmarks[PoseLandmarkType.leftElbow] ??
-            pose.landmarks[PoseLandmarkType.rightElbow];
-        final wrist = pose.landmarks[PoseLandmarkType.leftWrist] ??
-            pose.landmarks[PoseLandmarkType.rightWrist];
-
-        if (shoulder != null && elbow != null && wrist != null) {
-          // KOMENTAR KOMPREHENSIF - PULL-UP JOINT ANGLE:
-          // Titik vertex adalah Siku (Elbow overhead).
-          // Posisi Atas (Dagu melampaui palang / siku tertekuk): Sudut siku <= 80 derajat.
-          // Posisi Bawah (Dead hang / lengan memanjang): Sudut siku >= 150 derajat.
-          final angle = _calculateJointAngle(shoulder, elbow, wrist);
-
-          setState(() {
-            _currentJointAngle = angle;
-          });
-
-          if (angle <= 80.0) {
-            if (!_isJointFlexed) {
-              _isJointFlexed = true;
-              setState(() {
-                _poseFeedbackText = 'PULL-UP TERCAPAI! Turunkan badan perlahan.';
-              });
-            }
-          } else if (angle >= 150.0 && _isJointFlexed) {
-            _isJointFlexed = false;
-            HapticFeedback.mediumImpact();
-            setState(() {
-              _pullupCount++;
-              _poseFeedbackText = 'PULL-UP SAH +1! Tarik kembali tubuh Anda.';
-            });
-          }
-        }
-        break;
-    }
-  }
-
-  // ============================================================================
-  // TIMER & ALUR PERGANTIAN SESI (1 MENIT PER SESI)
-  // ============================================================================
-
-  void _startSessionTimer() {
-    _countdownTimer?.cancel();
-    _remainingSeconds = _sessionDurationSeconds;
-    _isJointFlexed = false;
-
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) return;
-
-      if (_remainingSeconds > 1) {
-        setState(() {
-          _remainingSeconds--;
-        });
+    _trialTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingSecondsNotifier.value > 0) {
+        _remainingSecondsNotifier.value--;
       } else {
         timer.cancel();
-        _onSessionTimeExpired();
+        _onTrialSessionFinished();
       }
     });
   }
 
-  /// Dipanggil saat 60 detik per sesi habis
-  void _onSessionTimeExpired() {
-    HapticFeedback.heavyImpact();
+  /// Menyimpan hasil repetisi sesi dan memulai jeda istirahat 5 detik
+  void _onTrialSessionFinished() {
+    // 1. Simpan hasil sesi aktif
+    final count = _repCountNotifier.value;
+    switch (_currentSession) {
+      case WorkoutSessionType.pushup:
+        _pushupCount = count;
+        break;
+      case WorkoutSessionType.situp:
+        _situpCount = count;
+        break;
+      case WorkoutSessionType.squat:
+        _squatCount = count;
+        break;
+      case WorkoutSessionType.pullup:
+        _pullupCount = count;
+        break;
+    }
 
-    if (_currentSessionIndex < _sessions.length - 1) {
-      // Pindah ke sesi berikutnya secara otomatis
-      setState(() {
-        _currentSessionIndex++;
-      });
+    // 2. Cek apakah seluruh 4 sesi telah selesai
+    if (_currentSessionIndex >= _sessions.length - 1) {
+      _completeAllTrials();
+      return;
+    }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'SESI SELESAI! Bersiap untuk ujian ${_sessions[_currentSessionIndex].title}',
-            style: LevMaxTheme.mono(fontSize: 11, fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: LevMaxTheme.surfaceContainerHigh,
-          duration: const Duration(seconds: 2),
-        ),
+    // 3. Masuki jeda istirahat 5 detik (REST PROTOCOL)
+    _isRestingNotifier.value = true;
+    _restSecondsNotifier.value = 5;
+
+    _restTimer?.cancel();
+    _restTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_restSecondsNotifier.value > 1) {
+        _restSecondsNotifier.value--;
+      } else {
+        timer.cancel();
+        _isRestingNotifier.value = false;
+        if (mounted) {
+          setState(() {
+            _currentSessionIndex++;
+          });
+          _startTrialTimer();
+        }
+      }
+    });
+  }
+
+  /// Menghentikan kamera dan melangkah ke FASE 3 (Result & Awakening Sync)
+  Future<void> _completeAllTrials() async {
+    _trialTimer?.cancel();
+    _restTimer?.cancel();
+    _isSessionActive = false;
+    await _stopAndDisposeCamera();
+
+    if (mounted) {
+      _pageController.animateToPage(
+        2,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
       );
-
-      _startSessionTimer();
-    } else {
-      // 4 Sesi selesai! Masuk ke Fase 3
-      _finishAllSessionsAndShowResults();
     }
   }
 
-  /// Navigasi ke Fase 3 (Penentuan Rank Akhir)
-  void _finishAllSessionsAndShowResults() {
-    _countdownTimer?.cancel();
-    _stopCamera();
+  // ============================================================================
+  // LOGIKA HITUNG BMI & EVALUASI RANK AWAKENING
+  // ============================================================================
 
-    setState(() {
-      _currentPhase = 3;
-    });
+  void _calculateBmiAndTempRank() {
+    final heightM = _tbCm / 100.0;
+    if (heightM > 0) {
+      _calculatedBmi = _bbKg / (heightM * heightM);
+    } else {
+      _calculatedBmi = 22.0;
+    }
+
+    // Aturan GDD: BMI Normal (18.5 - 24.9) -> E, selain itu F
+    if (_calculatedBmi >= 18.5 && _calculatedBmi <= 24.9) {
+      _tempRank = 'E';
+    } else {
+      _tempRank = 'F';
+    }
   }
 
-  /// Helper untuk simulasi penambahan repetisi secara manual (misal testing tanpa kamera)
-  void _simulateRepetition() {
-    HapticFeedback.selectionClick();
-    setState(() {
-      switch (_sessions[_currentSessionIndex]) {
-        case WorkoutSessionType.pushup:
-          _pushupCount++;
-          break;
-        case WorkoutSessionType.situp:
-          _situpCount++;
-          break;
-        case WorkoutSessionType.squat:
-          _squatCount++;
-          break;
-        case WorkoutSessionType.pullup:
-          _pullupCount++;
-          break;
+  /// Menghitung Rank Akhir berdasarkan Repetisi Ujian Fisik
+  /// Jika Push-up > 30, Sit-up > 30, Squat > 40, Pull-up > 2 -> Naik 1 Rank
+  Map<String, dynamic> _evaluateFinalAwakening() {
+    final bool meetsPromotion = _pushupCount > 30 &&
+        _situpCount > 30 &&
+        _squatCount > 40 &&
+        _pullupCount > 2;
+
+    String finalRank = _tempRank;
+    if (meetsPromotion) {
+      if (_tempRank == 'E') {
+        finalRank = 'D';
+      } else if (_tempRank == 'F') {
+        finalRank = 'E';
       }
-      _poseFeedbackText = 'MANUAL TEST REP +1 VALIDATED';
-    });
+    }
+
+    return {
+      'promoted': meetsPromotion,
+      'finalRank': finalRank,
+    };
   }
 
   // ============================================================================
-  // FASE 3: SINKRONISASI DATA KE SUPABASE & HIVE, LALU KE /MAIN
+  // EKSEKUSI FINAL: SYNC KE HIVE & SUPABASE LALU REDIRECT KE /MAIN
   // ============================================================================
 
-  Future<void> _syncAwakeningToSupabase() async {
-    setState(() {
-      _isSyncing = true;
-    });
+  Future<void> _executeAwakeningSync() async {
+    final eval = _evaluateFinalAwakening();
+    final finalRank = eval['finalRank'] as String;
+
+    // Tampilkan loading dialog bertema Solo Leveling
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(28),
+          margin: const EdgeInsets.symmetric(horizontal: 32),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F131D),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: LevMaxTheme.primaryContainer, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: LevMaxTheme.primaryContainer.withValues(alpha: 0.3),
+                blurRadius: 24,
+                spreadRadius: 4,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(LevMaxTheme.primaryContainer),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'SYNCHRONIZING VESSEL TO SYSTEM...',
+                textAlign: TextAlign.center,
+                style: LevMaxTheme.headline(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: LevMaxTheme.primaryContainer,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Mengukir Data Hunter ke Blockchain & Cloud Database...',
+                textAlign: TextAlign.center,
+                style: LevMaxTheme.mono(
+                  fontSize: 11,
+                  color: LevMaxTheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
 
     try {
-      final userId = await UserInfo.getUserId();
+      // 1. Ambil data user aktif dari Cache / UserInfo
+      final cachedPlayer = SupabaseApiService.getPlayerCache();
+      final userId = await UserInfo.getUserID();
       final username = await UserInfo.getUsername() ?? 'Hunter';
-      final email = await UserInfo.getEmail() ?? '$username@monarch.sys';
+      final email = await UserInfo.getEmail() ?? 'hunter@system.sys';
 
-      // 1. Ambil data User lama dari cache atau Supabase
-      UserModel? currentUser = SupabaseApiService.getPlayerCache();
-      if (currentUser == null && userId != null && userId.isNotEmpty) {
-        currentUser = await SupabaseApiService.getUserById(userId);
-      }
-
-      // 2. Buat objek UserModel baru dengan data antropometri & ranking hasil uji fisik
-      final updatedUser = (currentUser ??
+      final userToUpdate = (cachedPlayer ??
               UserModel.initial(
-                id: userId ?? '1',
+                id: userId,
                 username: username,
                 email: email,
               ))
           .copyWith(
         height: _tbCm.toInt(),
         weight: _bbKg,
-        bmiScore: _calculatedBmi,
+        bmiScore: double.parse(_calculatedBmi.toStringAsFixed(2)),
         maxPushup: _pushupCount,
         maxSitup: _situpCount,
         maxSquat: _squatCount,
         maxPullup: _pullupCount,
-        rank: _finalRank,
+        rank: finalRank,
         isOnboarded: true,
       );
 
-      // 3. Simpan perubahan ke Supabase Cloud REST API
-      await SupabaseApiService.updateUser(updatedUser);
-
-      // 4. Update status lokal di Hive authBox & playerBox
+      // 2. Simpan status onboarding dan cache lokal ke Hive
       await UserInfo.setIsOnboarded(true);
-      await SupabaseApiService.savePlayerCache(updatedUser);
+      await UserInfo.setLoginStatus(true);
+      await SupabaseApiService.savePlayerCache(userToUpdate);
 
-      if (!mounted) return;
+      // 3. Kirim update ke tabel users di Supabase via REST / SDK yang telah disempurnakan
+      await SupabaseApiService.updateUser(userToUpdate);
 
-      // 5. Berikan visual dialog keberhasilan Awakening
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: LevMaxTheme.surfaceContainerLow,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: LevMaxTheme.primaryContainer, width: 2),
-          ),
-          title: Center(
-            child: Text(
-              'AWAKENING CONFIRMED',
-              style: LevMaxTheme.headline(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: LevMaxTheme.primaryContainer,
-                letterSpacing: 1.5,
-              ),
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: LevMaxTheme.primaryContainer.withValues(alpha: 0.15),
-                  border: Border.all(color: LevMaxTheme.primaryContainer, width: 2),
-                ),
-                child: Center(
-                  child: Text(
-                    _finalRank,
-                    style: LevMaxTheme.headline(
-                      fontSize: 34,
-                      fontWeight: FontWeight.bold,
-                      color: LevMaxTheme.primaryContainer,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                'Selamat, Hunter ${updatedUser.username}!\nAnda resmi dibangkitkan ke dalam Sistem dengan status Rank $_finalRank.',
-                textAlign: TextAlign.center,
-                style: LevMaxTheme.mono(fontSize: 11, color: LevMaxTheme.onSurface),
-              ),
-            ],
-          ),
-          actions: [
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.pushReplacementNamed(context, '/main');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: LevMaxTheme.primaryContainer,
-                  foregroundColor: LevMaxTheme.onPrimaryFixed,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-                child: Text(
-                  'MASUKI GERBANG SYSTEM WINDOW',
-                  style: LevMaxTheme.mono(fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      debugPrint('[Onboarding Sync Error] $e');
+      // Tutup dialog
+      if (mounted) Navigator.pop(context);
+
+      // 4. Redirect ke Main Navigation
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sinkronisasi error: $e. Melanjutkan offline...'),
-            backgroundColor: LevMaxTheme.hpRed,
-          ),
-        );
-        await UserInfo.setIsOnboarded(true);
-        if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/main');
       }
-    } finally {
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      debugPrint('[Awakening Sync] Error: $e');
+
+      // Tetap lanjutkan ke main karena cache lokal sudah onboarded
       if (mounted) {
-        setState(() {
-          _isSyncing = false;
-        });
+        Navigator.pushReplacementNamed(context, '/main');
       }
     }
   }
 
   // ============================================================================
-  // BUILD UTAMA (ROUTING ANTAR FASE 1, 2, & 3)
+  // BUILD UTAMA (PAGEVIEW 3 FASE)
   // ============================================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: LevMaxTheme.surfaceContainerLowest,
-      body: SafeArea(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 350),
-          child: _buildPhaseContent(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPhaseContent() {
-    switch (_currentPhase) {
-      case 1:
-        return _buildPhase1BmiMetrics();
-      case 2:
-        return _buildPhase2CameraTrial();
-      case 3:
-      default:
-        return _buildPhase3FinalRankSync();
-    }
-  }
-
-  // ============================================================================
-  // UI FASE 1: KALKULASI BMI & STATUS SEMENTARA
-  // ============================================================================
-  Widget _buildPhase1BmiMetrics() {
-    return SingleChildScrollView(
-      key: const ValueKey('phase_1_bmi'),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      backgroundColor: const Color(0xFF0A0E18),
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
+        onPageChanged: (index) {
+          setState(() {
+            _activePageIndex = index;
+          });
+        },
         children: [
-          // Header
-          Center(
-            child: Column(
-              children: [
-                Text(
-                  '// PHASE 01: VESSEL ANTHROPOMETRY //',
-                  style: LevMaxTheme.mono(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: LevMaxTheme.primary,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'KALIBRASI METRIK TUBUH & BMI',
-                  style: LevMaxTheme.headline(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: LevMaxTheme.primaryContainer,
-                    letterSpacing: 1.0,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Sistem membutuhkan data fisik awal Anda untuk menghitung Rank Sementara dan kapasitas mana vessel.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: LevMaxTheme.onSurfaceVariant,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Input Card: Tinggi Badan & Berat Badan
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: LevMaxTheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF1E293B)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. Tinggi Badan
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.height, color: LevMaxTheme.primaryContainer, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'TINGGI BADAN (TB)',
-                          style: LevMaxTheme.mono(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: LevMaxTheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      '${_tbCm.toInt()} CM',
-                      style: LevMaxTheme.headline(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: LevMaxTheme.primaryContainer,
-                      ),
-                    ),
-                  ],
-                ),
-                Slider(
-                  value: _tbCm,
-                  min: 120.0,
-                  max: 220.0,
-                  activeColor: LevMaxTheme.primaryContainer,
-                  inactiveColor: const Color(0xFF1E293B),
-                  onChanged: (val) {
-                    setState(() {
-                      _tbCm = val;
-                      _tbController.text = val.toInt().toString();
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // 2. Berat Badan
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.monitor_weight_outlined,
-                            color: LevMaxTheme.secondary, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'BERAT BADAN (BB)',
-                          style: LevMaxTheme.mono(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: LevMaxTheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      '${_bbKg.toStringAsFixed(1)} KG',
-                      style: LevMaxTheme.headline(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: LevMaxTheme.secondary,
-                      ),
-                    ),
-                  ],
-                ),
-                Slider(
-                  value: _bbKg,
-                  min: 35.0,
-                  max: 160.0,
-                  activeColor: LevMaxTheme.secondary,
-                  inactiveColor: const Color(0xFF1E293B),
-                  onChanged: (val) {
-                    setState(() {
-                      _bbKg = val;
-                      _bbController.text = val.toStringAsFixed(1);
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Card Hasil Kalkulasi BMI & Temp Rank
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: LevMaxTheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _bmiCategoryColor.withValues(alpha: 0.6),
-                width: 1.5,
-              ),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'INDEX BODY MASS (BMI)',
-                          style: LevMaxTheme.mono(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: LevMaxTheme.outline,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$_calculatedBmi',
-                          style: LevMaxTheme.headline(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: _bmiCategoryColor,
-                          ),
-                        ),
-                        Text(
-                          _bmiCategoryText,
-                          style: LevMaxTheme.mono(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.bold,
-                            color: _bmiCategoryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Badge Temp Rank
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: LevMaxTheme.surfaceContainerLowest,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _bmiCategoryColor, width: 1.5),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            'TEMP RANK',
-                            style: LevMaxTheme.mono(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: LevMaxTheme.outline,
-                            ),
-                          ),
-                          Text(
-                            _tempRank,
-                            style: LevMaxTheme.headline(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: _bmiCategoryColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const Divider(color: Color(0xFF1E293B)),
-                const SizedBox(height: 8),
-                Text(
-                  _tempRank == 'E'
-                      ? '✓ BMI Normal (18.5 - 24.9): Memenuhi syarat Temp Rank E. Tuntaskan 4 sesi latihan fisik untuk peluang promosi ke Rank D!'
-                      : '⚠ BMI di luar rentang normal: Dialokasikan ke Temp Rank F. Anda tetap berpeluang naik ke Rank E jika menembus target ujian!',
-                  style: LevMaxTheme.mono(
-                    fontSize: 10,
-                    color: LevMaxTheme.onSurfaceVariant,
-                  ).copyWith(height: 1.3),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 28),
-
-          // CTA: Masuk ke Fase 2 (Kamera AI)
-          GestureDetector(
-            onTap: _startPhysicalTrials,
-            child: Container(
-              height: 52,
-              decoration: BoxDecoration(
-                color: LevMaxTheme.primaryContainer,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x3300F0FF),
-                    blurRadius: 18,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.videocam, color: LevMaxTheme.onPrimary, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'MASUKI ARENA UJIAN FISIK (4 SESI AI)',
-                    style: LevMaxTheme.mono(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.bold,
-                      color: LevMaxTheme.onPrimary,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
+          _buildPhase1VesselMetrics(),
+          _buildPhase2PhysicalTrial(),
+          _buildPhase3ResultSync(),
         ],
       ),
     );
   }
 
   // ============================================================================
-  // UI FASE 2: ARENA UJIAN KAMERA AI (ML KIT POSE DETECTION)
+  // UI FASE 1: VESSEL METRICS (INPUT TINGGI, BERAT & HITUNG BMI)
   // ============================================================================
-  Widget _buildPhase2CameraTrial() {
-    final currentSession = _sessions[_currentSessionIndex];
 
-    int currentCount = 0;
-    switch (currentSession) {
-      case WorkoutSessionType.pushup:
-        currentCount = _pushupCount;
-        break;
-      case WorkoutSessionType.situp:
-        currentCount = _situpCount;
-        break;
-      case WorkoutSessionType.squat:
-        currentCount = _squatCount;
-        break;
-      case WorkoutSessionType.pullup:
-        currentCount = _pullupCount;
-        break;
-    }
-
-    return Stack(
-      key: const ValueKey('phase_2_camera'),
-      children: [
-        // 1. Kamera Viewfinder / Feed
-        Positioned.fill(
-          child: _isCameraReady && _cameraController != null
-              ? AspectRatio(
-                  aspectRatio: _cameraController!.value.aspectRatio,
-                  child: CameraPreview(_cameraController!),
-                )
-              : Container(
-                  color: const Color(0xFF070B14),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.camera_alt_outlined,
-                            size: 48, color: LevMaxTheme.outline),
-                        const SizedBox(height: 12),
-                        Text(
-                          _isCameraError
-                              ? _cameraErrorMessage
-                              : 'MENGINISIALISASI SENSOR POSE KAMERA...',
-                          textAlign: TextAlign.center,
-                          style: LevMaxTheme.mono(
-                            fontSize: 11,
-                            color: _isCameraError
-                                ? LevMaxTheme.hpRed
-                                : LevMaxTheme.primaryContainer,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-        ),
-
-        // 2. Futuristic Bounding Box & HUD Reticle Overlay
-        Positioned.fill(
-          child: IgnorePointer(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 80),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: LevMaxTheme.primaryContainer.withValues(alpha: 0.4),
-                  width: 1.5,
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Stack(
-                children: [
-                  // Tactical Corner Notches
-                  _buildCornerReticle(top: 0, left: 0),
-                  _buildCornerReticle(top: 0, right: 0),
-                  _buildCornerReticle(bottom: 0, left: 0),
-                  _buildCornerReticle(bottom: 0, right: 0),
-
-                  // Laser Scan Animation
-                  AnimatedBuilder(
-                    animation: _scanLaserController,
-                    builder: (context, child) {
-                      return Align(
-                        alignment: Alignment(0, (_scanLaserController.value * 2) - 1),
-                        child: Container(
-                          height: 2,
-                          color: LevMaxTheme.primaryContainer.withValues(alpha: 0.7),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        // 3. TOP STRIP: TIMER 60 DETIK & PROGRESS SESI
-        Positioned(
-          top: 12,
-          left: 16,
-          right: 16,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: LevMaxTheme.surfaceContainerLowest.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: LevMaxTheme.primaryContainer, width: 1.2),
-            ),
-            child: Row(
+  Widget _buildPhase1VesselMetrics() {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 12),
+            // Header Top Bar
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Info Sesi Aktif
-                Row(
-                  children: [
-                    Icon(currentSession.icon,
-                        color: LevMaxTheme.primaryContainer, size: 20),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'SESI ${_currentSessionIndex + 1}/4 // ${currentSession.title}',
-                          style: LevMaxTheme.mono(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: LevMaxTheme.primaryContainer,
-                          ),
-                        ),
-                        Text(
-                          'Target Bonus: > ${currentSession.bonusThreshold} Reps',
-                          style: LevMaxTheme.mono(fontSize: 9, color: LevMaxTheme.outline),
-                        ),
-                      ],
+                Expanded(
+                  child: Text(
+                    '// PHASE 01: VESSEL ANTHROPOMETRY //',
+                    style: LevMaxTheme.mono(
+                      fontSize: 11,
+                      color: LevMaxTheme.primaryContainer,
+                      letterSpacing: 1.2,
                     ),
-                  ],
-                ),
-
-                // Countdown Timer Besar 60 Detik
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _remainingSeconds <= 10
-                        ? LevMaxTheme.hpRed.withValues(alpha: 0.2)
-                        : LevMaxTheme.primaryContainer.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: _remainingSeconds <= 10
-                          ? LevMaxTheme.hpRed
-                          : LevMaxTheme.primaryContainer,
-                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.timer,
-                        size: 16,
-                        color: _remainingSeconds <= 10
-                            ? LevMaxTheme.hpRed
-                            : LevMaxTheme.primaryContainer,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '00:${_remainingSeconds.toString().padLeft(2, '0')}',
-                        style: LevMaxTheme.headline(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: _remainingSeconds <= 10
-                              ? LevMaxTheme.hpRed
-                              : LevMaxTheme.primaryContainer,
-                        ),
-                      ),
-                    ],
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: LevMaxTheme.primaryContainer.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: LevMaxTheme.primaryContainer),
+                  ),
+                  child: Text(
+                    'STEP 1 OF 3',
+                    style: LevMaxTheme.mono(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: LevMaxTheme.primaryContainer,
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-        ),
+            const SizedBox(height: 12),
+            Text(
+              'KALIBRASI METRIK TUBUH & BMI',
+              style: LevMaxTheme.headline(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Sistem memerlukan kalibrasi fisik awal untuk menghitung daya tahan mana dan menentukan Temporary Hunter Rank Anda.',
+              style: TextStyle(
+                fontSize: 13,
+                color: LevMaxTheme.onSurfaceVariant.withValues(alpha: 0.9),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 28),
 
-        // 4. CENTER HUD: COUNTER REPETISI MENYALA & FEEDBACK DETEKSI
-        Positioned(
-          bottom: 120,
-          left: 16,
-          right: 16,
-          child: Column(
-            children: [
-              // Real-time Angle & Posture Status
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.75),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: _isJointFlexed
-                        ? LevMaxTheme.tertiaryContainer
-                        : const Color(0xFF334155),
-                  ),
+            // Card Input Tinggi Badan (TB)
+            _buildMetricInputCard(
+              title: 'TINGGI BADAN (TB)',
+              unit: 'CM',
+              value: _tbCm,
+              min: 120,
+              max: 220,
+              accentColor: LevMaxTheme.primaryContainer,
+              onChanged: (val) {
+                setState(() {
+                  _tbCm = val;
+                  _calculateBmiAndTempRank();
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Card Input Berat Badan (BB)
+            _buildMetricInputCard(
+              title: 'BERAT BADAN (BB)',
+              unit: 'KG',
+              value: _bbKg,
+              min: 35,
+              max: 150,
+              accentColor: const Color(0xFFD2BBFF),
+              onChanged: (val) {
+                setState(() {
+                  _bbKg = val;
+                  _calculateBmiAndTempRank();
+                });
+              },
+            ),
+            const SizedBox(height: 24),
+
+            // Card Kalkulasi Real-time BMI & Rank Sementara
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF131826),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _tempRank == 'E'
+                      ? LevMaxTheme.tertiaryFixed
+                      : const Color(0xFFFFB4AB),
+                  width: 1.5,
                 ),
-                child: Text(
-                  _poseFeedbackText,
-                  style: LevMaxTheme.mono(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: _isJointFlexed
-                        ? LevMaxTheme.tertiaryContainer
-                        : LevMaxTheme.primary,
+                boxShadow: [
+                  BoxShadow(
+                    color: (_tempRank == 'E'
+                            ? LevMaxTheme.tertiaryFixed
+                            : const Color(0xFFFFB4AB))
+                        .withValues(alpha: 0.15),
+                    blurRadius: 16,
                   ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'INDEX BODY MASS (BMI)',
+                            style: LevMaxTheme.mono(
+                              fontSize: 11,
+                              color: LevMaxTheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _calculatedBmi.toStringAsFixed(1),
+                            style: LevMaxTheme.headline(
+                              fontSize: 36,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            _calculatedBmi < 18.5
+                                ? 'UNDERWEIGHT // KEKURANGAN BOBOT'
+                                : _calculatedBmi <= 24.9
+                                    ? 'NORMAL // COMBAT READY'
+                                    : 'OVERWEIGHT // PERLU KONDISIONING',
+                            style: LevMaxTheme.mono(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: _tempRank == 'E'
+                                  ? LevMaxTheme.tertiaryFixed
+                                  : const Color(0xFFFFB4AB),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0A0E18),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _tempRank == 'E'
+                                ? LevMaxTheme.tertiaryFixed
+                                : const Color(0xFFFFB4AB),
+                            width: 2,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'TEMP RANK',
+                              style: LevMaxTheme.mono(
+                                fontSize: 9,
+                                color: LevMaxTheme.onSurfaceVariant,
+                              ),
+                            ),
+                            Text(
+                              _tempRank,
+                              style: LevMaxTheme.headline(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
+                                color: _tempRank == 'E'
+                                    ? LevMaxTheme.tertiaryFixed
+                                    : const Color(0xFFFFB4AB),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(color: Color(0xFF1E2638)),
+                  const SizedBox(height: 8),
+                  Text(
+                    _tempRank == 'E'
+                        ? '✓ BMI Anda Normal (18.5 - 24.9): Memenuhi syarat Temp Rank E! Selesaikan 4 sesi tes fisik untuk peluang promosi ke Rank D.'
+                        : '⚠ BMI di luar rentang normal: Terdaftar pada Temp Rank F. Anda dapat meningkatkan rank melalui Ujian Fisik kamera.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: LevMaxTheme.onSurfaceVariant.withValues(alpha: 0.9),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // Tombol CALCULATE VESSEL & PROCEED
+            ElevatedButton(
+              onPressed: () async {
+                _pageController.animateToPage(
+                  1,
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeInOut,
+                );
+                await _initCamera();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: LevMaxTheme.primaryContainer,
+                foregroundColor: LevMaxTheme.onPrimaryFixed,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 6,
+                shadowColor: LevMaxTheme.primaryContainer.withValues(alpha: 0.5),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.videocam, size: 22),
+                  const SizedBox(width: 10),
+                  Text(
+                    'MASUKI THE PHYSICAL TRIAL (4 SESI AI)',
+                    style: LevMaxTheme.headline(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: LevMaxTheme.onPrimaryFixed,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricInputCard({
+    required String title,
+    required String unit,
+    required double value,
+    required double min,
+    required double max,
+    required Color accentColor,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF131826),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF1E2638)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: LevMaxTheme.mono(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: LevMaxTheme.onSurfaceVariant,
+                  letterSpacing: 1.0,
                 ),
               ),
-              const SizedBox(height: 10),
-
-              // Angka Repetisi Menyala Besar di Tengah
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                decoration: BoxDecoration(
-                  color: LevMaxTheme.surfaceContainerLowest.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: LevMaxTheme.primaryContainer, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x5500F0FF),
-                      blurRadius: 24,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Column(
+              RichText(
+                text: TextSpan(
                   children: [
-                    Text(
-                      '${currentSession.title} REPS',
-                      style: LevMaxTheme.mono(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: LevMaxTheme.outline,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    Text(
-                      '$currentCount',
+                    TextSpan(
+                      text: value.toInt().toString(),
                       style: LevMaxTheme.headline(
-                        fontSize: 54,
-                        fontWeight: FontWeight.bold,
-                        color: LevMaxTheme.primaryContainer,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: accentColor,
                       ),
                     ),
-                    Text(
-                      'SUDUT SENDI: ${_currentJointAngle.toStringAsFixed(0)}°',
+                    TextSpan(
+                      text: ' $unit',
                       style: LevMaxTheme.mono(
-                        fontSize: 10,
+                        fontSize: 12,
                         color: LevMaxTheme.onSurfaceVariant,
                       ),
                     ),
@@ -1350,358 +1050,628 @@ class _OnboardingPageState extends State<OnboardingPage>
               ),
             ],
           ),
-        ),
-
-        // 5. BOTTOM ACTIONS: TOGGLE LENS, SIMULASI REP, & NEXT SESSION
-        Positioned(
-          bottom: 24,
-          left: 16,
-          right: 16,
-          child: Row(
-            children: [
-              // Switch Camera Lens
-              IconButton(
-                icon: const Icon(Icons.flip_camera_ios, color: Colors.white70),
-                onPressed: _toggleCameraLens,
-                tooltip: 'Ganti Kamera',
-              ),
-              const SizedBox(width: 8),
-
-              // Manual Rep Simulation (Untuk Testing Cepat & Fail-safe)
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _simulateRepetition,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: LevMaxTheme.surfaceContainerHighest,
-                    foregroundColor: LevMaxTheme.primaryContainer,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: LevMaxTheme.primaryContainer),
-                  ),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: Text(
-                    '+1 REP MANUAL',
-                    style: LevMaxTheme.mono(fontSize: 10, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // Skip / Next Session Button
-              ElevatedButton(
-                onPressed: _onSessionTimeExpired,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: LevMaxTheme.primaryContainer,
-                  foregroundColor: LevMaxTheme.onPrimaryFixed,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                ),
-                child: Text(
-                  _currentSessionIndex < _sessions.length - 1 ? 'LANJUT >>' : 'HASIL >>',
-                  style: LevMaxTheme.mono(fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCornerReticle({double? top, double? bottom, double? left, double? right}) {
-    return Positioned(
-      top: top,
-      bottom: bottom,
-      left: left,
-      right: right,
-      child: Container(
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          border: Border(
-            top: top != null
-                ? const BorderSide(color: LevMaxTheme.primaryContainer, width: 3)
-                : BorderSide.none,
-            bottom: bottom != null
-                ? const BorderSide(color: LevMaxTheme.primaryContainer, width: 3)
-                : BorderSide.none,
-            left: left != null
-                ? const BorderSide(color: LevMaxTheme.primaryContainer, width: 3)
-                : BorderSide.none,
-            right: right != null
-                ? const BorderSide(color: LevMaxTheme.primaryContainer, width: 3)
-                : BorderSide.none,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================================
-  // UI FASE 3: PENENTUAN RANK AKHIR & SYNC KE SUPABASE
-  // ============================================================================
-  Widget _buildPhase3FinalRankSync() {
-    return SingleChildScrollView(
-      key: const ValueKey('phase_3_results'),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header
-          Center(
-            child: Column(
-              children: [
-                Text(
-                  '// PHASE 03: AWAKENING EVALUATION //',
-                  style: LevMaxTheme.mono(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: LevMaxTheme.primary,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'HASIL UJIAN KEMAMPUAN FISIK',
-                  style: LevMaxTheme.headline(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: LevMaxTheme.primaryContainer,
-                    letterSpacing: 1.0,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 8),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: accentColor,
+              inactiveTrackColor: const Color(0xFF222B3E),
+              thumbColor: Colors.white,
+              overlayColor: accentColor.withValues(alpha: 0.2),
+              trackHeight: 6,
+            ),
+            child: Slider(
+              value: value,
+              min: min,
+              max: max,
+              onChanged: onChanged,
             ),
           ),
-          const SizedBox(height: 20),
-
-          // Big Rank Badge Monolith
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            decoration: BoxDecoration(
-              color: LevMaxTheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: LevMaxTheme.primaryContainer,
-                width: 2.0,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x3300F0FF),
-                  blurRadius: 20,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Text(
-                  'HUNTER RANK DIANUGERAHKAN',
-                  style: LevMaxTheme.mono(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: LevMaxTheme.outline,
-                    letterSpacing: 1.0,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: LevMaxTheme.surfaceContainerLowest,
-                    border: Border.all(color: LevMaxTheme.primaryContainer, width: 2.5),
-                  ),
-                  child: Center(
-                    child: Text(
-                      _finalRank,
-                      style: LevMaxTheme.headline(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: LevMaxTheme.primaryContainer,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  _finalRank == 'D'
-                      ? 'RANK D // EXPERIENCED STRIKER'
-                      : (_finalRank == 'E'
-                          ? 'RANK E // AWAKENED COMBATANT'
-                          : 'RANK F // RECRUIT HUNTER'),
-                  style: LevMaxTheme.mono(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: LevMaxTheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _isBonusRankAchieved
-                        ? LevMaxTheme.tertiaryContainer.withValues(alpha: 0.15)
-                        : Colors.white10,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    _isBonusRankAchieved
-                        ? '★ BONUS RANK +1 TINGKAT DIAPLIKASIKAN!'
-                        : 'STANDAR EVALUASI // TIDAK MENCAPAI SELURUH THRESHOLD BONUS',
-                    style: LevMaxTheme.mono(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.bold,
-                      color: _isBonusRankAchieved
-                          ? LevMaxTheme.tertiaryContainer
-                          : LevMaxTheme.outline,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Detail Rincian 4 Latihan Fisik
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: LevMaxTheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF1E293B)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'RINCIAN UJIAN 4 SESI (1 MENIT PER WO):',
-                  style: LevMaxTheme.mono(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: LevMaxTheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildWorkoutScoreRow(
-                  WorkoutSessionType.pushup.title,
-                  _pushupCount,
-                  WorkoutSessionType.pushup.bonusThreshold,
-                ),
-                _buildWorkoutScoreRow(
-                  WorkoutSessionType.situp.title,
-                  _situpCount,
-                  WorkoutSessionType.situp.bonusThreshold,
-                ),
-                _buildWorkoutScoreRow(
-                  WorkoutSessionType.squat.title,
-                  _squatCount,
-                  WorkoutSessionType.squat.bonusThreshold,
-                ),
-                _buildWorkoutScoreRow(
-                  WorkoutSessionType.pullup.title,
-                  _pullupCount,
-                  WorkoutSessionType.pullup.bonusThreshold,
-                ),
-                const Divider(color: Color(0xFF1E293B)),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'BMI: $_calculatedBmi ($_tempRank Temp)',
-                      style: LevMaxTheme.mono(fontSize: 10, color: LevMaxTheme.outline),
-                    ),
-                    Text(
-                      'TB: ${_tbCm.toInt()} cm | BB: ${_bbKg.toInt()} kg',
-                      style: LevMaxTheme.mono(fontSize: 10, color: LevMaxTheme.outline),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 28),
-
-          // CTA: Sinkronisasi ke Supabase & Masuk ke Main
-          GestureDetector(
-            onTap: _isSyncing ? null : _syncAwakeningToSupabase,
-            child: Container(
-              height: 52,
-              decoration: BoxDecoration(
-                color: LevMaxTheme.primaryContainer,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x3300F0FF),
-                    blurRadius: 18,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: _isSyncing
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.2,
-                          color: LevMaxTheme.onPrimary,
-                        ),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'KONFIRMASI KEBANGKITAN & AWALI PERJALANAN',
-                            style: LevMaxTheme.mono(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
-                              color: LevMaxTheme.onPrimary,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.arrow_forward, color: LevMaxTheme.onPrimary, size: 18),
-                        ],
-                      ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  Widget _buildWorkoutScoreRow(String name, int count, int threshold) {
-    final isPassed = count > threshold;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            name,
-            style: LevMaxTheme.mono(fontSize: 11, color: LevMaxTheme.onSurface),
+  // ============================================================================
+  // UI FASE 2: THE PHYSICAL TRIAL (KAMERA FULLSCREEN + HUD VALUE NOTIFIER)
+  // ============================================================================
+
+  Widget _buildPhase2PhysicalTrial() {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // 1. Layer Background Camera Preview
+        if (_isCameraInitialized && _cameraController != null)
+          FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: _cameraController!.value.previewSize?.height ?? 1080,
+              height: _cameraController!.value.previewSize?.width ?? 1920,
+              child: CameraPreview(_cameraController!),
+            ),
+          )
+        else
+          Container(
+            color: const Color(0xFF070A12),
+            child: Center(
+              child: _isCameraError
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.videocam_off, color: Color(0xFFFFB4AB), size: 48),
+                          const SizedBox(height: 16),
+                          Text(
+                            _cameraErrorMessage,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Color(0xFFFFB4AB), fontSize: 13),
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: _initCamera,
+                            child: const Text('COBA ULANG KAMERA'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(LevMaxTheme.primaryContainer),
+                    ),
+            ),
           ),
-          Row(
+
+        // 2. Layer Overlay Border Reticle Solo Leveling HUD
+        Positioned.fill(
+          child: IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, _) => Container(
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: LevMaxTheme.primaryContainer
+                        .withValues(alpha: _pulseAnimation.value * 0.4 + 0.1),
+                    width: 1.5,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // 3. Layer Konten Atas: Header Trial & Muscle Group
+        SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F131D).withValues(alpha: 0.88),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: LevMaxTheme.primaryContainer, width: 1.2),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '[ TRIAL ${_currentSessionIndex + 1}/4: ${_currentSession.title} ]',
+                          style: LevMaxTheme.headline(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: LevMaxTheme.primaryContainer,
+                            letterSpacing: 1.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'Target Fokus: ${_currentSession.muscleGroup} • Bonus Target: >${_currentSession.bonusThreshold}',
+                          style: LevMaxTheme.mono(
+                            fontSize: 10,
+                            color: LevMaxTheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.cameraswitch, color: LevMaxTheme.primaryContainer),
+                    onPressed: _toggleCameraLens,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // 4. Layer Tengah: Countdown Timer Besar (ValueListenableBuilder - Zero Lag)
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
+              ValueListenableBuilder<int>(
+                valueListenable: _remainingSecondsNotifier,
+                builder: (context, seconds, child) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0A0E18).withValues(alpha: 0.75),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: seconds <= 10
+                            ? const Color(0xFFFFB4AB)
+                            : LevMaxTheme.primaryContainer,
+                        width: 3,
+                      ),
+                    ),
+                    child: Text(
+                      '$seconds',
+                      style: LevMaxTheme.headline(
+                        fontSize: 48,
+                        fontWeight: FontWeight.w900,
+                        color: seconds <= 10
+                            ? const Color(0xFFFFB4AB)
+                            : LevMaxTheme.primaryContainer,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
               Text(
-                '$count Reps ',
+                'DETIK TERSISA',
+                style: LevMaxTheme.mono(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white70,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // 5. Layer Bawah: Counter Repetisi Besar & Feedback Pose
+        SafeArea(
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F131D).withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF1E2638), width: 1.5),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Realtime Repetisi & Sudut Sendi
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'REPETISI SAAT INI',
+                            style: LevMaxTheme.mono(
+                              fontSize: 10,
+                              color: LevMaxTheme.onSurfaceVariant,
+                            ),
+                          ),
+                          ValueListenableBuilder<int>(
+                            valueListenable: _repCountNotifier,
+                            builder: (context, count, child) {
+                              return Text(
+                                '$count',
+                                style: LevMaxTheme.headline(
+                                  fontSize: 42,
+                                  fontWeight: FontWeight.w900,
+                                  color: LevMaxTheme.primaryContainer,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'SUDUT SENDI (ATAN2)',
+                            style: LevMaxTheme.mono(
+                              fontSize: 10,
+                              color: LevMaxTheme.onSurfaceVariant,
+                            ),
+                          ),
+                          ValueListenableBuilder<double>(
+                            valueListenable: _angleNotifier,
+                            builder: (context, angle, child) {
+                              return Text(
+                                '${angle.toInt()}°',
+                                style: LevMaxTheme.headline(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: _isDownPosition
+                                      ? LevMaxTheme.tertiaryFixed
+                                      : Colors.white,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Feedback Realtime ML Kit
+                  ValueListenableBuilder<String>(
+                    valueListenable: _feedbackNotifier,
+                    builder: (context, feedback, child) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0A0E18),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: LevMaxTheme.primaryContainer.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.radar, color: LevMaxTheme.primaryContainer, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                feedback,
+                                style: LevMaxTheme.mono(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Tombol Manual / Dev Skip untuk evaluasi cepat
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton.icon(
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text('+1 Rep Manual'),
+                        onPressed: () {
+                          _repCountNotifier.value++;
+                        },
+                      ),
+                      TextButton.icon(
+                        icon: const Icon(Icons.fast_forward, size: 16),
+                        label: const Text('Lewati Sesi Ini'),
+                        onPressed: _onTrialSessionFinished,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // 6. Layer Jeda Istirahat (REST OVERLAY 5 DETIK)
+        ValueListenableBuilder<bool>(
+          valueListenable: _isRestingNotifier,
+          builder: (context, isResting, child) {
+            if (!isResting) return const SizedBox.shrink();
+
+            return Container(
+              color: const Color(0xFF060913).withValues(alpha: 0.94),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(28.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '// SYSTEM REST PROTOCOL //',
+                        style: LevMaxTheme.mono(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF65F2B5),
+                          letterSpacing: 2.0,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'AMBIL NAPAS & RELAKSASI OTOT',
+                        style: LevMaxTheme.headline(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Menyiapkan sesi berikutnya: [TRIAL ${_currentSessionIndex + 2}/4: ${_sessions[math.min(_currentSessionIndex + 1, _sessions.length - 1)].title}]',
+                        textAlign: TextAlign.center,
+                        style: LevMaxTheme.mono(
+                          fontSize: 12,
+                          color: LevMaxTheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      ValueListenableBuilder<int>(
+                        valueListenable: _restSecondsNotifier,
+                        builder: (ctx, restSec, _) {
+                          return Text(
+                            '$restSec',
+                            style: LevMaxTheme.headline(
+                              fontSize: 72,
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFF65F2B5),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  // ============================================================================
+  // UI FASE 3: RESULT & RE-AWAKENING SYNC (RANGKUMAN & SINKRONISASI SUPABASE)
+  // ============================================================================
+
+  Widget _buildPhase3ResultSync() {
+    final eval = _evaluateFinalAwakening();
+    final bool promoted = eval['promoted'] as bool;
+    final String finalRank = eval['finalRank'] as String;
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 10),
+            Center(
+              child: Text(
+                '// PHASE 03: AWAKENING EVALUATION //',
                 style: LevMaxTheme.mono(
                   fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: isPassed ? LevMaxTheme.tertiaryContainer : LevMaxTheme.onSurface,
+                  color: LevMaxTheme.primaryContainer,
+                  letterSpacing: 2.0,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                'HASIL EVALUASI UJIAN FISIK',
+                style: LevMaxTheme.headline(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Card Peringkat Rank Akhir
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFF131826),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: promoted ? LevMaxTheme.tertiaryFixed : LevMaxTheme.primaryContainer,
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (promoted ? LevMaxTheme.tertiaryFixed : LevMaxTheme.primaryContainer)
+                        .withValues(alpha: 0.25),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    promoted ? 'PROMOTED AWAKENING' : 'AWAKENING CONFIRMED',
+                    style: LevMaxTheme.mono(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: promoted ? LevMaxTheme.tertiaryFixed : LevMaxTheme.primaryContainer,
+                      letterSpacing: 2.0,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'RANK $finalRank',
+                    style: LevMaxTheme.headline(
+                      fontSize: 48,
+                      fontWeight: FontWeight.w900,
+                      color: promoted ? LevMaxTheme.tertiaryFixed : Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    promoted
+                        ? '★ Selamat! Repetisi Anda melampaui seluruh target bonus. Rank dinaikkan dari $_tempRank ke $finalRank!'
+                        : 'Peringkat Vessel Anda dikonfirmasi pada Rank $finalRank berdasarkan Metrik BMI & Ujian Fisik.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: LevMaxTheme.onSurfaceVariant.withValues(alpha: 0.9),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Rangkuman 4 Sesi Ujian Fisik
+            Text(
+              'RANGKUMAN REPETISI 60 DETIK',
+              style: LevMaxTheme.mono(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: LevMaxTheme.onSurfaceVariant,
+                letterSpacing: 1.0,
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            _buildTrialSummaryRow(
+              title: 'PUSH-UP',
+              reps: _pushupCount,
+              target: 30,
+              icon: Icons.fitness_center,
+            ),
+            const SizedBox(height: 8),
+            _buildTrialSummaryRow(
+              title: 'SIT-UP',
+              reps: _situpCount,
+              target: 30,
+              icon: Icons.sports_gymnastics,
+            ),
+            const SizedBox(height: 8),
+            _buildTrialSummaryRow(
+              title: 'SQUAT',
+              reps: _squatCount,
+              target: 40,
+              icon: Icons.accessibility_new,
+            ),
+            const SizedBox(height: 8),
+            _buildTrialSummaryRow(
+              title: 'PULL-UP',
+              reps: _pullupCount,
+              target: 2,
+              icon: Icons.horizontal_rule,
+            ),
+            const SizedBox(height: 28),
+
+            // Tombol Konfirmasi & Sinkronisasi
+            ElevatedButton(
+              onPressed: _executeAwakeningSync,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: LevMaxTheme.primaryContainer,
+                foregroundColor: LevMaxTheme.onPrimaryFixed,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 6,
+                shadowColor: LevMaxTheme.primaryContainer.withValues(alpha: 0.5),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.bolt, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    'KONFIRMASI & AKTIFKAN SISTEM HUNTER',
+                    style: LevMaxTheme.headline(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: LevMaxTheme.onPrimaryFixed,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrialSummaryRow({
+    required String title,
+    required int reps,
+    required int target,
+    required IconData icon,
+  }) {
+    final bool passed = reps >= target;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF131826),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF1E2638)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: LevMaxTheme.primaryContainer, size: 22),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: LevMaxTheme.mono(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  'Bonus Threshold: >$target reps',
+                  style: LevMaxTheme.mono(
+                    fontSize: 10,
+                    color: LevMaxTheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$reps reps',
+                style: LevMaxTheme.headline(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: passed ? LevMaxTheme.tertiaryFixed : Colors.white,
                 ),
               ),
               Text(
-                '(Target: >$threshold)',
-                style: LevMaxTheme.mono(fontSize: 9, color: LevMaxTheme.outline),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                isPassed ? Icons.check_circle : Icons.radio_button_unchecked,
-                size: 14,
-                color: isPassed ? LevMaxTheme.tertiaryContainer : LevMaxTheme.outline,
+                passed ? 'TARGET MET' : 'STANDARD',
+                style: LevMaxTheme.mono(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: passed ? LevMaxTheme.tertiaryFixed : LevMaxTheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),

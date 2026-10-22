@@ -42,10 +42,10 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- Google ML Kit Vision Model Dependencies (Face Detection) -->
+        <!-- Google ML Kit Vision Model Dependencies (Face & Pose Detection) -->
         <meta-data
             android:name="com.google.mlkit.vision.DEPENDENCIES"
-            android:value="face" />
+            android:value="face,pose" />
 
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
