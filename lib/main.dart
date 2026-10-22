@@ -27,6 +27,7 @@ import 'ui/gamification/penalty_game_page.dart';
 import 'ui/gamification/mini_games_page.dart';
 import 'ui/shop/shop_page.dart';
 import 'ui/penalty/game_over_page.dart';
+import 'ui/qa_debug_panel.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -163,6 +164,7 @@ class LevMaxApp extends StatelessWidget {
         '/mini_games': (context) => const MiniGamesPage(),
         '/mini-games': (context) => const MiniGamesPage(),
         '/shop': (context) => const ShopPage(),
+        '/qa_debug': (context) => const QaDebugPanel(),
       },
     );
   }

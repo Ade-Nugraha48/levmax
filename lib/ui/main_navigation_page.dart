@@ -69,6 +69,16 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       return;
     }
 
+    // Periksa apakah Penalti Aktif (Penalty Guard)
+    if (player.isPenaltyActive) {
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const PenaltyGamePage()),
+      );
+      return;
+    }
+
     // ========================================================================
     // ATURAN PERGANTIAN HARI & SISTEM PENALTI (BAB 5 RULES)
     // ========================================================================

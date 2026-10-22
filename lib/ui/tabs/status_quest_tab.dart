@@ -17,6 +17,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../../helpers/boxes.dart';
+import '../../helpers/debug_config.dart';
 import '../../helpers/game_rules.dart';
 import '../../helpers/levmax_theme.dart';
 import '../../helpers/user_info.dart';
@@ -27,6 +28,7 @@ import '../../services/notification_service.dart';
 import '../../services/supabase_api_service.dart';
 import '../chat/system_ai_chat_modal.dart';
 import '../gamification/mini_games_page.dart';
+import '../gamification/penalty_game_page.dart';
 import '../quests/sensor_study_page.dart';
 import '../quests/sensor_workout_page.dart';
 
@@ -102,7 +104,9 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
   void _checkPenaltyGuard() {
     if (widget.player.isPenaltyActive) {
       debugPrint('[PENALTY GUARD] User is penalized! Redirecting to /penalty...');
-      Navigator.pushReplacementNamed(context, '/penalty');
+      Navigator.of(context, rootNavigator: true).pushReplacement(
+        MaterialPageRoute(builder: (_) => const PenaltyGamePage()),
+      );
     }
   }
 
@@ -366,8 +370,7 @@ class _StatusQuestTabState extends State<StatusQuestTab> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            final int currentHour = DateTime.now().hour;
-            final bool isEligible = currentHour >= 21;
+            final bool isEligible = DebugConfig.isAppearanceUnlocked;
 
             return Padding(
               padding: EdgeInsets.only(

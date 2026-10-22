@@ -18,6 +18,7 @@ import '../../models/user_model.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/supabase_api_service.dart';
 import '../auth/login_page.dart';
+import '../qa_debug_panel.dart';
 
 class ProfileTab extends StatefulWidget {
   final UserModel player;
@@ -446,39 +447,56 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
               // Kotak 80x80 Avatar dengan Border Warna Rank
               Column(
                 children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: rankColor, width: 2.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: rankColor.withValues(alpha: 0.3),
-                          blurRadius: 12,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Icon(
-                            Icons.person,
-                            size: 48,
-                            color: rankColor.withValues(alpha: 0.35),
+                  GestureDetector(
+                    onLongPress: () {
+                      HapticFeedback.heavyImpact();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => QaDebugPanel(
+                            player: _player,
+                            onUpdated: () {
+                              _syncCachedPlayer();
+                              widget.onPlayerUpdated();
+                            },
                           ),
-                          Text(
-                            _player.username.isNotEmpty ? _player.username[0].toUpperCase() : 'H',
-                            style: LevMaxTheme.headline(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                              color: rankColor,
-                            ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: rankColor, width: 2.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: rankColor.withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            spreadRadius: 1,
                           ),
                         ],
+                      ),
+                      child: Center(
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Icon(
+                              Icons.person,
+                              size: 48,
+                              color: rankColor.withValues(alpha: 0.35),
+                            ),
+                            Text(
+                              _player.username.isNotEmpty ? _player.username[0].toUpperCase() : 'H',
+                              style: LevMaxTheme.headline(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
+                                color: rankColor,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
